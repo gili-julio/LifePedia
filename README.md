@@ -1,0 +1,276 @@
+# LifePedia
+
+> Sua vida inteira, organizada num só lugar.
+
+O **LifePedia** é uma plataforma pessoal para **centralizar dados da nossa vida** — finanças, metas, saúde,
+rotina, documentos — e transformar isso em uma visão clara do todo. Em vez de uma planilha para cada
+assunto e vários apps que não conversam entre si, tudo mora num lugar só, com o mesmo login e a mesma cara.
+
+A ideia é crescer **por módulos**: cada área da vida vira um módulo independente (API + telas), mas todos
+compartilham usuário, autenticação, design e padrões.
+
+## Módulos
+
+| Módulo | Status | O que faz |
+|---|---|---|
+| **Usuários** | ✅ v1.2 | Cadastro com **@username** único e obrigatório, login (sessão em cookie HttpOnly), perfil, **notificações**, **exportar/importar dados** e **excluir conta** |
+| **Grupos** | ✅ v1.1 | Grupos com nome e **imagem** (recorte antes de salvar), convites diretos (aceitar/recusar) ou por **link**, admins e membros, e **planejamento** (compras e investimentos com prazo, simulação, cenários e "e se") |
+| **Financeiro** | ✅ v1.2 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **importação de extrato/fatura via agente de IA** e **finanças em grupo** |
+| **Tarefas** | ✅ v1.0 | Tarefas pessoais e **em grupo** para hoje, outros dias ou sem data, **atrasadas**, **repetição** (a cada N dias/semanas/meses/anos, dias da semana, dia do mês, a partir da conclusão), prioridade, horário e duração, **subtarefas**, **listas** e **etiquetas**; no grupo, **responsável**, **rodízio**, **comentários** e avisos; **semana** (arrastar muda o dia), **hábitos** (sequência e % do mês), **lembretes** e **ligação com fixos do financeiro** |
+| Metas | 💡 ideia | Objetivos pessoais e financeiros com acompanhamento |
+| Saúde | 💡 ideia | Consultas, exames, medicamentos, hábitos |
+| Documentos | 💡 ideia | Documentos importantes, vencimentos, lembretes |
+
+### Financeiro v1 — conceitos
+
+- **Fixos (recorrentes)**: valores que se repetem todo mês (salário, aluguel, internet...). Têm mês de
+  início, mês de fim opcional e podem ser pausados. Entram automaticamente no cálculo de cada mês em que estão vigentes.
+  Um fixo pode ter o **valor real de um mês** (ex.: conta de luz que veio diferente), que substitui o cadastrado só naquele mês.
+- **Ocasionais**: lançamentos avulsos com data (uma compra, um freela, um presente) e o **mês em que contam**
+  (padrão: o da data; compra no cartão: o mês da fatura).
+- **Tornar fixo**: num ocasional, abre o cadastro de fixo já preenchido; ao salvar, os ocasionais de mesmo nome dentro
+  da vigência (você confirma quais) são removidos para não contar em dobro.
+- **Categorias**: cada usuário tem as suas (de despesa e de ganho), com nome e **cor**. O cadastro já cria
+  19 categorias padrão, que podem ser editadas, excluídas (movendo os lançamentos para outra) ou complementadas.
+  A cor é usada nos gráficos e listas.
+- **Comparativo**: para qualquer mês, mostra ganhos x despesas separando fixos e ocasionais, saldo,
+  **% da renda fixa comprometida com despesas fixas**, histórico dos últimos 6 meses e composição por categoria
+  (cada categoria abre os itens do mês agrupados pelo nome, ex.: "Lanche IMD 5×").
+- **Listagens** (lançamentos e fixos): paginadas e ordenadas pela API (10/25/50/100 por página, clique no
+  cabeçalho para ordenar). Os totais do topo sempre consideram todos os itens do mês.
+- **Importar com IA**: a tela *Importar* gera um **prompt pronto** para **extrato bancário** ou **fatura do cartão**,
+  com as categorias, os fixos e os nomes que você já usa nos lançamentos. Você cola o prompt num agente de IA (ChatGPT,
+  Claude, Gemini...) junto com o documento; o agente devolve um JSON no modelo `lifepedia/transactions@2`; você cola a
+  resposta, revisa numa prévia editável e importa tudo de uma vez. O LifePedia não envia o documento a lugar nenhum.
+  - Cada item traz a **descrição do documento** (guardada como veio, não editável) e um **nome padronizado**
+    (editável): o mesmo lugar ganha sempre o mesmo nome, e nomes com as mesmas palavras em outra ordem
+    ("Natal IMD" / "IMD Natal") são unificados — assim o agrupamento por nome da visão geral fica certo.
+  - Itens que **correspondem a um fixo** (marcados pelo agente ou detectados por valor/categoria/descrição/dia) não viram
+    lançamento: se o valor for igual, já estão contados; se for diferente, viram o **valor real do fixo naquele mês**.
+  - Itens já importados antes vêm desmarcados. No extrato, o pagamento da fatura do cartão é ignorado (a fatura é
+    importada à parte, item a item), assim como transferências entre contas próprias e aplicações/resgates.
+
+### Usuários e grupos — conceitos
+
+- **@username**: obrigatório e único (3 a 30 caracteres: letras minúsculas, números, ponto e `_`). Contas antigas sem
+  ele recebem um aviso ao abrir o app e vão para **Meu perfil** até completar o cadastro.
+- **Notificações**: no menu do perfil (avatar com contador): convite para grupo
+  ("*Fulano* te chamou para participar do grupo *X*" · **Ver**), com a foto do grupo, membro que excluiu a conta
+  (avisa também quem virou admin) e tarefas de grupo (responsável, sua vez no rodízio, alguém concluiu a sua,
+  comentário, atrasada) e **lembretes** de tarefa (na hora ou X min antes; com o app aberto aparecem também na tela)
+  — **Ver** abre a tarefa (em *Tarefas* ou na aba *Tarefas* do grupo).
+- **Início** (`/`, logo no topo): resumo do dia — tarefas de hoje e atrasadas, sequência dos hábitos e o mês no
+  financeiro (entradas, saídas, saldo).
+- **Meus dados** (em *Meu perfil*):
+  - **Exportar (.json)**: arquivo `lifepedia/account@2` com perfil, categorias, fixos (com os valores de cada mês),
+    lançamentos e **tarefas pessoais** (com listas, etiquetas e o que foi feito em cada ocorrência) — é o que dá para
+    importar; arquivos `@1` antigos continuam aceitos e não mexem nas tarefas — e, só como registro, os seus itens em cada grupo (lançamentos, fixos,
+    planejamento). **Planilha (.xlsx)**: as mesmas informações em abas, para ver no Excel/Google Planilhas.
+  - **Importar** (nesta ou em outra conta): mostra antes o que vai acontecer. *Somar* junta ao que já existe
+    (categoria com mesmo tipo e nome é reaproveitada; lançamento/fixo igual não duplica). *Substituir* apaga os
+    lançamentos e fixos pessoais antes (e as tarefas pessoais, se o arquivo tiver tarefas; pede confirmação); categorias sem uso saem, e itens **sincronizados** em grupos
+    viram **cópia** e continuam no grupo. Perfil e itens de grupo do arquivo não são importados.
+- **Excluir conta** (em *Meu perfil*): mostra o que some e o que acontece em cada grupo, oferece baixar os dados e
+  pede **senha + digitar EXCLUIR**. Em cada grupo é como "Sair do grupo": seus itens (lançamentos, fixos,
+  planejamento) saem, se você era o único admin o membro mais antigo vira admin, e grupo só seu é excluído. Os membros
+  recebem um aviso. Não dá para desfazer.
+- **Grupos** (menu *Social → Grupos*): nome e imagem (JPEG/PNG/WebP; você arrasta, dá zoom e gira antes de salvar,
+  como no WhatsApp). Quem cria vira **admin**; admins editam, convidam, geram o link, promovem e removem membros.
+  Último admin que sai passa o posto ao membro mais antigo; último membro que sai apaga o grupo.
+  - **Convite direto**: busca por nome ou @username; a pessoa recebe a notificação e aceita ou recusa em
+    *Grupos → Solicitações (n)*.
+  - **Link de convite**: vale 7 dias; gerar outro invalida o anterior; dá para desativar. Quem abre logado entra direto.
+- **Finanças em grupo**: cada membro **leva** para o grupo os fixos e ocasionais que quiser — pelo seletor
+  *Levar meus itens* do grupo ou pela seção *Levar para grupos* ao cadastrar um fixo/ocasional (um ou vários grupos).
+  - **Sincronizado**: espelho do item pessoal (editar ou excluir o pessoal reflete no grupo).
+  - **Cópia**: independente; só quem levou edita. Fixo copiado usa o valor cadastrado (sem os ajustes mensais).
+  - **Direto no grupo**: *Novo lançamento* (aba Lançamentos) e *Novo fixo* (aba Fixos) cadastram um item só do grupo,
+    sem item pessoal — funciona como uma cópia de quem cadastrou (categoria dele, só ele edita).
+  - Membros veem tudo do item (descrição, valor, categoria, data, quem levou). Quem levou (ou um admin) pode tirá-lo
+    do grupo; quem sai do grupo leva seus itens junto.
+  - **Visão do grupo**: totais do mês, % da renda fixa comprometida, **quanto cada membro trouxe**, fixos x ocasionais,
+    últimos 6 meses e categorias (somadas pelo nome entre os membros; cada uma abre os itens agrupados).
+- **Planejamento em grupo** (aba *Planejamento* do grupo): coisas que o grupo quer **comprar ou investir** até um mês.
+  - Item: nome, valor, prazo, à vista ou **parcelado** (parcelas a partir do prazo), observação, **link** opcional e foto.
+    Ao colar o link, a API tenta ler **nome, preço e foto** da página (Amazon e KaBuM funcionam). Se a loja bloqueia
+    (Mercado Livre, Magalu, Shopee) ou falta preço/foto, o nome vem do próprio link e a API busca um **produto parecido
+    no Buscapé** (comparador de preços): traz o menor preço e a foto e avisa de onde veio ("preço/foto de referência").
+    Sem link, dá para **buscar preço e foto pelo nome** do item.
+  - **Saldo previsto por mês** = ganhos fixos − despesas fixas do grupo (mês a mês, com vigência e ajustes) + média dos
+    ocasionais (ganhos − despesas) dos últimos 3, 6 ou 12 meses completos — só os meses **com lançamentos** contam
+    (mês vazio não puxa a média para baixo); sem nenhum, usa o **mês atual**. A tela mostra quais meses entraram.
+    Ou um **valor definido** pelo grupo.
+    **Reserva** = quanto o grupo já tem guardado.
+  - **Simulação**: saldo acumulado mês a mês, descontando os pagamentos dos itens **ativos** na ordem de **prioridade**
+    (o 1º recebe o dinheiro primeiro; muda **arrastando** o item pela alça ⋮⋮ — mouse, toque ou teclado — ou pelas setas). Cada item mostra se **cabe no prazo**, **quanto falta**, a partir de quando daria
+    e quanto guardar por mês (à vista) ou a parcela. **Linha do tempo** com e sem os planos.
+  - **Ativar/desativar** item (vale para o grupo), **cenários** salvos (conjuntos de itens, comparados lado a lado,
+    "ver" e "aplicar") e **"e se"** (renda ou gasto extra por mês, só na tela).
+  - **Marcar como comprado/feito**: sai da simulação; opcionalmente vira despesa no grupo (em nome de quem marcou, com
+    a categoria dele; parcelado vira uma despesa por mês).
+  - Qualquer membro cadastra e liga/desliga itens; editar/excluir: quem cadastrou ou admin. Quem sai leva os seus itens.
+
+### Tarefas — conceitos
+
+- **Onde**: menu *Organização → Tarefas*. Abas **Hoje** (atrasadas + hoje), **Semana** (seg–dom em colunas; arrastar
+  uma pendente pela alça muda o dia só dela), **Próximos** (a partir de amanhã, 7 dias por vez, até 8 semanas),
+  **Sem data**, **Hábitos** e **Concluídas** (histórico). Filtro por lista/etiqueta e ordem: *minha ordem*
+  (arrastando pela alça ⋮⋮), *prioridade* ou *horário*. Campo rápido: digitar e Enter cria a tarefa do dia.
+- **Tarefa**: título, notas, dia (ou sem data), horário e duração opcionais, prioridade (nenhuma/baixa/média/alta, cor
+  no círculo), **lista** (uma) e **etiquetas** (até 10), **subtarefas** (checklist, até 50).
+- **"Hoje"** segue o fuso `TIME_ZONE` (padrão `America/Sao_Paulo`). Pendente de dia que já passou = **atrasada**.
+- **Repetição**: a cada N dias, semanas (escolhendo os dias), meses (mesmo dia — dia 31 vira o último em meses curtos —,
+  "2ª terça" ou último dia) ou anos; termina nunca, numa data ou após N vezes. **A partir da conclusão**: a próxima
+  conta de quando você concluiu (ex.: regar a planta 3 dias depois).
+  - **Cada ocorrência é independente**: perdeu segunda e terça, as duas aparecem atrasadas (as da mesma tarefa ficam
+    juntas numa linha, com "Concluir/Pular as N atrasadas"). Atrasadas de tarefa repetida: até 90 dias para trás.
+  - Por ocorrência: **concluir**, **pular**, **mover para** outro dia (só ela) e o checklist marcado só nela.
+  - **Editar** ou **excluir** pergunta: *só esta*, *esta e as próximas* (a série é dividida no dia) ou *todas*. "Só
+    esta" muda título, notas, horário, prioridade e dia; regra, lista, etiquetas, duração e subtarefas valem para a série.
+- **Hábitos**: numa tarefa com repetição em dias fixos, ligue *Acompanhar como hábito*. Mostra a **sequência** (🔥, dias
+  feitos seguidos), o recorde e o **% do mês** (feitos ÷ devidos até hoje). **Pular não quebra** a sequência; só quebra
+  um dia que passou sem fazer. Na aba *Hábitos*, tocar num dos últimos 7 dias marca ou desmarca. Dividir a série
+  ("esta e as próximas") começa uma sequência nova.
+- **Lembrete** (tarefa com horário): na hora, 5/15/30/60 min antes ou no dia anterior; chega como notificação (tarefa
+  pessoal: você; de grupo: o responsável ou, sem ninguém, todos os membros). Checado a cada minuto; com a API parada,
+  recupera no máximo os últimos 10 minutos.
+- **Fixo do financeiro** (só tarefa pessoal): ligue a tarefa a um fixo seu (ex.: "Pagar luz"). Ao concluir, abre
+  *Registrar no financeiro?* com o valor do mês; valor diferente do cadastrado vira o **ajuste daquele mês**. Excluir o
+  fixo só desliga a tarefa.
+- **Listas e etiquetas** (⋮ → *Listas e etiquetas*): nome e cor; excluir não apaga tarefas, só as desliga.
+- **Em grupo** (aba *Tarefas* do grupo): mesmas abas e ações; listas/etiquetas do grupo são separadas das suas.
+  - **Permissões**: qualquer membro cria, edita, conclui, pula e comenta; **excluir** é de quem criou ou de um admin.
+  - **Responsável**: ninguém, uma pessoa fixa ou **rodízio** (ordem fixa; precisa de repetição). No rodízio cada
+    ocorrência é de uma pessoa, na ordem (pular também passa a vez); em "a partir da conclusão" a vez passa ao
+    concluir/pular. *Mudar responsável…* troca só aquela ocorrência. Filtro *Responsável* (todos, minhas, cada um).
+  - **Na sua tela de Tarefas** aparecem também as de grupo em que você é o responsável (com o nome do grupo, depois
+    das suas na ordem manual; sem filtro de lista/etiqueta).
+  - **Comentários** dentro da tarefa (apagar: quem escreveu ou admin).
+  - **Avisos**: você virou responsável; é a sua vez no rodízio; alguém concluiu a sua; comentário novo (para quem criou,
+    responsáveis e quem já comentou); e, todo dia às 8h, a ocorrência de ontem que ficou pendente (para o
+    responsável ou, sem responsável, quem criou). Nunca avisa quem fez a ação.
+  - **Quem sai do grupo** deixa de ser responsável, sai dos rodízios (rodízio de uma pessoa vira responsável fixo) e
+    leva os comentários; as tarefas que criou ficam no grupo.
+
+## Arquitetura
+
+```
+                ┌──────────────────────┐
+  navegador ───►│ lifepedia-web        │  React + TypeScript + Vite + Tailwind + shadcn/ui
+                │ (nginx no container) │
+                └──────────┬───────────┘
+                           │ /api/*  (mesmo host; proxy do Vite em dev / nginx no container)
+                ┌──────────▼───────────┐
+  app mobile ──►│ lifepedia-api        │  Spring Boot 4 · Java 21 · Spring Security (JWT HS256)
+   (futuro)     │                      │  JPA/Hibernate · Flyway
+                └──────────┬───────────┘
+                ┌──────────▼───────────┐
+                │ PostgreSQL 17        │
+                └──────────────────────┘
+```
+
+## Projetos
+
+Monorepo (um único repositório git nesta pasta) com três projetos:
+
+| Pasta | Stack | Descrição |
+|---|---|---|
+| [`lifepedia-api/`](lifepedia-api/README.md) | Java 21, Spring Boot 4, PostgreSQL | API REST de todos os módulos |
+| [`lifepedia-web/`](lifepedia-web/README.md) | React 19, TypeScript, Vite, Tailwind v4, shadcn/ui | Front web |
+| [`lifepedia-mobile/`](lifepedia-mobile/README.md) | a definir | App mobile (ainda não iniciado) |
+
+Os arquivos da raiz (`README.md`, `AGENTS.md`, `docker-compose.yml`, `.env.example`) são a "cola" entre eles.
+
+## Como rodar
+
+Pré-requisitos: Docker Desktop. Para desenvolver fora do container: JDK 21, Maven (ou `./mvnw`), Node 24.
+
+### Tudo em containers (jeito mais simples)
+
+```bash
+cp .env.example .env        # e preencha JWT_SECRET e DB_PASSWORD com valores aleatórios
+docker compose up -d --build
+```
+
+| Serviço | URL |
+|---|---|
+| Front | http://localhost:3080 (ou http://127.0.0.1:3080; outro endereço precisa entrar em `CORS_ORIGINS` no `.env`) |
+| API | http://localhost:8080 (health: `/actuator/health`) |
+| Postgres | `localhost:5440` · db e usuário `lifepedia`, senha em `.env` |
+
+Todas as portas escutam **só em `127.0.0.1`** (variável `BIND_ADDRESS`): outros dispositivos da rede não acessam.
+
+Os containers usam `restart: unless-stopped`: sobem de novo sozinhos junto com o Docker.
+Os dados ficam no volume `lifepedia-db` e as imagens (grupos e itens do planejamento) no volume
+`lifepedia-uploads` (sobrevivem a `docker compose down`; só somem com `down -v`).
+
+Comandos úteis:
+
+```bash
+docker compose ps                    # status
+docker compose logs -f api           # logs da API
+docker compose up -d --build api     # rebuild só da API depois de mudar código
+docker compose down                  # para tudo (mantém os dados)
+```
+
+### Desenvolvimento com hot reload (híbrido)
+
+Banco no container, API e front rodando local:
+
+```bash
+docker compose up -d db                                            # só o Postgres (porta 5440)
+cd lifepedia-api && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev   # API em :8080 (lê ../.env)
+cd lifepedia-web && npm install && npm run dev                     # front em :5173 (proxy /api -> :8080)
+```
+
+> Se o stack completo estiver no ar, pare a API do container antes (`docker compose stop api`) para liberar a porta 8080.
+
+### Dados de teste locais
+
+Ambiente de desenvolvimento usa o usuário `dev@lifepedia.local` / senha `lifepedia123`
+(crie pela tela de cadastro se o banco estiver vazio). **Nunca use essas credenciais fora do ambiente local.**
+
+## Segurança
+
+Os dados são sensíveis, então a segurança é parte do projeto, não um extra. Resumo do que está implementado:
+
+| Tema | Como está |
+|---|---|
+| Senhas | **BCrypt custo 12** (hash com salt; nunca texto puro). Hashes antigos são atualizados no login. Senha mín. 8 caracteres |
+| Sessão no navegador | JWT (HS256, 8h) em **cookie HttpOnly + Secure + SameSite=Strict**, `Path=/api`. O JavaScript não lê o token (protege contra roubo via XSS). O token só carrega o id do usuário |
+| CSRF | SameSite=Strict + cabeçalho `X-Requested-With` obrigatório em requisições que alteram dados |
+| Força bruta | Limite de login/cadastro por IP (20 / 10 min) e bloqueio de 15 min por e-mail após 5 senhas erradas. Confirmação de senha (excluir conta): mesmo bloqueio, por usuário |
+| Conta | Excluir pede a senha atual + "EXCLUIR"; apaga tudo do usuário (FKs em cascata, fotos dos itens no disco) e o cookie. Token de conta que não existe mais é recusado (**401**) em toda requisição |
+| Exportar/importar | Só os próprios dados, logado. Exportar: 20/h; importar: 10/h (prévia 60/h); arquivo até 25 MB (nginx), validado inteiro (versão, categorias, valores, datas) antes de gravar — tudo ou nada |
+| Enumeração de contas | Login responde igual e no mesmo tempo para e-mail inexistente e senha errada |
+| Isolamento | Todo dado tem dono; buscas sempre filtram pelo usuário do token (outro usuário recebe 404) |
+| Grupos | Tudo do grupo (itens, métricas, membros, imagem) só para membros; quem não é membro recebe **404**. Ações de admin → 403 para membro comum. Convite direto exige aceite |
+| Link de convite | Token aleatório de 256 bits, válido por 7 dias, um por grupo, revogável; entrar exige estar logado |
+| Uploads | Só JPEG/PNG até 1 MB (o front já envia recortado em 512 px); a API confere o tipo pelos bytes e as dimensões antes de decodificar e **regrava** um JPEG novo (sem metadados do arquivo). Servido só a membros/convidados |
+| Prévia de links | A API busca a página do link (proteção contra **SSRF**): só http(s) nas portas 80/443, só **IPs públicos** (checado na conexão, sem brecha de DNS rebinding), sem proxy/cookies, redirecionamentos revalidados, 12 s e 3 MB no máximo, 20 buscas por usuário a cada 10 min (inclui a busca de produto parecido no Buscapé). A foto é baixada, validada e **regravada** pela API (o navegador nunca carrega imagem de fora). Links só abrem em http(s), em outra aba, sem `Referer` |
+| Busca de usuários | Só para admins de grupo, mín. 2 caracteres, até 10 resultados, devolve apenas nome e @username (nunca e-mail) |
+| Rede | Portas só em `127.0.0.1`; banco com senha aleatória; API e nginx rodam **sem root**; `no-new-privileges` |
+| Navegador | CSP restritiva, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, sem versão do servidor |
+| Segredos | Só em `.env` (fora do git). A API **não sobe** sem `JWT_SECRET` |
+| Erros | Sem stack trace nem mensagens internas nas respostas |
+
+Pontos em aberto / recomendações:
+
+- **HTTPS**: hoje é só local. Antes de expor fora da máquina, coloque um proxy com TLS (Caddy/Traefik) na frente.
+- **Criptografia em disco**: o volume do Postgres não é criptografado — ative o **BitLocker** no Windows.
+- **Backup**: ainda não há rotina de backup dos volumes `lifepedia-db` e `lifepedia-uploads`.
+- **Busca de usuários**: qualquer admin de grupo encontra outros usuários pelo nome/@username (sem opção de ficar oculto).
+- **Logout** apaga o cookie, mas o JWT é stateless: um token copiado valeria até expirar (8h).
+- **Importação com IA**: a fatura vai para o serviço de IA escolhido pelo usuário; a tela orienta a ocultar dados do cartão.
+- **Prévia de links**: ao buscar um link, a loja vê um acesso vindo do servidor do LifePedia (não do navegador). O nome
+  do produto (tirado do link ou digitado) vai para a busca do Buscapé quando a loja não libera os dados.
+- **Preço de referência** é de um produto **parecido**, não necessariamente o mesmo (cor/versão podem mudar); a tela
+  sempre avisa. Depende do formato da página de busca do Buscapé — se mudar, a referência só deixa de aparecer.
+- **Arquivo exportado** (.json/.xlsx) tem todos os seus dados financeiros **sem criptografia**: guarde em lugar seguro.
+- **Conta excluída**: notificações já enviadas a outras pessoas guardam o nome da época (ex.: convite antigo).
+
+## Documentação para agentes
+
+- [`AGENTS.md`](AGENTS.md) — visão geral, convenções e checklist para qualquer agente/IA que trabalhe no projeto.
+- Cada projeto (`lifepedia-api/`, `lifepedia-web/`, `lifepedia-mobile/`) tem o seu `AGENTS.md` com detalhes da stack.
+- **Regra do projeto:** toda alteração atualiza, na mesma tarefa, os `README.md`/`AGENTS.md` afetados e o `.env.example`.
