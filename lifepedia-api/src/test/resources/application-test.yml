@@ -1,0 +1,12 @@
+# Perfil de testes (banco via Testcontainers).
+lifepedia:
+  storage:
+    dir: ${java.io.tmpdir}/lifepedia-test-uploads
+  jwt:
+    secret: test-only-secret-0123456789abcdef-0123456789
+  auth:
+    # Muitos cadastros do mesmo IP.
+    ip-limit: 10000
+  # Os testes chamam os agendamentos direto (TaskOverdueJob.notifyOverdue, TaskReminderJob.remind).
+  scheduling:
+    enabled: false

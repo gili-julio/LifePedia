@@ -1,0 +1,13 @@
+package com.lifepedia.api;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class LifepediaApiApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(LifepediaApiApplication.class, args);
+	}
+
+}

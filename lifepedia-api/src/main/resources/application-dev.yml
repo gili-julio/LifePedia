@@ -1,0 +1,4 @@
+# API fora do container, lendo o .env da raiz.
+spring:
+  config:
+    import: optional:file:../.env[.properties]

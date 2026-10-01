@@ -1,0 +1,68 @@
+# LifePedia: banco + API + front. Segredos em .env (ver .env.example).
+# Front :3080 · API :8080 · Banco :5440 — só em 127.0.0.1 (BIND_ADDRESS).
+name: lifepedia
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  db:
+    <<: *hardening
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: lifepedia
+      POSTGRES_USER: ${DB_USER:-lifepedia}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${DB_PORT:-5440}:5432"
+    volumes:
+      - lifepedia-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d lifepedia"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    <<: *hardening
+    build: ./lifepedia-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/lifepedia
+      DB_USER: ${DB_USER:-lifepedia}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no arquivo .env}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET no arquivo .env}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${WEB_PORT:-3080},http://127.0.0.1:${WEB_PORT:-3080},http://localhost:5173,http://127.0.0.1:5173}
+      STORAGE_DIR: /data/uploads
+      TIME_ZONE: ${TIME_ZONE:-America/Sao_Paulo}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8080}:8080"
+    volumes:
+      - lifepedia-uploads:/data/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 10
+
+  web:
+    <<: *hardening
+    build: ./lifepedia-web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${WEB_PORT:-3080}:8080"
+
+volumes:
+  lifepedia-db:
+    name: lifepedia-db
+  # Imagens de grupo enviadas pelos usuários.
+  lifepedia-uploads:
+    name: lifepedia-uploads

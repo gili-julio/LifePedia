@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: lifepedia-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5440/lifepedia}
+    username: ${DB_USER:lifepedia}
+    password: ${DB_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  servlet:
+    multipart:
+      # Imagem de grupo (o front envia já cortada e reduzida).
+      max-file-size: 1MB
+      max-request-size: 2MB
+
+server:
+  port: ${PORT:8080}
+  # IP real do cliente via X-Forwarded-For do nginx.
+  forward-headers-strategy: native
+  error:
+    include-stacktrace: never
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+lifepedia:
+  jwt:
+    # Obrigatório (mín. 32 caracteres), sem valor padrão.
+    secret: ${JWT_SECRET}
+    issuer: lifepedia-api
+    expiration: ${JWT_EXPIRATION:8h}
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+  time:
+    # Fuso de "hoje" nas tarefas (atrasadas, repetição).
+    zone: ${TIME_ZONE:America/Sao_Paulo}
+  storage:
+    # Imagens (grupos e itens do planejamento). No Docker: volume em /data/uploads.
+    dir: ${STORAGE_DIR:data/uploads}
+  auth:
+    cookie-name: lifepedia_session
+    cookie-secure: ${COOKIE_SECURE:true}
+    ip-limit: 20
+    ip-window: 10m
+    max-failed-logins: 5
+    lockout-window: 15m
