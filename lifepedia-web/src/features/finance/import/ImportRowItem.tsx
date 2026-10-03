@@ -1,6 +1,6 @@
 import { AlertTriangleIcon, ChevronRightIcon } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
-import { formatDate, parseAmount } from '@/lib/format'
+import { formatDate, formatMonth, parseAmount } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { FALLBACK_COLOR } from '../categories'
 import { ColorDot } from '../components/CategoryBadge'
@@ -9,6 +9,7 @@ import type { Category, RecurringEntry } from '../types'
 import { FixedOutcomeNote } from './FixedOutcomeNote'
 import { OriginalDescription } from './OriginalDescription'
 import type { ImportRow } from './parse'
+import { SOURCE_LABEL } from './prompt'
 
 type Props = {
   row: ImportRow
@@ -17,6 +18,12 @@ type Props = {
   fixed?: RecurringEntry
   onToggle: (include: boolean) => void
   onOpen: () => void
+}
+
+/** Mostra o mês em que a linha conta quando não é o da data (fatura). */
+export function CountsIn({ row, className }: { row: ImportRow; className?: string }) {
+  if (!row.month || !row.date || row.month === row.date.slice(0, 7)) return null
+  return <p className={cn('text-xs text-muted-foreground', className)}>Conta em {formatMonth(row.month, 'short')}</p>
 }
 
 /** Linha da prévia no mobile: toque abre a edição. */
@@ -38,14 +45,15 @@ export function ImportRowItem({ row, errors, category, fixed, onToggle, onOpen }
           <OriginalDescription original={row.originalDescription} description={row.description} />
           <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
             {fixed ? (
-              <>Fixo: {fixed.description} · {date}</>
+              <>Fixo: {fixed.description} · {date} · {SOURCE_LABEL[row.source]}</>
             ) : (
               <>
                 <ColorDot color={category?.color ?? FALLBACK_COLOR} />
-                {category?.name ?? 'Sem categoria'} · {date}
+                {category?.name ?? 'Sem categoria'} · {date} · {SOURCE_LABEL[row.source]}
               </>
             )}
           </p>
+          <CountsIn row={row} />
           {fixed && row.include && <FixedOutcomeNote row={row} fixed={fixed} />}
           {errors.length > 0 && <p className="text-xs text-destructive">Corrigir: {errors.join(', ')}</p>}
           {row.warnings.map((w) => (

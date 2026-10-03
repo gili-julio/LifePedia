@@ -4,13 +4,17 @@ import { Button } from '@/components/ui/button'
 import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { formatMonth } from '@/lib/format'
 import { CategorySelect } from '../components/CategorySelect'
 import { TypeToggle } from '../components/TypeToggle'
 import type { Category, RecurringEntry } from '../types'
 import { FixedOutcomeNote } from './FixedOutcomeNote'
 import { FixedSelect } from './FixedSelect'
-import { rowErrors, rowMonth, type ImportRow } from './parse'
+import { CountsIn } from './ImportRowItem'
+import { rowErrors, rowMonth, withSource, type ImportRow } from './parse'
+import { SOURCE_LABEL, type ImportSource } from './prompt'
 
 type Props = {
   open: boolean
@@ -54,6 +58,17 @@ export function ImportRowSheet({ open, onOpenChange, row, categoriesById, fixedE
                 })
               }
             />
+            <Field>
+              <FieldLabel htmlFor="imp-source">Origem</FieldLabel>
+              <Select value={draft.source} onValueChange={(v) => set(withSource(draft, v as ImportSource))}>
+                <SelectTrigger id="imp-source" className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(SOURCE_LABEL) as ImportSource[]).map((key) => (
+                    <SelectItem key={key} value={key}>{SOURCE_LABEL[key]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
             <Field data-invalid={errors.includes('fixo')}>
               <FieldLabel htmlFor="imp-fixed">Lançar como</FieldLabel>
               <FixedSelect id="imp-fixed" type={draft.type} month={rowMonth(draft)} value={draft.fixedEntryId}
@@ -93,7 +108,10 @@ export function ImportRowSheet({ open, onOpenChange, row, categoriesById, fixedE
                 <FieldLabel htmlFor="imp-date">Data</FieldLabel>
                 <DatePicker id="imp-date" value={draft.date} invalid={errors.includes('data')}
                   onChange={(date) => set({ date })} />
-                <FieldError errors={error('data', 'Informe a data.')} />
+                <CountsIn row={draft} />
+                <FieldError errors={error('data', draft.date && draft.month
+                  ? `Depois do mês da fatura (${formatMonth(draft.month, 'short')}).`
+                  : 'Informe a data.')} />
               </Field>
             </div>
             <Field>

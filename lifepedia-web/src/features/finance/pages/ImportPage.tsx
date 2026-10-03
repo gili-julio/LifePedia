@@ -11,14 +11,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api'
-import { currentYearMonth, formatCurrency, formatMonth, parseAmount, type YearMonth } from '@/lib/format'
+import { currentYearMonth, formatCurrency, parseAmount } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { fetchTransactions, useImport, useRecurringEntries, useTransactionDescriptions } from '../api'
 import { CategorySelect } from '../components/CategorySelect'
-import { MonthPicker } from '../components/MonthPicker'
 import { FixedOutcomeNote } from '../import/FixedOutcomeNote'
 import { FixedSelect } from '../import/FixedSelect'
 import {
@@ -30,19 +28,15 @@ import {
   parseAiOutput,
   rowErrors,
   rowMonth,
+  withSource,
   type ImportRow,
 } from '../import/parse'
-import { ImportRowItem } from '../import/ImportRowItem'
+import { CountsIn, ImportRowItem } from '../import/ImportRowItem'
 import { ImportRowSheet } from '../import/ImportRowSheet'
 import { OriginalDescription } from '../import/OriginalDescription'
 import { buildImportPrompt, IMPORT_FORMAT, SOURCE_LABEL, type ImportSource } from '../import/prompt'
 import type { EntryType, ImportRequest, RecurringEntry } from '../types'
 import { useCategoryLookup } from '../use-category-lookup'
-
-/** Na fatura, tudo conta no mês dela; no extrato, no mês da data. */
-function assignMonth(rows: ImportRow[], source: ImportSource, referenceMonth: YearMonth): ImportRow[] {
-  return rows.map((r) => ({ ...r, month: source === 'card' ? referenceMonth : '' }))
-}
 
 function Step({ n, title, description, children }: { n: number; title: string; description: string; children: React.ReactNode }) {
   return (
@@ -71,8 +65,6 @@ export function ImportPage() {
   const importMutation = useImport()
   const loading = loadingCategories || loadingFixed || loadingNames
 
-  const [referenceMonth, setReferenceMonth] = useState<YearMonth>(currentYearMonth())
-  const [source, setSource] = useState<ImportSource>('statement')
   const [copied, setCopied] = useState(false)
   const [raw, setRaw] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
@@ -80,15 +72,9 @@ export function ImportPage() {
   const [rows, setRows] = useState<ImportRow[] | null>(null)
   const [editor, setEditor] = useState<{ open: boolean; key?: string; seq: number }>({ open: false, seq: 0 })
 
-  function changeContext(nextSource: ImportSource, nextMonth: YearMonth) {
-    setSource(nextSource)
-    setReferenceMonth(nextMonth)
-    setRows((current) => current && assignMonth(current, nextSource, nextMonth))
-  }
-
   const prompt = useMemo(
-    () => buildImportPrompt(categories, fixedEntries, referenceMonth, source, knownNames),
-    [categories, fixedEntries, referenceMonth, source, knownNames],
+    () => buildImportPrompt(categories, fixedEntries, knownNames),
+    [categories, fixedEntries, knownNames],
   )
 
   async function copyPrompt() {
@@ -106,10 +92,7 @@ export function ImportPage() {
     setParseError(null)
     setAnalyzing(true)
     try {
-      const parsed = linkFixed(
-        assignMonth(parseAiOutput(raw, categories, fixedEntries, referenceMonth, knownNames), source, referenceMonth),
-        fixedEntries,
-      )
+      const parsed = linkFixed(parseAiOutput(raw, categories, fixedEntries, knownNames), fixedEntries)
       const existing = (await Promise.all(monthsOf(parsed).map((m) => fetchTransactions(queryClient, m)))).flat()
       setRows(markDuplicates(parsed, existing))
     } catch (error) {
@@ -135,7 +118,7 @@ export function ImportPage() {
     try {
       const saved = await importMutation.mutateAsync(plan.request)
       toast.success(`${saved.transactions} lançamento(s) importado(s) · ${saved.fixedAdjustments} fixo(s) atualizado(s).`)
-      const month = monthsOf(selected).sort().at(-1) ?? referenceMonth
+      const month = monthsOf(selected).sort().at(-1) ?? currentYearMonth()
       navigate(month === currentYearMonth() ? '/financeiro/lancamentos' : `/financeiro/lancamentos?mes=${month}`)
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : 'Não foi possível importar.')
@@ -146,21 +129,10 @@ export function ImportPage() {
     <div className="space-y-6">
       <PageHeader
         title="Importar com IA"
-        description="Use um agente de IA para separar o extrato ou a fatura do mês nas suas categorias e importe tudo de uma vez."
+        description="Use um agente de IA para separar extratos e faturas nas suas categorias e importe tudo de uma vez — um mês ou um período inteiro."
       />
 
       <Step n={1} title="Copie o prompt" description="Ele já traz suas categorias, seus fixos, os nomes que você usa e o modelo de resposta que o LifePedia entende.">
-        <Tabs value={source} onValueChange={(v) => changeContext(v as ImportSource, referenceMonth)}>
-          <TabsList>
-            {(Object.keys(SOURCE_LABEL) as ImportSource[]).map((key) => (
-              <TabsTrigger key={key} value={key}>{SOURCE_LABEL[key]}</TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm text-muted-foreground">Mês</span>
-          <MonthPicker value={referenceMonth} onChange={(m) => changeContext(source, m)} />
-        </div>
         <Textarea readOnly value={loading ? 'Carregando…' : prompt}
           className="h-56 font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
         <div className="flex flex-wrap items-center gap-3">
@@ -168,7 +140,8 @@ export function ImportPage() {
             {copied ? <CheckIcon /> : <ClipboardCopyIcon />} {copied ? 'Copiado' : 'Copiar prompt'}
           </Button>
           <p className="text-sm text-muted-foreground">
-            Cole no seu agente (ChatGPT, Claude, Gemini…) e anexe o PDF, print ou texto do documento.
+            Cole no seu agente (ChatGPT, Claude, Gemini…) e anexe extratos e/ou faturas (PDF, print ou texto), de um ou
+            mais meses. O agente separa a origem de cada item e tira as datas do documento.
           </p>
         </div>
         <p className="flex gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
@@ -192,7 +165,7 @@ export function ImportPage() {
       </Step>
 
       {rows && (
-        <Step n={3} title="Revise e importe" description={`${source === 'card' ? `Tudo conta em ${formatMonth(referenceMonth).toLowerCase()} (mês da fatura), mesmo compras de outros meses. ` : ''}A descrição pode ser ajustada; a do documento fica guardada como veio. Itens de fixos não viram lançamento: atualizam o valor real do fixo no mês. Nada é salvo antes de confirmar.`}>
+        <Step n={3} title="Revise e importe" description={`Itens de fatura contam no mês da fatura em que vieram (sem ele, no mês da compra); itens de extrato, no mês da data. A descrição pode ser ajustada; a do documento fica guardada como veio. Itens de fixos não viram lançamento: atualizam o valor real do fixo no mês. Nada é salvo antes de confirmar.`}>
           <div className="md:hidden">
             <label className="flex items-center gap-3 border-b pb-3 text-sm">
               <Checkbox checked={selected.length === rows.length}
@@ -227,7 +200,7 @@ export function ImportPage() {
                   </TableHead>
                   <TableHead className="w-36">Data</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead className="w-28">Tipo</TableHead>
+                  <TableHead className="w-32">Tipo e origem</TableHead>
                   <TableHead className="w-52">Lançar como</TableHead>
                   <TableHead className="w-44">Categoria</TableHead>
                   <TableHead className="w-28 text-right">Valor (R$)</TableHead>
@@ -246,6 +219,7 @@ export function ImportPage() {
                       <TableCell className="align-top">
                         <DatePicker size="sm" value={row.date} invalid={errors.includes('data')}
                           onChange={(date) => updateRow(row.key, { date })} />
+                        <CountsIn row={row} className="mt-1" />
                       </TableCell>
                       <TableCell className="align-top">
                         <Input className="h-7" value={row.description} maxLength={120} aria-invalid={errors.includes('descrição')}
@@ -269,10 +243,18 @@ export function ImportPage() {
                               fixedEntryId: fixed?.type === type ? row.fixedEntryId : '',
                             })
                           }}>
-                          <SelectTrigger size="sm" className="w-full"><SelectValue /></SelectTrigger>
+                          <SelectTrigger size="sm" className="w-full" aria-label="Tipo"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="EXPENSE">Despesa</SelectItem>
                             <SelectItem value="INCOME">Ganho</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select value={row.source} onValueChange={(v) => updateRow(row.key, withSource(row, v as ImportSource))}>
+                          <SelectTrigger size="sm" className="mt-1 w-full" aria-label="Origem"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {(Object.keys(SOURCE_LABEL) as ImportSource[]).map((key) => (
+                              <SelectItem key={key} value={key}>{SOURCE_LABEL[key]}</SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </TableCell>

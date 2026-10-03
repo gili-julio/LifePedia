@@ -1,7 +1,8 @@
-import { amountToInput, parseAmount, type YearMonth } from '@/lib/format'
+import { amountToInput, currentYearMonth, parseAmount, type YearMonth } from '@/lib/format'
 import { normalizeName } from '../categories'
 import { isActiveIn, valueIn } from '../fixed'
 import type { Category, EntryType, RecurringEntry, Transaction } from '../types'
+import { SOURCE_LABEL, type ImportSource } from './prompt'
 
 /** Limite do endpoint batch da API. */
 export const MAX_IMPORT_ITEMS = 500
@@ -21,8 +22,11 @@ export type ImportRow = {
   fixedEntryId: string
   amount: string
   notes: string
+  source: ImportSource
   /** Mês em que conta ('' = o da data) */
   month: YearMonth
+  /** Mês da fatura informado pelo agente ('' = não informado) */
+  invoiceMonth: YearMonth
   /** Não impedem importar */
   warnings: string[]
 }
@@ -58,6 +62,17 @@ function parseDate(raw: unknown, referenceMonth: YearMonth): string | null {
   return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 }
 
+/** `AAAA-MM` ou `MM/AAAA`. */
+function parseMonth(raw: unknown): YearMonth | null {
+  if (typeof raw !== 'string') return null
+  const value = raw.trim()
+  const iso = value.match(/^(\d{4})-(\d{1,2})$/)
+  const br = value.match(/^(\d{1,2})\/(\d{4})$/)
+  const year = iso ? +iso[1] : br ? +br[2] : 0
+  const month = iso ? +iso[2] : br ? +br[1] : 0
+  return month >= 1 && month <= 12 ? `${year}-${String(month).padStart(2, '0')}` : null
+}
+
 function isValidDate(year: number, month: number, day: number) {
   const date = new Date(year, month - 1, day)
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
@@ -84,15 +99,23 @@ export function nameKey(name: string) {
   return normalizeName(name).split(/[^a-z0-9]+/).filter(Boolean).sort().join(' ')
 }
 
+function parseSource(raw: unknown): ImportSource | null {
+  const value = normalizeName(String(raw ?? ''))
+  if (['statement', 'extrato', 'conta', 'bank', 'banco'].includes(value)) return 'statement'
+  if (['card', 'fatura', 'cartao', 'credit card', 'cartao de credito'].includes(value)) return 'card'
+  return null
+}
+
 /**
- * Resposta do agente → linhas da prévia. Aceita formatos BR e o formato @1 (`description`); valor negativo
- * inverte o tipo. Nomes com as mesmas palavras viram a grafia de `knownNames` (ou a primeira da resposta).
+ * Resposta do agente → linhas da prévia. Aceita formatos BR e os formatos @1 (`description`) e @2 (sem
+ * `source`/`invoiceMonth`). Cada item tem origem (extrato ou fatura); item de fatura conta no mês da fatura.
+ * Valor negativo vira positivo e mantém o tipo informado (sem tipo, o sinal decide conforme a origem). Nomes com as
+ * mesmas palavras viram a grafia de `knownNames` (ou a primeira da resposta).
  */
 export function parseAiOutput(
   text: string,
   categories: Category[],
   fixedEntries: RecurringEntry[],
-  referenceMonth: YearMonth,
   knownNames: string[] = [],
 ): ImportRow[] {
   const data = extractJson(text)
@@ -114,24 +137,43 @@ export function parseAiOutput(
     const item = (raw ?? {}) as Record<string, unknown>
     const warnings: string[] = []
 
-    let type = parseType(item.type) ?? 'EXPENSE'
-    if (item.type !== undefined && !parseType(item.type)) warnings.push(`Tipo "${String(item.type)}" desconhecido; considerado despesa.`)
+    let invoiceMonth = parseMonth(item.invoiceMonth) ?? ''
+    if (item.invoiceMonth !== undefined && !invoiceMonth) warnings.push(`Mês da fatura "${String(item.invoiceMonth)}" não reconhecido.`)
 
-    let amount = parseNumber(item.amount)
-    if (amount < 0) {
-      amount = -amount
-      type = type === 'EXPENSE' ? 'INCOME' : 'EXPENSE'
-      warnings.push('Valor negativo: tipo invertido.')
+    // Sem origem: com mês da fatura é fatura; senão, extrato.
+    const source = parseSource(item.source) ?? (invoiceMonth ? 'card' : 'statement')
+    if (!parseSource(item.source)) {
+      const label = item.source === undefined ? 'Origem não informada' : `Origem "${String(item.source)}" desconhecida`
+      warnings.push(`${label}; considerada ${SOURCE_LABEL[source].toLowerCase()}.`)
     }
 
-    let date = parseDate(item.date, referenceMonth)
+    const informed = parseType(item.type)
+    let amount = parseNumber(item.amount)
+    const negative = amount < 0
+    if (negative) amount = -amount
+    // Sem tipo, o sinal decide: no extrato negativo é saída; na fatura, negativo é crédito.
+    const type: EntryType = informed ?? ((source === 'statement') === negative ? 'EXPENSE' : 'INCOME')
+    if (!informed) {
+      const label = item.type === undefined ? 'Sem tipo' : `Tipo "${String(item.type)}" desconhecido`
+      warnings.push(`${label}; considerado ${type === 'EXPENSE' ? 'despesa' : 'ganho'} pelo sinal do valor.`)
+    } else if (negative) {
+      warnings.push('Valor negativo; mantive o tipo informado.')
+    }
+
+    // Ano faltante sai do mês da fatura; nenhuma data passa do mês atual.
+    const limit = currentYearMonth()
+    let date = parseDate(item.date, invoiceMonth || limit)
     if (!date) warnings.push(`Data "${String(item.date ?? '')}" não reconhecida.`)
-    else if (date.slice(0, 7) > referenceMonth) {
+    else if (date.slice(0, 7) > limit) {
       const previousYear = `${+date.slice(0, 4) - 1}${date.slice(4)}`
-      if (previousYear.slice(0, 7) <= referenceMonth && isValidDate(+previousYear.slice(0, 4), +date.slice(5, 7), +date.slice(8))) {
+      if (previousYear.slice(0, 7) <= limit && isValidDate(+previousYear.slice(0, 4), +date.slice(5, 7), +date.slice(8))) {
         date = previousYear
-        warnings.push(`Data depois do mês; ano ajustado para ${date.slice(0, 4)}.`)
+        warnings.push(`Data depois do mês atual; ano ajustado para ${date.slice(0, 4)}.`)
       }
+    }
+    if (date && invoiceMonth && invoiceMonth < date.slice(0, 7)) {
+      warnings.push(`Mês da fatura (${invoiceMonth}) antes da compra; ignorado.`)
+      invoiceMonth = ''
     }
 
     const categoryName = String(item.category ?? '').trim()
@@ -171,10 +213,18 @@ export function parseAiOutput(
       categoryId: category?.id ?? '',
       amount: Number.isFinite(amount) && amount > 0 ? amountToInput(amount) : '',
       notes: typeof item.notes === 'string' ? item.notes.trim().slice(0, 500) : '',
-      month: '',
+      source,
+      month: source === 'card' ? invoiceMonth : '',
+      invoiceMonth,
       warnings,
     }
   })
+}
+
+/** Troca a origem da linha e recalcula o mês em que ela conta (fatura: o da fatura; extrato: o da data). */
+export function withSource(row: ImportRow, source: ImportSource): Pick<ImportRow, 'source' | 'month' | 'warnings'> {
+  // Origem escolhida à mão: o aviso de origem deduzida não vale mais.
+  return { source, month: source === 'card' ? row.invoiceMonth : '', warnings: row.warnings.filter((w) => !w.startsWith('Origem')) }
 }
 
 /** Erros que impedem importar a linha. */

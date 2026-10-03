@@ -82,9 +82,10 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   celular (ver `GroupPage`), para a página não ganhar rolagem lateral.
 - **Ações do cabeçalho**: muitas ações? Marque as menos usadas como `secondary` (vão para o ⋮ no desktop).
 - **Fixos**: vigência e valor do mês sempre por `features/finance/fixed.ts` (`isActiveIn`, `valueIn`).
-- **Importação por IA**: o formato `lifepedia/transactions@2` é um contrato com prompts que o usuário já copiou.
-  Mudou `import/prompt.ts`? Mantenha `import/parse.ts` compatível (ou crie `@3` aceitando todos; `@1` só tem
-  `description`). `descriptionOficial` → `originalDescription`: só leitura na revisão (`OriginalDescription`) e no
+- **Importação por IA**: o formato `lifepedia/transactions@3` é um contrato com prompts que o usuário já copiou.
+  Mudou `import/prompt.ts`? Mantenha `import/parse.ts` compatível (ou crie `@4` aceitando todos; `@1` só tem
+  `description`, `@2` não tem `source`/`invoiceMonth`). Prompt único para extrato e fatura: cada linha tem `source`;
+  item de fatura conta no `invoiceMonth`. Trocar a origem na prévia sempre por `withSource` (recalcula o `month`). `descriptionOficial` → `originalDescription`: só leitura na revisão (`OriginalDescription`) e no
   lançamento; só `descriptionNormal` (a `description`) é editável.
 - **Formulários**: React Hook Form + Zod; campos do form como string e conversão no submit
   (`parseAmount` aceita `1.234,56`). Use `Field`/`FieldLabel`/`FieldError` do shadcn.

@@ -35,7 +35,7 @@ faz o proxy de `/api` para o serviço `api` e envia os cabeçalhos de segurança
 | `/financeiro` | Visão geral do mês: totais, % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, categorias (expandem os itens agrupados pelo nome) |
 | `/financeiro/fixos` | Ganhos e despesas fixas (mensais), paginados |
 | `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; ação **Tornar fixo** em cada item |
-| `/financeiro/importar` | Importar extrato ou fatura com IA: copia o prompt (categorias + fixos + nomes já usados), cola a resposta do agente, revisa numa prévia editável e importa |
+| `/financeiro/importar` | Importar extratos e faturas com IA (juntos, um ou vários meses): copia o prompt (categorias + fixos + nomes já usados), cola a resposta do agente, revisa numa prévia editável e importa |
 | `/financeiro/categorias` | Categorias de despesa e ganho em cartões (lista completa): criar, editar (nome/cor), excluir movendo os lançamentos |
 
 O mês selecionado fica na URL (`?mes=2026-09`); a aba do grupo também (`?aba=lancamentos`).
@@ -66,16 +66,17 @@ da base da tela para editar só aquele lançamento; "Salvar" aplica, "Cancelar" 
 
 ## Importar com IA — formato
 
-O prompt muda conforme o documento (**Extrato bancário** ou **Fatura do cartão**) e leva as categorias, os fixos
-vigentes no mês e os nomes mais usados nos últimos 12 meses (`GET /transactions/descriptions`). O agente responde com
-um JSON assim:
+Um prompt só serve para extratos bancários e faturas de cartão, juntos ou separados, de um ou vários meses: o agente
+marca a origem de cada item (`source`) e tira as datas (e, na fatura, o mês de vencimento) do documento. Leva as
+categorias, os fixos ativos ou encerrados há até 12 meses (com a vigência) e os nomes mais usados nos últimos 12 meses
+(`GET /transactions/descriptions`). O agente responde com um JSON assim:
 
 ```json
 {
-  "format": "lifepedia/transactions@2",
+  "format": "lifepedia/transactions@3",
   "items": [
-    { "date": "2026-09-05", "descriptionOficial": "PAG*SUPERM NORDESTAO NATAL", "descriptionNormal": "Supermercado Nordestão", "category": "Alimentação", "type": "EXPENSE", "amount": 245.9 },
-    { "date": "2026-09-10", "descriptionOficial": "PIX ENVIADO JOAO S", "descriptionNormal": "João S.", "category": "Moradia", "type": "EXPENSE", "amount": 1800, "fixed": "Aluguel" }
+    { "source": "card", "date": "2026-09-05", "descriptionOficial": "PAG*SUPERM NORDESTAO NATAL", "descriptionNormal": "Supermercado Nordestão", "category": "Alimentação", "type": "EXPENSE", "amount": 245.9, "invoiceMonth": "2026-10" },
+    { "source": "statement", "date": "2026-09-10", "descriptionOficial": "PIX ENVIADO JOAO S", "descriptionNormal": "João S.", "category": "Moradia", "type": "EXPENSE", "amount": 1800, "fixed": "Aluguel" }
   ]
 }
 ```
@@ -83,9 +84,13 @@ um JSON assim:
 `descriptionOficial` é o texto do documento: aparece só para leitura na revisão e fica guardado no lançamento
 (`originalDescription`, "No documento" na edição). `descriptionNormal` é o nome padronizado e editável. O parser ainda
 unifica nomes com as mesmas palavras em qualquer ordem, usando a grafia já existente (ou a primeira da resposta).
-O formato `@1` (só `description`) continua aceito.
+Os formatos `@1` (só `description`) e `@2` (sem `source`/`invoiceMonth`) continuam aceitos.
 
-Na fatura do cartão, tudo conta no mês da fatura (`month`), mesmo compras de meses anteriores; data depois do mês tem o ano ajustado para o anterior.
+Item de **extrato** conta no mês da data. Item de **fatura** conta no mês da fatura (`month` = `invoiceMonth`, mês de
+**vencimento**, `AAAA-MM` ou `MM/AAAA`), mesmo compras de meses anteriores; sem ele ou antes da compra, no mês da
+compra. Sem `source` (prompt antigo ou esquecido): com `invoiceMonth` é fatura, senão extrato, com aviso. A prévia mostra
+a origem de cada linha (dá para trocar: recalcula o mês) e "Conta em …" quando o mês não é o da data. Data depois do
+mês atual tem o ano ajustado para o anterior.
 
 Na prévia, cada item tem **Lançar como**: *Ocasional (novo)* ou *Fixo: X*. Item de fixo não vira lançamento: com o
 mesmo valor já está contado; com valor diferente, vira o valor real do fixo no mês. Além do `fixed` do agente, a tela
@@ -93,7 +98,10 @@ liga itens a fixos por conta própria (valor até 15% diferente + valor exato, m
 próximo) e avisa "confira". Dá para trocar o vínculo em cada linha.
 
 O parser é tolerante: aceita texto em volta, bloco ```json, lista pura, datas `dd/mm[/aaaa]`, valores `"1.234,56"`,
-tipo em português e valores negativos (tipo invertido). Categoria desconhecida vira "Outros" com aviso. Lançamentos
+tipo em português e valores negativos (viram positivos e mantêm o tipo informado; sem tipo, o sinal decide pela origem do item:
+no extrato negativo = despesa e positivo = ganho, na fatura negativo = ganho/crédito e positivo = despesa; sempre com
+aviso).
+Categoria desconhecida vira "Outros" com aviso. Lançamentos
 com mesma data e valor de um já salvo aparecem como possível duplicado (desmarcados se a descrição padronizada ou a do
 documento também bater).
 
@@ -138,7 +146,7 @@ src/
 │       ├── types.ts, api.ts          tipos e hooks React Query
 │       ├── categories.ts             ordenação/normalização de nomes
 │       ├── use-category-lookup.ts    categorias do usuário por id/tipo
-│       ├── import/prompt.ts          gera o prompt para o agente de IA (formato lifepedia/transactions@2)
+│       ├── import/prompt.ts          gera o prompt para o agente de IA (formato lifepedia/transactions@3)
 │       ├── import/parse.ts           lê a resposta do agente, casa categorias, detecta duplicados
 │       ├── fixed.ts                  vigência e valor do fixo no mês (valueIn)
 │       ├── components/ReplacedOccasionals.tsx  "tornar fixo": ocasionais de mesmo nome a remover

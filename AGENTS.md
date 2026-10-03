@@ -134,11 +134,14 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   **Fixo** (`recurringEntryId`, só pessoal e do próprio usuário): o front abre o diálogo e grava o ajuste do mês pela
   rota do financeiro; a API de tarefas não mexe em valores.
 - **Importação por IA**: `POST /api/finance/import` grava ocasionais + ajustes de fixos (tudo ou nada). O modelo de
-  resposta é `lifepedia/transactions@2`: `descriptionOficial` (como no documento, só leitura, gravada em
+  resposta é `lifepedia/transactions@3`: `descriptionOficial` (como no documento, só leitura, gravada em
   `original_description` e nunca alterada depois) e `descriptionNormal` (nome padronizado, editável, vira
-  `description`); campo opcional `fixed` = nome do fixo (prompt em
-  `lifepedia-web/src/features/finance/import/prompt.ts`, parser em `import/parse.ts`). Mudou o formato? Crie `@3`
-  e mantenha o parser aceitando os anteriores (`@1` usa só `description`; usuários podem ter prompts antigos salvos).
+  `description`); campo `source` (`statement` | `card`, origem do item) e
+  opcionais `fixed` = nome do fixo e `invoiceMonth` = mês de vencimento da fatura (item `card`; vira o `month` do
+  ocasional) (prompt único para extrato e fatura em
+  `lifepedia-web/src/features/finance/import/prompt.ts`, parser em `import/parse.ts`). Mudou o formato? Crie `@4`
+  e mantenha o parser aceitando os anteriores (`@1` usa só `description`, `@2` não tem `source`/`invoiceMonth`; usuários podem
+  ter prompts antigos salvos).
 
 ## Checklist: novo módulo
 

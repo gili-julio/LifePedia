@@ -38,10 +38,13 @@ compartilham usuário, autenticação, design e padrões.
   (cada categoria abre os itens do mês agrupados pelo nome, ex.: "Lanche IMD 5×").
 - **Listagens** (lançamentos e fixos): paginadas e ordenadas pela API (10/25/50/100 por página, clique no
   cabeçalho para ordenar). Os totais do topo sempre consideram todos os itens do mês.
-- **Importar com IA**: a tela *Importar* gera um **prompt pronto** para **extrato bancário** ou **fatura do cartão**,
-  com as categorias, os fixos e os nomes que você já usa nos lançamentos. Você cola o prompt num agente de IA (ChatGPT,
-  Claude, Gemini...) junto com o documento; o agente devolve um JSON no modelo `lifepedia/transactions@2`; você cola a
+- **Importar com IA**: a tela *Importar* gera um **prompt pronto** que serve para **extratos bancários** e **faturas do
+  cartão** (juntos ou separados, de um ou vários meses), com as categorias, os fixos e os nomes que você já usa nos lançamentos. Você cola o prompt num agente de IA (ChatGPT,
+  Claude, Gemini...) junto com o documento; o agente devolve um JSON no modelo `lifepedia/transactions@3`; você cola a
   resposta, revisa numa prévia editável e importa tudo de uma vez. O LifePedia não envia o documento a lugar nenhum.
+  - O agente marca a **origem** de cada item (extrato ou fatura) e tira as datas do documento: item de extrato conta
+    no mês da data; compra no cartão conta no mês de vencimento da sua fatura. Na prévia dá para conferir e trocar a
+    origem de cada linha.
   - Cada item traz a **descrição do documento** (guardada como veio, não editável) e um **nome padronizado**
     (editável): o mesmo lugar ganha sempre o mesmo nome, e nomes com as mesmas palavras em outra ordem
     ("Natal IMD" / "IMD Natal") são unificados — assim o agrupamento por nome da visão geral fica certo.
