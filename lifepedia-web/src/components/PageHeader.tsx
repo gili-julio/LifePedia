@@ -58,7 +58,7 @@ export function PageHeader({ title, description, toolbar, actions = [] }: Props)
         )}
 
         <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 sm:flex">
-          {toolbar && <div className="hidden lg:block">{toolbar}</div>}
+          {toolbar && <div className="hidden xl:block">{toolbar}</div>}
           {buttons.map((action) =>
             action.to ? (
               <Button key={action.label} variant={action.primary ? 'default' : 'outline'} asChild>
@@ -87,7 +87,7 @@ export function PageHeader({ title, description, toolbar, actions = [] }: Props)
         </div>
       </div>
 
-      {toolbar && <div className="lg:hidden">{toolbar}</div>}
+      {toolbar && <div className="xl:hidden">{toolbar}</div>}
 
       {actions.length > 1 && (
         <ActionSheet

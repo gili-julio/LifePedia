@@ -7,7 +7,7 @@ export function Logo({ className }: { className?: string }) {
       <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
         <BookOpenIcon className="size-4" />
       </span>
-      LifePedia
+      <span>LifePedia</span>
     </span>
   )
 }

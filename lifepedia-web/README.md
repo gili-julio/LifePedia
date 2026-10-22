@@ -56,12 +56,15 @@ No cadastro do item, colar o link busca nome, preço e foto pela API; dá para t
 que bloqueia: aviso "não deu para ler X" + preço/foto de produto parecido no Buscapé (caixa com link, removível); sem
 link, "Buscar preço e foto pelo nome". O item mostra "Preço/foto de referência: Buscapé" ao lado do link.
 
-**Navegação responsiva**: a partir de 1024px (`lg`) os links ficam na barra do topo; abaixo disso vira um menu
-hambúrguer que desce/sobe com animação e fecha ao escolher uma aba, clicar fora, apertar `Esc` ou trocar de rota.
+**Navegação**: sidebar (shadcn `Sidebar`) com a logo no topo, seções (Finanças, Organização, Social) com itens que
+expandem (Financeiro → telas do módulo; Tarefas → abas; Grupos → seus grupos + todos) e o usuário no rodapé
+(notificações, perfil, tema, sair). A partir de 1024px fica fixa e recolhe para só ícones (botão no topo ou
+`Ctrl+B`; subitens abrem num menu ao lado; a escolha fica no cookie `sidebar_state`). Abaixo disso vira gaveta
+lateral aberta pelo ☰ do topo, que fecha ao navegar. O topo mostra o caminho (ex.: Financeiro › Lançamentos).
 
 **Ações no mobile** (< 640px): o cabeçalho de cada página mostra só o atalho da ação principal (`+`) e um `⋮` que
 abre um *action sheet* (sobe da base da tela, fecha arrastando) com todas as ações. O filtro de mês fica visível,
-em linha própria abaixo de 1024px (no desktop largo, ao lado das ações). Abaixo de 768px as tabelas de Fixos e Lançamentos viram listas, e cada item tem um `⋮` com
+em linha própria abaixo de 1280px (no desktop largo, ao lado das ações). Abaixo de 768px as tabelas de Fixos e Lançamentos viram listas, e cada item tem um `⋮` com
 Editar/Excluir (o mesmo vale para os cards de Categorias). No celular os formulários abrem sem subir o teclado
 (só a nova tarefa já foca o título), e abas que não cabem rolam na própria faixa mantendo a aba ativa à vista.
 
@@ -118,10 +121,12 @@ src/
 ├── components/
 │   ├── ui/                   componentes shadcn (gerados pelo CLI — evite editar à mão)
 │   ├── layout/
-│   │   ├── AppLayout.tsx     cabeçalho, nav do desktop (≥ lg), menu do usuário/tema
-│   │   ├── MobileNav.tsx     menu hambúrguer animado (< lg)
-│   │   └── nav-items.ts      seções e links da navegação (fonte única para desktop e mobile)
-│   ├── PageHeader.tsx        título + ações (botões no desktop, `secondary` no ⋮; `+` e ⋮ no mobile) + toolbar (mês; linha própria abaixo de lg)
+│   │   ├── AppLayout.tsx     sidebar + topo fino (☰/recolher, caminho da página), notificações
+│   │   ├── AppSidebar.tsx    sidebar: logo, seções com itens que expandem, usuário no rodapé
+│   │   ├── UserMenu.tsx      usuário no rodapé: notificações, perfil, tema, sair
+│   │   ├── use-dynamic-links.ts subitens vindos da API (grupos)
+│   │   └── nav-items.ts      seções, itens e subitens da navegação + regra de item ativo
+│   ├── PageHeader.tsx        título + ações (botões no desktop, `secondary` no ⋮; `+` e ⋮ no mobile) + toolbar (mês; linha própria abaixo de xl)
 │   ├── image/                ImagePicker (escolher → recortar), ImageCropDialog (zoom/girar, recorte redondo ou quadrado), crop-image
 │   ├── ActionSheet.tsx       folha de opções mobile (vaul/drawer)
 │   ├── DialogLayout.tsx      dialog com altura máxima: cabeçalho/rodapé fixos, miolo rola
@@ -163,6 +168,7 @@ src/
 │       ├── components/               dialogs, seletores, gráficos, EntryListItem (linha mobile)
 │       ├── group/                    financeiro dentro dos grupos: visão geral, abas de itens, BringItemsDialog, GroupShareSection
 │       └── pages/                    Dashboard, Fixos, Lançamentos, Importar, Categorias
-├── lib/                      api (fetch com cookie + X-Requested-With), format (moeda/mês/data), colors (paleta), utils (cn)
+├── hooks/use-mobile.ts       gerado pelo shadcn (sidebar); celular = abaixo de 1024px
+├── lib/                      api (fetch com cookie + X-Requested-With), format (moeda/mês/data), colors (paleta), utils (cn), skipAutoFocusOnTouch
 └── index.css                 tema shadcn (maia) + Manrope + cores de significado (--income/--expense/--data)
 ```

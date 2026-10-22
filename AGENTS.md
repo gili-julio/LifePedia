@@ -151,7 +151,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 2. **Teste** de integração (Testcontainers) cobrindo o fluxo feliz, validação e isolamento entre usuários.
 3. **Web**: `src/features/<modulo>/` com `types.ts`, `api.ts` (hooks React Query com chave iniciando pelo nome do
    módulo), `components/`, `pages/`; rota lazy em `src/app/router.tsx`; seção/links em `src/components/layout/nav-items.ts`
-   (vale para a barra do desktop e o menu mobile).
+   (vale para a sidebar no desktop e na gaveta do celular).
 4. Dados iniciais para novos usuários: escute `UserRegisteredEvent` (como `CategoryService.onUserRegistered`).
    Dados do módulo dentro de grupos: tabela com `group_id` + `user_id`, acesso por `GroupAccess` e limpeza em
    `GroupMemberRemovedEvent` (quem sai leva seus itens).

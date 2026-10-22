@@ -52,12 +52,12 @@ export function FinanceDashboardPage() {
       />
 
       {!data ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard label="Ganhos" tone="income" icon={ArrowUpRightIcon}
               hint={`Fixos ${formatCurrency(data.fixed.income)} · Ocasionais ${formatCurrency(data.occasional.income)}`}>
               <Money value={data.total.income} type="INCOME" />

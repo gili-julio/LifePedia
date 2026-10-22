@@ -1,147 +1,79 @@
-import { BellIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon, UserRoundIcon } from 'lucide-react'
-import { useTheme } from 'next-themes'
-import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router'
+import { ChevronRightIcon, MenuIcon, PanelLeftIcon } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, Outlet, useLocation } from 'react-router'
 import { Logo } from '@/components/Logo'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { useAuth } from '@/features/auth/auth-context'
+import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar'
 import { ProfileGate } from '@/features/auth/ProfileGate'
 import { useUnreadNotifications } from '@/features/notifications/api'
 import { NotificationsSheet } from '@/features/notifications/NotificationsSheet'
 import { useReminderToasts } from '@/features/notifications/use-reminder-toasts'
-import { cn } from '@/lib/utils'
-import { MobileNav } from './MobileNav'
-import { NAV_SECTIONS } from './nav-items'
+import { AppSidebar } from './AppSidebar'
+import { findActiveNav } from './nav-items'
+import { useDynamicLinks } from './use-dynamic-links'
 
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
-}
-
-/** Contador de não lidas (9+ acima de 9). */
-function CountBadge({ count, className }: { count: number; className?: string }) {
-  if (!count) return null
-  return (
-    <span className={cn('flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white tabular-nums', className)}>
-      {count > 9 ? '9+' : count}
-    </span>
-  )
-}
-
-function UserMenu() {
-  const { user, logout } = useAuth()
-  const { theme, setTheme } = useTheme()
-  const navigate = useNavigate()
-  const [notificationsOpen, setNotificationsOpen] = useState(false)
-  const { data: unread = 0, isSuccess } = useUnreadNotifications()
-  useReminderToasts(isSuccess ? unread : undefined)
-  if (!user) return null
-
-  return (
-    <>
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative rounded-full"
-          aria-label={unread ? `Menu do usuário (${unread} notificações não lidas)` : 'Menu do usuário'}>
-          <Avatar className="size-8">
-            <AvatarFallback>{initials(user.name)}</AvatarFallback>
-          </Avatar>
-          <CountBadge count={unread} className="absolute -top-0.5 -right-0.5 ring-2 ring-background" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="font-normal">
-          <p className="font-medium">{user.name}</p>
-          <p className="truncate text-xs text-muted-foreground">{user.username ? `@${user.username}` : user.email}</p>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => setNotificationsOpen(true)}>
-          <BellIcon /> Notificações
-          <CountBadge count={unread} className="ml-auto" />
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/perfil')}>
-          <UserRoundIcon /> Meu perfil
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs text-muted-foreground">Tema</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
-          <DropdownMenuRadioItem value="light"><SunIcon /> Claro</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark"><MoonIcon /> Escuro</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system"><MonitorIcon /> Sistema</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={logout}>
-          <LogOutIcon /> Sair
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-    <NotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
-    </>
-  )
-}
-
-/** Navegação em linha (a partir de `lg`). */
-function DesktopNav() {
-  return (
-    <nav aria-label="Navegação principal" className="hidden flex-1 items-center gap-1 lg:flex">
-      {NAV_SECTIONS.map((section) => (
-        <div key={section.title} className="flex items-center gap-1">
-          <span className="px-1 text-xs font-medium tracking-wide text-muted-foreground uppercase">{section.title}</span>
-          {section.items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                cn(
-                  'rounded-full px-2.5 py-1.5 text-sm whitespace-nowrap transition-colors xl:px-3',
-                  isActive ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
-                )
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </div>
-      ))}
-    </nav>
-  )
+/** A sidebar grava se está aberta no cookie `sidebar_state`; recolhida, volta recolhida. */
+function sidebarStartsOpen() {
+  return !document.cookie.split('; ').includes('sidebar_state=false')
 }
 
 export function AppLayout() {
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  // Fora da sidebar: no celular ela desmonta quando a gaveta fecha.
+  const { data: unread = 0, isSuccess } = useUnreadNotifications()
+  useReminderToasts(isSuccess ? unread : undefined)
+
   return (
-    <div className="min-h-svh bg-muted/40">
-      <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4 lg:gap-4 xl:gap-6">
-          <MobileNav />
-          <Link to="/" aria-label="Início">
-            <Logo />
-          </Link>
-          <DesktopNav />
-          <div className="ml-auto lg:ml-0">
-            <UserMenu />
-          </div>
+    <SidebarProvider defaultOpen={sidebarStartsOpen()}>
+      <AppSidebar unread={unread} onOpenNotifications={() => setNotificationsOpen(true)} />
+      <SidebarInset className="min-w-0">
+        <TopBar unread={unread} />
+        <div className="mx-auto w-full max-w-6xl px-4 py-8">
+          <Outlet />
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">
-        <Outlet />
-      </main>
+      </SidebarInset>
+      <CloseOnNavigate />
+      <NotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
       <ProfileGate />
-    </div>
+    </SidebarProvider>
   )
+}
+
+/** Topo fino: botão do menu; no celular a logo, no desktop o caminho da página. */
+function TopBar({ unread }: { unread: number }) {
+  const { pathname, search } = useLocation()
+  const active = findActiveNav(pathname, search, useDynamicLinks())
+  const { isMobile, toggleSidebar } = useSidebar()
+  const label = unread ? `Abrir ou fechar o menu (${unread} notificações não lidas)` : 'Abrir ou fechar o menu'
+
+  return (
+    <header className="sticky top-0 z-30 flex h-12 shrink-0 items-center gap-2 border-b bg-background/90 px-4 backdrop-blur lg:rounded-t-xl">
+      <span className="relative -ml-1">
+        <Button variant="ghost" size="icon-sm" aria-label={label} title="Menu (Ctrl+B)" onClick={toggleSidebar}>
+          {isMobile ? <MenuIcon /> : <PanelLeftIcon />}
+        </Button>
+        {unread > 0 && <span aria-hidden className="absolute top-1 right-1 size-2 rounded-full bg-destructive ring-2 ring-background lg:hidden" />}
+      </span>
+      <Link to="/" aria-label="Início" className="lg:hidden"><Logo /></Link>
+      {active && (
+        <p className="hidden min-w-0 items-center gap-1.5 text-sm text-muted-foreground lg:flex">
+          <span className="truncate">{active.item.label}</span>
+          {active.link && active.link.label !== active.item.label && (
+            <>
+              <ChevronRightIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate font-medium text-foreground">{active.link.label}</span>
+            </>
+          )}
+        </p>
+      )}
+    </header>
+  )
+}
+
+/** Fecha a gaveta do celular ao trocar de página. */
+function CloseOnNavigate() {
+  const { pathname, search } = useLocation()
+  const { setOpenMobile } = useSidebar()
+  useEffect(() => setOpenMobile(false), [pathname, search, setOpenMobile])
+  return null
 }

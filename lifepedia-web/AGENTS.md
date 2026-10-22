@@ -104,8 +104,11 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   ícone de seta (`TypeIcon`) e, nos gráficos, ganho à esquerda e perda à direita com legenda. Saldo negativo:
   `text-destructive`. Botão principal é neutro (branco/preto), não verde. Tarefa/hábito feito usa `bg-income`.
   Cores de **categoria** são do usuário: use-as em marcas (bolinha, barras), nunca como cor de texto.
-- **Navegação**: links só em `components/layout/nav-items.ts` (desktop e mobile leem dali). Nada de rolagem
-  horizontal no header: abaixo de `lg` a navegação é o `MobileNav`.
+- **Navegação**: só em `components/layout/nav-items.ts` (seção → item com ícone → subitens; `dynamic` para subitens
+  da API, em `use-dynamic-links.ts`). A sidebar (`AppSidebar`) é fixa a partir de `lg` (o `useIsMobile` de
+  `hooks/use-mobile.ts` foi ajustado para 1024px) e gaveta abaixo disso. Com a sidebar aberta o conteúdo perde
+  256px: grades de 4 colunas só em `xl`. Coisa que precisa existir com a gaveta fechada (notificações, toasts)
+  fica no `AppLayout`, não dentro da sidebar.
 - **Mobile**: teste em 375px (e confira 320px). Sem scroll horizontal na página.
   - Campo editável com fonte de 16px no celular (`text-base md:text-sm`): menor que isso o iPhone dá zoom ao focar.
   - Alvo de toque pequeno (check, alça, chevron): amplie a área com `relative after:absolute after:-inset-2` sem mudar

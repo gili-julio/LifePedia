@@ -61,7 +61,7 @@ export function GroupOverview({ groupId, month, onBring }: Props) {
 
   if (!data) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
       </div>
     )
@@ -71,7 +71,7 @@ export function GroupOverview({ groupId, month, onBring }: Props) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <TotalCard label="Ganhos do grupo" value={data.total.income} kind="INCOME" />
         <TotalCard label="Despesas do grupo" value={data.total.expense} kind="EXPENSE" />
         <TotalCard label="Saldo do mês" value={data.total.balance} kind="BALANCE" />

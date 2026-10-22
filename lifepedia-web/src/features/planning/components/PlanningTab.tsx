@@ -138,7 +138,7 @@ export function PlanningTab({ groupId }: { groupId: string }) {
   if (!data) {
     return (
       <div className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
         </div>
         <Skeleton className="h-72 rounded-xl" />
@@ -278,7 +278,7 @@ function SummaryCards({ data, onAdjust, simulating }: { data: Simulation; onAdju
   const fits = outcome.shortfall === 0
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       <Card size="sm" className="bg-data/10 ring-data/20">
         <CardContent className="space-y-1">
           <div className="flex items-center justify-between gap-2">
