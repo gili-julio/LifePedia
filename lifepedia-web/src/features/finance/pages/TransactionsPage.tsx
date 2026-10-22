@@ -80,9 +80,9 @@ export function TransactionsPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <TotalCard label="Ganhos ocasionais" value={totals?.income} />
-        <TotalCard label="Gastos ocasionais" value={totals?.expense} />
-        <TotalCard label="Saldo ocasional" value={totals?.balance} signed />
+        <TotalCard label="Ganhos ocasionais" value={totals?.income} kind="INCOME" />
+        <TotalCard label="Gastos ocasionais" value={totals?.expense} kind="EXPENSE" />
+        <TotalCard label="Saldo ocasional" value={totals?.balance} kind="BALANCE" />
       </div>
 
       <Card>

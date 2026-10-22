@@ -7,7 +7,7 @@ atualizada**). Aqui ficam só as regras do front. Mudou tela, rota, estrutura ou
 ## Stack
 
 React 19 · TypeScript 6 · Vite 8 · Tailwind CSS v4 (sem `tailwind.config`, tema em `src/index.css`) ·
-shadcn/ui (estilo `radix-nova`) · React Router 8 (data router) · TanStack Query 5 · React Hook Form + Zod 4 ·
+shadcn/ui (estilo `radix-maia`: cantos bem arredondados, botões em pílula) · fonte Manrope (`@fontsource-variable/manrope`) · React Router 8 (data router) · TanStack Query 5 · React Hook Form + Zod 4 ·
 Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · next-themes · sonner · lucide-react. Lint com oxlint.
 
 ## Convenções
@@ -17,7 +17,8 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   `src/app/router.tsx` com `lazy`.
 - Import com alias `@/` (→ `src/`).
 - **Componentes shadcn**: adicione com `npx shadcn@latest add <nome>`; não reescreva `components/ui/*` à mão.
-  Atenção: o CLI atual às vezes gera `import { cn } from "cn"` — troque por `@/lib/utils`.
+  Atenção: o CLI atual às vezes gera `import { cn } from "cn"` e instala o pacote npm `cn` — troque o import por
+  `@/lib/utils` e rode `npm uninstall cn`. Trocar o estilo: `style` no `components.json` + `add <todos> --overwrite`.
 - **Dados do servidor só via TanStack Query**. Chaves começam com o nome do módulo (`['finance', ...]`) e as
   mutações invalidam o módulo inteiro. Chamadas HTTP sempre por `lib/api.ts` (envia cookie e `X-Requested-With`,
   trata 401, converte ProblemDetail em `ApiError`). Nunca use `fetch` direto. Baixar arquivo da API: `apiDownload`
@@ -28,7 +29,8 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   `dangerouslySetInnerHTML`. Dependências entram pelo npm e são empacotadas pelo Vite.
 - **Categorias** vêm da API (`useCategoryLookup()`); nunca fixe lista de categorias no código. Use `CategorySelect`,
   `CategoryBadge` e `ColorDot` para exibi-las.
-- **Totais**: sempre do `/summary` (componente `TotalCard`); não somar no front.
+- **Totais**: sempre do `/summary` (componente `TotalCard`); não somar no front. Totais e indicadores usam
+  `components/StatCard` (card tingido pelo tom: `income`, `expense` ou `data`).
 - **Listagens**: sempre paginadas e ordenadas pela API com o kit `components/data-table/`: `useListState` (página,
   tamanho, ordenação → `params` da query), `SortableHead` (cabeçalho clicável), `SortSelect` (ordenação no mobile),
   `DataTablePagination` (rodapé: intervalo, total, 10/25/50/100, páginas) e `useClampPage`. Mudou filtro/mês/aba?
@@ -96,10 +98,12 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   (`parseAmount` aceita `1.234,56`). Use `Field`/`FieldLabel`/`FieldError` do shadcn.
 - **Formatação**: sempre `lib/format.ts` (`formatCurrency`, `formatMonth`, `formatDate`...). Datas `yyyy-MM-dd`
   são tratadas como texto para evitar bug de fuso.
-- **Cores do financeiro**: `--income` (azul) e `--expense` (laranja), par validado para daltonismo em claro/escuro.
-  Use em marcas (barras, ícones, bordas) — **não em texto** (contraste baixo). Valores monetários ficam em cor
-  neutra com sinal `+`/`−`; saldo negativo usa `text-destructive`. Cores de **categoria** são do usuário: use-as
-  em marcas (bolinha, barras), nunca como cor de texto.
+- **Cores de significado**: `--income` (verde, ganho), `--expense` (vermelho, perda) e `--data` (azul, totais e
+  indicadores: saldo, %, planejado), com contraste AA também como texto em claro e escuro. Verde e vermelho se
+  confundem para quem tem daltonismo: nunca dependa só da cor — valor sempre com sinal `+`/`−` (`Money` com `type`),
+  ícone de seta (`TypeIcon`) e, nos gráficos, ganho à esquerda e perda à direita com legenda. Saldo negativo:
+  `text-destructive`. Botão principal é neutro (branco/preto), não verde. Tarefa/hábito feito usa `bg-income`.
+  Cores de **categoria** são do usuário: use-as em marcas (bolinha, barras), nunca como cor de texto.
 - **Navegação**: links só em `components/layout/nav-items.ts` (desktop e mobile leem dali). Nada de rolagem
   horizontal no header: abaixo de `lg` a navegação é o `MobileNav`.
 - **Mobile**: teste em 375px (e confira 320px). Sem scroll horizontal na página.

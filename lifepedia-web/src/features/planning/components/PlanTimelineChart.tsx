@@ -4,7 +4,7 @@ import { formatCompactCurrency, formatCurrency, formatMonth } from '@/lib/format
 import type { TimelinePoint } from '../types'
 
 const config = {
-  balance: { label: 'Saldo com os planos', color: 'var(--income)' },
+  balance: { label: 'Saldo com os planos', color: 'var(--data)' },
   withoutPlan: { label: 'Saldo sem os planos', color: 'var(--muted-foreground)' },
   planned: { label: 'Pagamentos do mês', color: 'var(--expense)' },
 } satisfies ChartConfig
@@ -54,7 +54,7 @@ export function PlanTimelineChart({ points, names }: Props) {
                   <p key={id} className="truncate pl-4.5 text-muted-foreground">• {names.get(id) ?? 'Item'}</p>
                 ))}
                 <div className="my-0.5 border-t" />
-                <TooltipRow color="var(--income)" label="Saldo com os planos" value={row.balance} negative />
+                <TooltipRow color="var(--data)" label="Saldo com os planos" value={row.balance} negative />
                 <TooltipRow color="var(--muted-foreground)" label="Sem os planos" value={row.withoutPlan} negative />
               </div>
             )

@@ -3,6 +3,10 @@
 Front web do [LifePedia](../README.md). React 19 · TypeScript · Vite · Tailwind CSS v4 · shadcn/ui ·
 React Router · TanStack Query · React Hook Form + Zod · Recharts · dnd-kit (arrastar para ordenar).
 
+**Visual**: shadcn no estilo `radix-maia` (cantos arredondados, botões em pílula), fonte Manrope, tema claro e
+escuro. Cores com significado fixo: **verde = ganho**, **vermelho = perda**, **azul = totais e indicadores**; totais
+em cards tingidos dessas cores. Todo valor leva sinal `+`/`−` e seta, para não depender só da cor.
+
 ## Rodando
 
 ```bash
@@ -121,6 +125,7 @@ src/
 │   ├── image/                ImagePicker (escolher → recortar), ImageCropDialog (zoom/girar, recorte redondo ou quadrado), crop-image
 │   ├── ActionSheet.tsx       folha de opções mobile (vaul/drawer)
 │   ├── DialogLayout.tsx      dialog com altura máxima: cabeçalho/rodapé fixos, miolo rola
+│   ├── StatCard.tsx          total/indicador em card tingido (ganho verde, perda vermelha, dados azul)
 │   ├── ScrollTabsList.tsx    abas que rolam na faixa no celular, com a ativa sempre à vista
 │   ├── DatePicker.tsx        campo de data do sistema (calendário pt-BR)
 │   ├── MonthField.tsx        campo de mês do sistema (grade de meses, opcionalmente limpável)
@@ -159,5 +164,5 @@ src/
 │       ├── group/                    financeiro dentro dos grupos: visão geral, abas de itens, BringItemsDialog, GroupShareSection
 │       └── pages/                    Dashboard, Fixos, Lançamentos, Importar, Categorias
 ├── lib/                      api (fetch com cookie + X-Requested-With), format (moeda/mês/data), colors (paleta), utils (cn)
-└── index.css                 tema shadcn + cores do financeiro (--income/--expense)
+└── index.css                 tema shadcn (maia) + Manrope + cores de significado (--income/--expense/--data)
 ```

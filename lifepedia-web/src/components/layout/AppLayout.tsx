@@ -109,7 +109,7 @@ function DesktopNav() {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  'rounded-md px-3 py-1.5 text-sm whitespace-nowrap transition-colors',
+                  'rounded-full px-2.5 py-1.5 text-sm whitespace-nowrap transition-colors xl:px-3',
                   isActive ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:text-foreground',
                 )
               }
@@ -127,7 +127,7 @@ export function AppLayout() {
   return (
     <div className="min-h-svh bg-muted/40">
       <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4 lg:gap-6">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4 lg:gap-4 xl:gap-6">
           <MobileNav />
           <Link to="/" aria-label="Início">
             <Logo />

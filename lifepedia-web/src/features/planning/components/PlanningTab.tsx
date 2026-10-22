@@ -279,47 +279,47 @@ function SummaryCards({ data, onAdjust, simulating }: { data: Simulation; onAdju
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-      <Card size="sm">
+      <Card size="sm" className="bg-data/10 ring-data/20">
         <CardContent className="space-y-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm text-muted-foreground">Saldo previsto por mês</p>
+            <p className="text-sm font-semibold text-data">Saldo previsto por mês</p>
             {simulating && <Badge variant="secondary" className="gap-1"><FlaskConicalIcon className="size-3" /> E se</Badge>}
           </div>
-          <p className="text-lg font-semibold sm:text-xl"><Money value={base.monthly} signed /></p>
+          <p className="text-lg font-semibold text-data sm:text-xl"><Money value={base.monthly} signed /></p>
           <p className="text-xs text-muted-foreground">{source}</p>
           <Button variant="link" size="xs" className="h-auto px-0" onClick={onAdjust}>
             <SlidersHorizontalIcon /> Ajustar base
           </Button>
         </CardContent>
       </Card>
-      <Card size="sm">
+      <Card size="sm" className="bg-data/10 ring-data/20">
         <CardContent className="space-y-1">
-          <p className="text-sm text-muted-foreground">Reserva hoje</p>
-          <p className="text-lg font-semibold sm:text-xl"><Money value={settings.reserve} /></p>
+          <p className="text-sm font-semibold text-data">Reserva hoje</p>
+          <p className="text-lg font-semibold text-data sm:text-xl"><Money value={settings.reserve} /></p>
           <p className="text-xs text-muted-foreground">Quanto o grupo já tem guardado.</p>
           <Button variant="link" size="xs" className="h-auto px-0" onClick={onAdjust}>
             <PencilIcon /> Alterar
           </Button>
         </CardContent>
       </Card>
-      <Card size="sm">
+      <Card size="sm" className="bg-data/10 ring-data/20">
         <CardContent className="space-y-1">
-          <p className="text-sm text-muted-foreground">Planejado</p>
-          <p className="text-lg font-semibold sm:text-xl"><Money value={outcome.total} /></p>
+          <p className="text-sm font-semibold text-data">Planejado</p>
+          <p className="text-lg font-semibold text-data sm:text-xl"><Money value={outcome.total} /></p>
           <p className="text-xs text-muted-foreground">
             {outcome.count} {outcome.count === 1 ? 'item considerado' : 'itens considerados'}
           </p>
         </CardContent>
       </Card>
-      <Card size="sm" className={cn(!fits && 'ring-destructive/40')}>
+      <Card size="sm" className={fits ? 'bg-income/10 ring-income/20' : 'bg-expense/10 ring-expense/20'}>
         <CardContent className="space-y-1">
-          <p className="text-sm text-muted-foreground">Situação</p>
+          <p className={cn('text-sm font-semibold', fits ? 'text-income' : 'text-expense')}>Situação</p>
           {fits ? (
             <p className="flex items-center gap-1.5 text-lg font-semibold sm:text-xl">
               <CheckCircle2Icon className="size-5 text-income" aria-hidden /> Tudo cabe
             </p>
           ) : (
-            <p className="text-lg font-semibold text-destructive tabular-nums sm:text-xl">Faltam {formatCurrency(outcome.shortfall)}</p>
+            <p className="text-lg font-semibold text-expense tabular-nums sm:text-xl">Faltam {formatCurrency(outcome.shortfall)}</p>
           )}
           <p className="text-xs text-muted-foreground">
             {fits

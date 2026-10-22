@@ -72,9 +72,9 @@ export function GroupOverview({ groupId, month, onBring }: Props) {
   return (
     <div className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <TotalCard label="Ganhos do grupo" value={data.total.income} />
-        <TotalCard label="Despesas do grupo" value={data.total.expense} />
-        <TotalCard label="Saldo do mês" value={data.total.balance} signed />
+        <TotalCard label="Ganhos do grupo" value={data.total.income} kind="INCOME" />
+        <TotalCard label="Despesas do grupo" value={data.total.expense} kind="EXPENSE" />
+        <TotalCard label="Saldo do mês" value={data.total.balance} kind="BALANCE" />
         <Card size="sm">
           <CardContent className="space-y-1">
             <p className="text-sm text-muted-foreground">Renda fixa comprometida</p>

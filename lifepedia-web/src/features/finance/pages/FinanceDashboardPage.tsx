@@ -1,7 +1,8 @@
 import { ArrowDownRightIcon, ArrowUpRightIcon, PercentIcon, PlusIcon, RepeatIcon, ScaleIcon, SparklesIcon } from 'lucide-react'
-import { useState, type ComponentType, type ReactNode } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { StatCard } from '@/components/StatCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -17,33 +18,6 @@ import { RecurringEntryDialog } from '../components/RecurringEntryDialog'
 import { TransactionDialog } from '../components/TransactionDialog'
 import type { EntryType, MonthlySummary } from '../types'
 import { useMonthParam } from '../use-month-param'
-
-function StatTile({
-  label,
-  icon: Icon,
-  iconClass,
-  children,
-  hint,
-}: {
-  label: string
-  icon: ComponentType<{ className?: string }>
-  iconClass?: string
-  children: ReactNode
-  hint?: ReactNode
-}) {
-  return (
-    <Card size="sm">
-      <CardContent className="space-y-1">
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          {label}
-          <Icon className={cn('size-4', iconClass)} />
-        </div>
-        <div className="text-2xl font-semibold tracking-tight">{children}</div>
-        {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-      </CardContent>
-    </Card>
-  )
-}
 
 function commitmentHint(percent: number | null) {
   if (percent === null) return 'Cadastre seus ganhos fixos para calcular.'
@@ -79,28 +53,28 @@ export function FinanceDashboardPage() {
 
       {!data ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)}
+          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
         </div>
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <StatTile label="Ganhos" icon={ArrowUpRightIcon} iconClass="text-income"
+            <StatCard label="Ganhos" tone="income" icon={ArrowUpRightIcon}
               hint={`Fixos ${formatCurrency(data.fixed.income)} · Ocasionais ${formatCurrency(data.occasional.income)}`}>
-              <Money value={data.total.income} />
-            </StatTile>
-            <StatTile label="Despesas" icon={ArrowDownRightIcon} iconClass="text-expense"
+              <Money value={data.total.income} type="INCOME" />
+            </StatCard>
+            <StatCard label="Despesas" tone="expense" icon={ArrowDownRightIcon}
               hint={`Fixas ${formatCurrency(data.fixed.expense)} · Ocasionais ${formatCurrency(data.occasional.expense)}`}>
-              <Money value={data.total.expense} />
-            </StatTile>
-            <StatTile label="Saldo do mês" icon={ScaleIcon}
+              <Money value={data.total.expense} type="EXPENSE" />
+            </StatCard>
+            <StatCard label="Saldo do mês" tone="data" icon={ScaleIcon}
               hint={`Só com os fixos: ${formatCurrency(data.fixed.balance)}`}>
               <Money value={data.total.balance} signed />
-            </StatTile>
-            <StatTile label="Renda fixa comprometida" icon={PercentIcon} hint={commitmentHint(data.fixedCommitmentPercent)}>
+            </StatCard>
+            <StatCard label="Renda fixa comprometida" tone="data" icon={PercentIcon} hint={commitmentHint(data.fixedCommitmentPercent)}>
               <span className={cn('tabular-nums', (data.fixedCommitmentPercent ?? 0) > 100 && 'text-destructive')}>
                 {data.fixedCommitmentPercent === null ? '—' : `${data.fixedCommitmentPercent.toLocaleString('pt-BR')}%`}
               </span>
-            </StatTile>
+            </StatCard>
           </div>
 
           {isEmpty(data) && (

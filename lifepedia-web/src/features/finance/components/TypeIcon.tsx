@@ -10,7 +10,7 @@ export function TypeIcon({ type, className }: { type: EntryType; className?: str
     <span
       title={TYPE_LABEL[type]}
       className={cn(
-        'inline-flex size-7 shrink-0 items-center justify-center rounded-md',
+        'inline-flex size-8 shrink-0 items-center justify-center rounded-full',
         type === 'INCOME' ? 'bg-income/12 text-income' : 'bg-expense/12 text-expense',
         className,
       )}

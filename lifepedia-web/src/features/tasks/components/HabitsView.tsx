@@ -112,7 +112,7 @@ function DayButton({ day, disabled, onToggle }: { day: HabitDay; disabled: boole
       className={cn(
         'flex size-8 items-center justify-center rounded-full border-2 outline-none transition-colors motion-reduce:transition-none',
         'focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50',
-        day.state === 'DONE' && 'border-transparent bg-primary text-primary-foreground',
+        day.state === 'DONE' && 'border-transparent bg-income text-background',
         day.state === 'SKIPPED' && 'border-dashed border-muted-foreground/50 text-muted-foreground',
         day.state === 'MISSED' && 'border-destructive/60 text-destructive',
         day.state === 'PENDING' && 'border-muted-foreground/60 hover:bg-muted',

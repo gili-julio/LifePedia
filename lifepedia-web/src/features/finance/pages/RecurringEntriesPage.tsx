@@ -102,7 +102,7 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
                   {isCurrent(entry) && currentValue(entry) !== entry.amount && <> · este mês {formatCurrency(currentValue(entry))}</>}
                 </>
               }
-              amount={<Money value={entry.amount} />}
+              amount={<Money value={entry.amount} type={entry.type} />}
               onMore={() => onMore(entry)}
             />
           ))}
@@ -139,7 +139,7 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
               <TableCell className="hidden lg:table-cell">{period(entry)}</TableCell>
               <TableCell><StatusBadge entry={entry} /></TableCell>
               <TableCell className="text-right">
-                <Money value={entry.amount} />
+                <Money value={entry.amount} type={entry.type} />
                 {isCurrent(entry) && currentValue(entry) !== entry.amount && (
                   <p className="text-xs text-muted-foreground">este mês: {formatCurrency(currentValue(entry))}</p>
                 )}
@@ -209,9 +209,9 @@ export function RecurringEntriesPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <TotalCard label="Ganhos fixos / mês" value={fixedTotals?.income} />
-        <TotalCard label="Despesas fixas / mês" value={fixedTotals?.expense} />
-        <TotalCard label="Sobra fixa / mês" value={fixedTotals?.balance} signed />
+        <TotalCard label="Ganhos fixos / mês" value={fixedTotals?.income} kind="INCOME" />
+        <TotalCard label="Despesas fixas / mês" value={fixedTotals?.expense} kind="EXPENSE" />
+        <TotalCard label="Sobra fixa / mês" value={fixedTotals?.balance} kind="BALANCE" />
       </div>
 
       <Card>

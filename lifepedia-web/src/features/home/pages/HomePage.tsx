@@ -162,8 +162,8 @@ function FinanceCard() {
   const month = currentYearMonth()
   const { data, isLoading, isError } = useSummary(month)
   const rows = data && [
-    { label: 'Entradas', value: data.total.income, sign: '+' },
-    { label: 'Saídas', value: data.total.expense, sign: '−' },
+    { label: 'Entradas', value: data.total.income, sign: '+', className: 'text-income' },
+    { label: 'Saídas', value: data.total.expense, sign: '−', className: 'text-expense' },
   ]
   return (
     <HomeCard title="Financeiro" to="/financeiro" description={formatMonth(month)} className="lg:col-span-3">
@@ -177,16 +177,16 @@ function FinanceCard() {
             <Button asChild variant="outline" size="sm"><Link to="/financeiro/lancamentos">Lançar</Link></Button>
           </div>
         ) : (
-          <dl className="grid grid-cols-3 gap-3">
+          <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {rows.map((r) => (
               <div key={r.label} className="min-w-0 space-y-0.5">
                 <dt className="text-xs text-muted-foreground">{r.label}</dt>
-                <dd className="truncate font-semibold tabular-nums sm:text-lg">{r.sign} {formatCurrency(r.value)}</dd>
+                <dd className={cn('truncate font-semibold tabular-nums sm:text-lg', r.className)}>{r.sign} {formatCurrency(r.value)}</dd>
               </div>
             ))}
-            <div className="min-w-0 space-y-0.5">
+            <div className="col-span-2 min-w-0 space-y-0.5 sm:col-span-1">
               <dt className="text-xs text-muted-foreground">Saldo</dt>
-              <dd className={cn('truncate font-semibold tabular-nums sm:text-lg', data.total.balance < 0 && 'text-destructive')}>
+              <dd className={cn('truncate font-semibold tabular-nums text-data sm:text-lg', data.total.balance < 0 && 'text-destructive')}>
                 {formatCurrency(data.total.balance)}
               </dd>
             </div>

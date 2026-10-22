@@ -234,7 +234,7 @@ function CardBody({ item, overlay, busy, onToggle, onOpen, handle, menu }: {
         aria-label={done ? `Desmarcar ${item.title}` : `Concluir ${item.title}`}
         className={cn('relative mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 outline-none after:absolute after:-inset-2',
           'focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60',
-          done ? 'border-transparent bg-muted-foreground text-background' : 'border-muted-foreground/60 hover:bg-muted')}
+          done ? 'border-transparent bg-income text-background' : 'border-muted-foreground/60 hover:bg-muted')}
         style={!done && color ? { borderColor: color } : undefined}>
         {done && <CheckIcon className="size-3" strokeWidth={3} />}
       </button>
