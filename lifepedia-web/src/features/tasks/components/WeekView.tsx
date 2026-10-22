@@ -182,7 +182,7 @@ function WeekCard({ item, actions, onEdit, busy }: {
         handle={movable && (
           <button ref={setActivatorNodeRef} type="button" {...attributes} {...listeners} disabled={busy}
             aria-label={`Arrastar ${item.title} para outro dia`}
-            className="-my-1 -ml-1 flex w-4 shrink-0 cursor-grab touch-none items-center justify-center rounded text-muted-foreground outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 active:cursor-grabbing">
+            className="relative -my-1 -ml-1 flex w-4 shrink-0 cursor-grab touch-none items-center justify-center rounded text-muted-foreground outline-none after:absolute after:-inset-y-1 after:-left-2 after:right-0 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 active:cursor-grabbing">
             <GripVerticalIcon className="size-3.5" />
           </button>
         )}
@@ -232,7 +232,7 @@ function CardBody({ item, overlay, busy, onToggle, onOpen, handle, menu }: {
       {handle}
       <button type="button" role="checkbox" aria-checked={done} disabled={busy || overlay} onClick={onToggle}
         aria-label={done ? `Desmarcar ${item.title}` : `Concluir ${item.title}`}
-        className={cn('mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 outline-none',
+        className={cn('relative mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border-2 outline-none after:absolute after:-inset-2',
           'focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-60',
           done ? 'border-transparent bg-muted-foreground text-background' : 'border-muted-foreground/60 hover:bg-muted')}
         style={!done && color ? { borderColor: color } : undefined}>

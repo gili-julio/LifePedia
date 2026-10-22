@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { PageHeader, type PageAction } from '@/components/PageHeader'
+import { ScrollTabsList } from '@/components/ScrollTabsList'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsTrigger } from '@/components/ui/tabs'
 import { BringItemsDialog } from '@/features/finance/group/BringItemsDialog'
 import { GroupOverview } from '@/features/finance/group/GroupOverview'
 import { GroupRecurringTab } from '@/features/finance/group/GroupRecurringTab'
@@ -79,7 +80,7 @@ export function GroupPage() {
       { label: 'Editar grupo', icon: PencilIcon, secondary: true, onSelect: () => setDialog('edit') },
     ] : []),
     { label: 'Sair do grupo', icon: LogOutIcon, secondary: true, onSelect: () => setDialog('leave') },
-    ...(isAdmin ? [{ label: 'Excluir grupo', icon: Trash2Icon, secondary: true, onSelect: () => setDialog('delete') }] : []),
+    ...(isAdmin ? [{ label: 'Excluir grupo', icon: Trash2Icon, secondary: true, destructive: true, onSelect: () => setDialog('delete') }] : []),
   ]
   const bring = () => setDialog('bring')
 
@@ -108,17 +109,14 @@ export function GroupPage() {
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
-        {/* Abas rolam dentro da faixa no celular (a página não ganha rolagem lateral). */}
-        <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
-          <TabsList className="w-max">
-            <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
-            <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
-            <TabsTrigger value="fixos">Fixos</TabsTrigger>
-            <TabsTrigger value="planejamento">Planejamento</TabsTrigger>
-            <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
-            <TabsTrigger value="membros">Membros ({group.members.length})</TabsTrigger>
-          </TabsList>
-        </div>
+        <ScrollTabsList value={tab}>
+          <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
+          <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
+          <TabsTrigger value="fixos">Fixos</TabsTrigger>
+          <TabsTrigger value="planejamento">Planejamento</TabsTrigger>
+          <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
+          <TabsTrigger value="membros">Membros ({group.members.length})</TabsTrigger>
+        </ScrollTabsList>
         <TabsContent value="visao-geral" className="pt-4">
           <GroupOverview groupId={group.id} month={month} onBring={bring} />
         </TabsContent>

@@ -11,9 +11,9 @@ export function CategoryBadge({ categoryId }: { categoryId: string }) {
   const { byId } = useCategoryLookup()
   const category = byId.get(categoryId)
   return (
-    <span className="inline-flex items-center gap-2">
+    <span className="inline-flex min-w-0 items-center gap-2">
       <ColorDot color={category?.color ?? FALLBACK_COLOR} />
-      {category?.name ?? '—'}
+      <span className="truncate">{category?.name ?? '—'}</span>
     </span>
   )
 }

@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
+import { ScrollTabsList } from '@/components/ScrollTabsList'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsContent, TabsTrigger } from '@/components/ui/tabs'
 import type { GroupDetail } from '@/features/groups/types'
 import { todayIso } from '@/lib/format'
 import { type Board, BoardContext, useBoardValue } from '../board'
@@ -85,16 +86,14 @@ export function TasksBoard({ group, param, header }: Props) {
         })}
 
         <Tabs value={tab} onValueChange={(value) => update({ [param]: value === 'hoje' ? null : value })}>
-          <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
-            <TabsList className="w-max">
-              <TabsTrigger value="hoje">Hoje</TabsTrigger>
-              <TabsTrigger value="semana">Semana</TabsTrigger>
-              <TabsTrigger value="proximos">Próximos</TabsTrigger>
-              <TabsTrigger value="sem-data">Sem data</TabsTrigger>
-              <TabsTrigger value="habitos">Hábitos</TabsTrigger>
-              <TabsTrigger value="concluidas">Concluídas</TabsTrigger>
-            </TabsList>
-          </div>
+          <ScrollTabsList value={tab}>
+            <TabsTrigger value="hoje">Hoje</TabsTrigger>
+            <TabsTrigger value="semana">Semana</TabsTrigger>
+            <TabsTrigger value="proximos">Próximos</TabsTrigger>
+            <TabsTrigger value="sem-data">Sem data</TabsTrigger>
+            <TabsTrigger value="habitos">Hábitos</TabsTrigger>
+            <TabsTrigger value="concluidas">Concluídas</TabsTrigger>
+          </ScrollTabsList>
           <TabsContent value="hoje" className="pt-4"><TodayView {...view} /></TabsContent>
           <TabsContent value="semana" className="pt-4"><WeekView {...view} /></TabsContent>
           <TabsContent value="proximos" className="pt-4"><UpcomingView {...view} /></TabsContent>

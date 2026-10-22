@@ -111,7 +111,7 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
                   key={t.id}
                   type={t.type}
                   title={t.description}
-                  details={<>{t.member.name} · <CategoryLabel category={t.category} /> · {formatDate(t.date).slice(0, 5)}</>}
+                  details={<><span className="truncate">{t.member.name}</span> · <CategoryLabel category={t.category} /> · {formatDate(t.date).slice(0, 5)}</>}
                   amount={<Money value={t.amount} type={t.type} />}
                   onMore={() => setMenu({ open: true, item: t })}
                 />

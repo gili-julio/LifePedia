@@ -14,6 +14,7 @@ export type PageAction = {
   to?: string
   /** No desktop fica no menu ⋮ em vez de virar botão. */
   secondary?: boolean
+  destructive?: boolean
 }
 
 type Props = {
@@ -76,7 +77,7 @@ export function PageHeader({ title, description, toolbar, actions = [] }: Props)
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 {menu.map((action) => (
-                  <DropdownMenuItem key={action.label} onClick={() => run(action)}>
+                  <DropdownMenuItem key={action.label} variant={action.destructive ? 'destructive' : 'default'} onClick={() => run(action)}>
                     <action.icon /> {action.label}
                   </DropdownMenuItem>
                 ))}
@@ -93,7 +94,7 @@ export function PageHeader({ title, description, toolbar, actions = [] }: Props)
           open={sheetOpen}
           onOpenChange={setSheetOpen}
           title={title}
-          actions={actions.map((a) => ({ label: a.label, icon: a.icon, onSelect: () => run(a) }))}
+          actions={actions.map((a) => ({ label: a.label, icon: a.icon, destructive: a.destructive, onSelect: () => run(a) }))}
         />
       )}
     </div>

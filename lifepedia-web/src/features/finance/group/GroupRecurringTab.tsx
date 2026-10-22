@@ -113,7 +113,7 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
                   type={r.type}
                   title={r.description}
                   muted={!r.active}
-                  details={<>{r.member.name} · <CategoryLabel category={r.category} />{r.dayOfMonth ? ` · dia ${r.dayOfMonth}` : ''}</>}
+                  details={<><span className="truncate">{r.member.name}</span> · <CategoryLabel category={r.category} />{r.dayOfMonth ? ` · dia ${r.dayOfMonth}` : ''}</>}
                   amount={<Money value={r.amount} type={r.type} />}
                   onMore={() => setMenu({ open: true, item: r })}
                 />

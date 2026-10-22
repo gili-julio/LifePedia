@@ -10,7 +10,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api'
 import { AuthLayout } from './AuthLayout'
-import { useAuth } from './auth-context'
+import { returnTo, useAuth } from './auth-context'
 
 const schema = z.object({
   email: z.email('Informe um e-mail válido.'),
@@ -23,7 +23,7 @@ export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/'
+  const from = returnTo(location.state)
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -68,7 +68,7 @@ export function LoginPage() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 Ainda não tem conta?{' '}
-                <Link to="/cadastro" className="font-medium text-foreground underline underline-offset-4">
+                <Link to="/cadastro" state={location.state} className="font-medium text-foreground underline underline-offset-4">
                   Cadastre-se
                 </Link>
               </p>

@@ -36,13 +36,17 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   Exceção: a tela de Categorias é uma grade de cartões com a lista completa (`useCategoryLookup`), sem paginação.
   Exceção: a agenda de Tarefas (por dia) e "Sem data" vêm inteiras e já ordenadas da API; "Concluídas" é paginada.
 - **Dialogs de formulário**: `DialogScrollContent` + `DialogBody` (`components/DialogLayout.tsx`): altura máxima da
-  tela, cabeçalho e botões sempre visíveis, miolo com rolagem.
+  tela, cabeçalho e botões sempre visíveis, miolo com rolagem. No toque, abre sem focar o 1º campo
+  (`skipAutoFocusOnTouch` de `lib/utils`; use também em `DialogContent` com campos); `autoFocus` só onde digitar é a
+  ação principal (ex.: título da tarefa nova).
 - **Datas**: `DatePicker` (dia) e `MonthField` (mês) de `src/components`; não use `<input type="date|month">`.
 - **Imagens enviadas**: sempre por `components/image/ImagePicker` (valida tipo/tamanho, recorta em 512 px JPEG);
   `shape="rect"` para foto de produto (padrão: redondo, avatar). Envio por `FormData` via `lib/api.ts` (grupo) ou
   data URL no JSON (`imageData` do item do planejamento). A CSP permite `blob:`/`data:` só em `img-src` (prévia).
 - **Estado de dialog que recomeça a cada abertura**: coloque-o num componente filho do `DialogContent` (desmonta ao
   fechar) em vez de `useEffect` com `setState` (ver `InviteDialog`, `BringItemsDialog`).
+- **Login/cadastro**: `RequireAuth` guarda a página pedida em `state.from`; login, cadastro e `GuestOnly` voltam para
+  ela (`returnTo`), e os links entre login e cadastro repassam o `state` (ex.: link de convite aberto sem sessão).
 - **Cadastro incompleto**: `ProfileGate` (no `AppLayout`) bloqueia o app com aviso e leva a `/perfil` quando
   `user.profileComplete` é false.
 - **Grupos**: chaves `['groups', ...]`; mutações invalidam também `['notifications']` e `['finance', 'groups']`.
@@ -78,9 +82,10 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
   (perfil e grupos do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha + "EXCLUIR", e depois `logout()` (limpa o estado local).
-- **Abas com muitos itens**: envolva o `TabsList` (`w-max`) num contêiner `overflow-x-auto` com `-mx-4 px-4` no
-  celular (ver `GroupPage`), para a página não ganhar rolagem lateral.
-- **Ações do cabeçalho**: muitas ações? Marque as menos usadas como `secondary` (vão para o ⋮ no desktop).
+- **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
+  faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.
+- **Ações do cabeçalho**: muitas ações? Marque as menos usadas como `secondary` (vão para o ⋮ no desktop). Excluir
+  leva `destructive` (vermelho no menu).
 - **Fixos**: vigência e valor do mês sempre por `features/finance/fixed.ts` (`isActiveIn`, `valueIn`).
 - **Importação por IA**: o formato `lifepedia/transactions@3` é um contrato com prompts que o usuário já copiou.
   Mudou `import/prompt.ts`? Mantenha `import/parse.ts` compatível (ou crie `@4` aceitando todos; `@1` só tem
@@ -97,7 +102,12 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   em marcas (bolinha, barras), nunca como cor de texto.
 - **Navegação**: links só em `components/layout/nav-items.ts` (desktop e mobile leem dali). Nada de rolagem
   horizontal no header: abaixo de `lg` a navegação é o `MobileNav`.
-- **Mobile**: teste em 375px. Sem scroll horizontal na página.
+- **Mobile**: teste em 375px (e confira 320px). Sem scroll horizontal na página.
+  - Campo editável com fonte de 16px no celular (`text-base md:text-sm`): menor que isso o iPhone dá zoom ao focar.
+  - Alvo de toque pequeno (check, alça, chevron): amplie a área com `relative after:absolute after:-inset-2` sem mudar
+    o visual (ver `TaskRow`).
+  - Linha com nome + data/status: só o nome trunca (`min-w-0` + `truncate` no texto, como `CategoryBadge`); data e
+    status ficam inteiros.
   - Ações de página: sempre via `PageHeader` (`actions` com uma `primary`; `toolbar` para filtros como o mês).
     Não coloque botões soltos no cabeçalho.
   - Listas: tabela a partir de `md`; abaixo disso lista com `EntryListItem` (ou card) e `⋮` abrindo `ActionSheet`.

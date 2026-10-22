@@ -10,6 +10,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ApiError } from '@/lib/api'
 import { amountToInput, formatCurrency, parseAmount } from '@/lib/format'
+import { skipAutoFocusOnTouch } from '@/lib/utils'
 import { useSaveSettings } from '../api'
 import type { AverageMonths, PlanBase, PlanSettings } from '../types'
 
@@ -40,7 +41,7 @@ function parseSigned(raw: string) {
 export function BaseSettingsDialog({ open, onOpenChange, groupId, settings, base }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={skipAutoFocusOnTouch}>
         <DialogHeader>
           <DialogTitle>Base do planejamento</DialogTitle>
           <DialogDescription>Vale para todos do grupo.</DialogDescription>

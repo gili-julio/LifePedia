@@ -82,7 +82,7 @@ export function TaskRow({ item, labels, today, sortId, dragDisabled, showDate, e
         aria-label={done ? `Desmarcar ${item.title}` : `Concluir ${item.title}`}
         title={item.priority !== 'NONE' ? `Prioridade ${PRIORITY_LABEL[item.priority].toLowerCase()}` : undefined}
         className={cn(
-          'mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 outline-none transition-colors motion-reduce:transition-none',
+          'relative mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-2 outline-none transition-colors motion-reduce:transition-none after:absolute after:-inset-2',
           'focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:opacity-50',
           done ? 'border-transparent bg-muted-foreground text-background' : 'border-muted-foreground/60 hover:bg-muted',
         )}
@@ -144,7 +144,7 @@ export function TaskRow({ item, labels, today, sortId, dragDisabled, showDate, e
           {item.subtasks.length > 0 && (
             <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open}
               aria-label={`Subtarefas: ${checked} de ${item.subtasks.length} feitas`}
-              className="flex items-center gap-1 rounded outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50">
+              className="relative flex items-center gap-1 rounded outline-none after:absolute after:-inset-2 hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50">
               <ListChecksIcon className="size-3.5" aria-hidden />
               <span className="tabular-nums">{checked}/{item.subtasks.length}</span>
               <ChevronDownIcon className={cn('size-3 transition-transform motion-reduce:transition-none', open && 'rotate-180')} aria-hidden />

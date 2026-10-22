@@ -1,6 +1,6 @@
 import { Loader2Icon } from 'lucide-react'
 import { Navigate, Outlet, useLocation } from 'react-router'
-import { useAuth } from './auth-context'
+import { returnTo, useAuth } from './auth-context'
 
 function FullScreenLoader() {
   return (
@@ -19,10 +19,11 @@ export function RequireAuth() {
   return <Outlet />
 }
 
-/** Login/cadastro: quem está logado vai para o app. */
+/** Login/cadastro: quem está logado vai para o app (ou para a página que pediu login). */
 export function GuestOnly() {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <FullScreenLoader />
-  if (user) return <Navigate to="/" replace />
+  if (user) return <Navigate to={returnTo(location.state)} replace />
   return <Outlet />
 }

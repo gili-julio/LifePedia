@@ -152,7 +152,7 @@ export function ImportPage() {
       </Step>
 
       <Step n={2} title="Cole a resposta do agente" description="Pode colar a resposta inteira; o LifePedia encontra o bloco JSON.">
-        <Textarea value={raw} onChange={(e) => setRaw(e.target.value)} className="h-40 font-mono text-xs"
+        <Textarea value={raw} onChange={(e) => setRaw(e.target.value)} className="h-40 font-mono text-base md:text-xs"
           placeholder={`\`\`\`json\n{ "format": "${IMPORT_FORMAT}", "items": [ ... ] }\n\`\`\``} />
         {parseError && (
           <p className="flex items-center gap-2 text-sm text-destructive">

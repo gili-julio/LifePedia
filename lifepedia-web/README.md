@@ -31,7 +31,7 @@ faz o proxy de `/api` para o serviço `api` e envia os cabeçalhos de segurança
 | `/tarefas` | Tarefas: **Hoje** (atrasadas + hoje, campo rápido), **Semana** (seg–dom em colunas; arrastar pela alça muda o dia), **Próximos** (por dia, +7 dias por vez), **Sem data**, **Hábitos** (sequência, recorde, % do mês, últimos 7 dias clicáveis) e **Concluídas** (`?aba=`; `?tarefa=<id>` abre a tarefa). Lembrete, hábito e fixo do financeiro no formulário; concluir tarefa ligada a fixo abre *Registrar no financeiro?*. Filtro por lista/etiqueta, ordem (minha ordem arrastando, prioridade, horário). Concluir, subtarefas, mover para, pular, editar/excluir com "só esta / esta e as próximas / todas"; listas e etiquetas no ⋮. Mostra também as de grupo em que você é o responsável (com o nome do grupo) |
 | `/grupos` | Meus grupos e **Solicitações (n)** (convites recebidos: aceitar/recusar); criar grupo com imagem |
 | `/grupos/:id` | Grupo: visão geral (totais, por membro, fixos x ocasionais, 6 meses, categorias), lançamentos, fixos, **planejamento**, **tarefas** (`?aba=tarefas&vista=`; responsável/rodízio, comentários, filtro por responsável; `&tarefa=<id>` abre a tarefa) e membros; levar meus itens, novo lançamento/fixo direto no grupo (mesmos formulários do pessoal), convidar (admin). No celular as abas rolam na própria faixa |
-| `/grupos/convite/:token` | Entrar num grupo pelo link de convite |
+| `/grupos/convite/:token` | Entrar num grupo pelo link de convite (sem sessão: depois de entrar ou criar a conta, volta para o convite) |
 | `/financeiro` | Visão geral do mês: totais, % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, categorias (expandem os itens agrupados pelo nome) |
 | `/financeiro/fixos` | Ganhos e despesas fixas (mensais), paginados |
 | `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; ação **Tornar fixo** em cada item |
@@ -58,7 +58,8 @@ hambúrguer que desce/sobe com animação e fecha ao escolher uma aba, clicar fo
 **Ações no mobile** (< 640px): o cabeçalho de cada página mostra só o atalho da ação principal (`+`) e um `⋮` que
 abre um *action sheet* (sobe da base da tela, fecha arrastando) com todas as ações. O filtro de mês fica visível,
 em linha própria abaixo de 1024px (no desktop largo, ao lado das ações). Abaixo de 768px as tabelas de Fixos e Lançamentos viram listas, e cada item tem um `⋮` com
-Editar/Excluir (o mesmo vale para os cards de Categorias).
+Editar/Excluir (o mesmo vale para os cards de Categorias). No celular os formulários abrem sem subir o teclado
+(só a nova tarefa já foca o título), e abas que não cabem rolam na própria faixa mantendo a aba ativa à vista.
 
 Na **prévia da importação**, o desktop mostra a tabela editável; no mobile, uma lista compacta com todos os itens
 (caixinha para incluir/excluir, avisos e "Corrigir: …" na própria linha). Tocar num item abre um formulário que sobe
@@ -120,6 +121,7 @@ src/
 │   ├── image/                ImagePicker (escolher → recortar), ImageCropDialog (zoom/girar, recorte redondo ou quadrado), crop-image
 │   ├── ActionSheet.tsx       folha de opções mobile (vaul/drawer)
 │   ├── DialogLayout.tsx      dialog com altura máxima: cabeçalho/rodapé fixos, miolo rola
+│   ├── ScrollTabsList.tsx    abas que rolam na faixa no celular, com a ativa sempre à vista
 │   ├── DatePicker.tsx        campo de data do sistema (calendário pt-BR)
 │   ├── MonthField.tsx        campo de mês do sistema (grade de meses, opcionalmente limpável)
 │   ├── ColorPicker.tsx       paleta (lib/colors) + cor livre

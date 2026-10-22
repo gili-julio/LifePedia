@@ -19,3 +19,8 @@ export function useAuth() {
   if (!context) throw new Error('useAuth precisa estar dentro de <AuthProvider>')
   return context
 }
+
+/** Para onde ir depois de entrar ou criar a conta: a página que pediu login (`RequireAuth`) ou o início. */
+export function returnTo(state: unknown) {
+  return (state as { from?: string } | null)?.from ?? '/'
+}

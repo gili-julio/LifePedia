@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2Icon } from 'lucide-react'
 import { useForm } from 'react-hook-form'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
@@ -10,7 +10,7 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/c
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api'
 import { AuthLayout } from './AuthLayout'
-import { useAuth } from './auth-context'
+import { returnTo, useAuth } from './auth-context'
 import { usernameSchema } from './username'
 import { UsernameInput } from './UsernameInput'
 
@@ -33,6 +33,7 @@ type FormValues = z.output<typeof schema>
 export function RegisterPage() {
   const { register: registerUser } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const form = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
@@ -44,7 +45,7 @@ export function RegisterPage() {
     try {
       await registerUser({ name, username, email, password })
       toast.success(`Bem-vindo(a), ${name.split(' ')[0]}!`)
-      navigate('/', { replace: true })
+      navigate(returnTo(location.state), { replace: true })
     } catch (error) {
       if (error instanceof ApiError) {
         for (const [field, message] of Object.entries(error.fieldErrors)) {
@@ -109,7 +110,7 @@ export function RegisterPage() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 Já tem conta?{' '}
-                <Link to="/login" className="font-medium text-foreground underline underline-offset-4">
+                <Link to="/login" state={location.state} className="font-medium text-foreground underline underline-offset-4">
                   Entrar
                 </Link>
               </p>

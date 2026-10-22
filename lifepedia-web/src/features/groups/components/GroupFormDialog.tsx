@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Field, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api'
+import { skipAutoFocusOnTouch } from '@/lib/utils'
 import { useRemoveGroupImage, useSaveGroup, useUploadGroupImage } from '../api'
 import type { GroupSummary } from '../types'
 import { GroupAvatar } from './GroupAvatar'
@@ -23,7 +24,7 @@ type Props = {
 export function GroupFormDialog(props: Props) {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onOpenAutoFocus={skipAutoFocusOnTouch}>
         <GroupForm {...props} />
       </DialogContent>
     </Dialog>
