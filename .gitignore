@@ -1,1 +1,28 @@
+# Segredos
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.jks
+
+# Dumps e dados pessoais
+*.sql
+!**/src/main/resources/db/migration/*.sql
+*.dump
+*.backup
+*.csv
+*.xlsx
+*.xls
+*.ofx
+
+# Editores e sistema
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code (configuração local)
+.claude/settings.local.json

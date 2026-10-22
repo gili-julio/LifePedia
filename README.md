@@ -230,8 +230,8 @@ cd lifepedia-web && npm install && npm run dev                     # front em :5
 
 ### Dados de teste locais
 
-Ambiente de desenvolvimento usa o usuário `dev@lifepedia.local` / senha `lifepedia123`
-(crie pela tela de cadastro se o banco estiver vazio). **Nunca use essas credenciais fora do ambiente local.**
+Nenhum usuário é semeado: crie o seu pela tela de cadastro. Use uma senha só desse ambiente e nunca reaproveite
+credenciais de teste fora dele.
 
 ## Segurança
 
