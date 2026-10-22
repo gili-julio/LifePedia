@@ -109,7 +109,7 @@ public class GroupInviteController {
 
     @GetMapping("/join/{token}/image")
     public ResponseEntity<byte[]> linkImage(@PathVariable String token) {
-        return GroupController.imageResponse(service.linkImage(token));
+        return service.linkImage(token).response();
     }
 
     @PostMapping("/join/{token}")

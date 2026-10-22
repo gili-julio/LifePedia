@@ -8,10 +8,10 @@ import com.lifepedia.api.group.GroupDtos.InviteResult;
 import com.lifepedia.api.group.GroupDtos.LinkPreview;
 import com.lifepedia.api.group.GroupDtos.ReceivedInvite;
 import com.lifepedia.api.group.GroupDtos.SentInvite;
-import com.lifepedia.api.group.GroupService.ImageFile;
 import com.lifepedia.api.notification.NotificationService;
 import com.lifepedia.api.notification.NotificationType;
 import com.lifepedia.api.shared.NotFoundException;
+import com.lifepedia.api.shared.image.ImageFile;
 import com.lifepedia.api.user.User;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import com.lifepedia.api.user.UserRepository;
@@ -74,7 +74,7 @@ public class GroupInviteService {
         Set<UUID> invitedIds = invites.findByGroupIdAndStatusOrderByCreatedAtDesc(groupId, GroupInvite.Status.PENDING)
                 .stream().map(GroupInvite::getUserId).collect(Collectors.toSet());
         return users.search(term, userId, PageRequest.of(0, 10)).stream()
-                .map(u -> new InviteCandidate(u.getId(), u.getName(), u.getUsername(),
+                .map(u -> new InviteCandidate(u.getId(), u.getName(), u.getUsername(), u.imageUrl(),
                         memberIds.contains(u.getId()) ? "MEMBER" : invitedIds.contains(u.getId()) ? "INVITED" : null))
                 .toList();
     }

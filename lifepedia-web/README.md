@@ -31,7 +31,7 @@ faz o proxy de `/api` para o serviço `api` e envia os cabeçalhos de segurança
 |---|---|
 | `/login`, `/cadastro` | Autenticação (cadastro pede o @username) |
 | `/` | **Início** (logo no topo): tarefas de hoje e atrasadas (até 5, abrem a tarefa), hábitos com a sequência e o mês no financeiro (entradas, saídas, saldo) |
-| `/perfil` | Meu perfil: nome e @username (conta sem dado obrigatório é trazida para cá com um aviso); **Meus dados** (exportar .json/.xlsx, importar com prévia *Somar*/*Substituir*) e **Excluir conta** (prévia por grupo, baixar dados, senha + EXCLUIR) |
+| `/perfil` | Meu perfil: foto (envia ao confirmar o recorte), nome e @username (conta sem dado obrigatório é trazida para cá com um aviso); **Meus dados** (exportar .json/.xlsx, importar com prévia *Somar*/*Substituir*) e **Excluir conta** (prévia por grupo, baixar dados, senha + EXCLUIR) |
 | `/tarefas` | Tarefas: **Hoje** (atrasadas + hoje, campo rápido), **Semana** (seg–dom em colunas; arrastar pela alça muda o dia), **Próximos** (por dia, +7 dias por vez), **Sem data**, **Hábitos** (sequência, recorde, % do mês, últimos 7 dias clicáveis) e **Concluídas** (`?aba=`; `?tarefa=<id>` abre a tarefa). Lembrete, hábito e fixo do financeiro no formulário; concluir tarefa ligada a fixo abre *Registrar no financeiro?*. Filtro por lista/etiqueta, ordem (minha ordem arrastando, prioridade, horário). Concluir, subtarefas, mover para, pular, editar/excluir com "só esta / esta e as próximas / todas"; listas e etiquetas no ⋮. Mostra também as de grupo em que você é o responsável (com o nome do grupo) |
 | `/grupos` | Meus grupos e **Solicitações (n)** (convites recebidos: aceitar/recusar); criar grupo com imagem |
 | `/grupos/:id` | Grupo: visão geral (totais, por membro, fixos x ocasionais, 6 meses, categorias), lançamentos, fixos, **planejamento**, **tarefas** (`?aba=tarefas&vista=`; responsável/rodízio, comentários, filtro por responsável; `&tarefa=<id>` abre a tarefa) e membros; levar meus itens, novo lançamento/fixo direto no grupo (mesmos formulários do pessoal), convidar (admin). No celular as abas rolam na própria faixa |
@@ -128,6 +128,8 @@ src/
 │   │   └── nav-items.ts      seções, itens e subitens da navegação + regra de item ativo
 │   ├── PageHeader.tsx        título + ações (botões no desktop, `secondary` no ⋮; `+` e ⋮ no mobile) + toolbar (mês; linha própria abaixo de xl)
 │   ├── image/                ImagePicker (escolher → recortar), ImageCropDialog (zoom/girar, recorte redondo ou quadrado), crop-image
+│   ├── PhotoAvatar.tsx       foto redonda com iniciais/ícone de reserva (base de UserAvatar e GroupAvatar)
+│   ├── UserAvatar.tsx        foto de perfil de um usuário (sidebar, membros, convites, comentários, autorias)
 │   ├── ActionSheet.tsx       folha de opções mobile (vaul/drawer)
 │   ├── DialogLayout.tsx      dialog com altura máxima: cabeçalho/rodapé fixos, miolo rola
 │   ├── StatCard.tsx          total/indicador em card tingido (ganho verde, perda vermelha, dados azul)
@@ -140,7 +142,7 @@ src/
 │   ├── data-table/           listagens: useListState, SortableHead, SortSelect (mobile), DataTablePagination
 │   └── Logo.tsx
 ├── features/
-│   ├── auth/                 AuthProvider, guards de rota, login e cadastro, ProfilePage, ProfileGate (aviso de cadastro incompleto), username
+│   ├── auth/                 AuthProvider, guards de rota, login e cadastro, ProfilePage + ProfilePhoto, ProfileGate (aviso de cadastro incompleto), username
 │   ├── account/              exportar/importar (ImportDialog com prévia) e excluir conta (DeleteAccountDialog) — seções do perfil
 │   ├── home/                 página Início (resumo de tarefas, hábitos e financeiro)
 │   ├── notifications/        hooks, NotificationsSheet, texto por tipo (notification-content), use-reminder-toasts

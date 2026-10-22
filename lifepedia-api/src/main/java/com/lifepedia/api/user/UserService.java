@@ -2,6 +2,7 @@ package com.lifepedia.api.user;
 
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
+import com.lifepedia.api.shared.image.ImageFile;
 import com.lifepedia.api.user.UserDtos.UpdateProfileRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -13,9 +14,11 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository repository;
+    private final UserImageStore images;
 
-    public UserService(UserRepository repository) {
+    public UserService(UserRepository repository, UserImageStore images) {
         this.repository = repository;
+        this.images = images;
     }
 
     @Transactional(readOnly = true)
@@ -31,6 +34,37 @@ public class UserService {
         user.setName(request.name().trim());
         user.setUsername(username);
         return UserResponse.from(user);
+    }
+
+    /** Troca a foto; a anterior sai do disco depois do commit. */
+    @Transactional
+    public UserResponse setImage(UUID id, byte[] bytes) {
+        User user = find(id);
+        String previous = user.getImageKey();
+        user.setImageKey(images.save(bytes));
+        images.deleteAfterCommit(previous);
+        return UserResponse.from(user);
+    }
+
+    @Transactional
+    public UserResponse removeImage(UUID id) {
+        User user = find(id);
+        images.deleteAfterCommit(user.getImageKey());
+        user.setImageKey(null);
+        return UserResponse.from(user);
+    }
+
+    /** Foto de qualquer usuário para quem está logado. */
+    @Transactional(readOnly = true)
+    public ImageFile image(UUID id) {
+        User user = find(id);
+        if (user.getImageKey() == null) throw new NotFoundException("O usuário não tem foto.");
+        return images.file(user.getImageKey());
+    }
+
+    /** Apaga a foto do disco quando a conta for excluída (depois do commit). */
+    public void deleteImageAfterCommit(User user) {
+        images.deleteAfterCommit(user.getImageKey());
     }
 
     /** 409 se outro usuário já usa o username. */

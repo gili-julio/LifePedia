@@ -13,7 +13,7 @@ spring:
     enabled: true
   servlet:
     multipart:
-      # Imagem de grupo (o front envia já cortada e reduzida).
+      # Imagem de grupo ou foto de perfil (o front envia já cortada e reduzida).
       max-file-size: 1MB
       max-request-size: 2MB
 
@@ -46,7 +46,7 @@ lifepedia:
     # Fuso de "hoje" nas tarefas (atrasadas, repetição).
     zone: ${TIME_ZONE:America/Sao_Paulo}
   storage:
-    # Imagens (grupos e itens do planejamento). No Docker: volume em /data/uploads.
+    # Imagens (perfis, grupos e itens do planejamento). No Docker: volume em /data/uploads.
     dir: ${STORAGE_DIR:data/uploads}
   auth:
     cookie-name: lifepedia_session

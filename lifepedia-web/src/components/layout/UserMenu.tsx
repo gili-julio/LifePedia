@@ -1,7 +1,7 @@
 import { BellIcon, ChevronsUpDownIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon, UserRoundIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useNavigate } from 'react-router'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/UserAvatar'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,15 +15,6 @@ import {
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar'
 import { useAuth } from '@/features/auth/auth-context'
 import { cn } from '@/lib/utils'
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
-}
 
 /** Contador de não lidas (9+ acima de 9). */
 export function CountBadge({ count, className }: { count: number; className?: string }) {
@@ -56,9 +47,7 @@ export function UserMenu({ unread, onOpenNotifications }: { unread: number; onOp
             <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent"
               aria-label={unread ? `Menu do usuário (${unread} notificações não lidas)` : 'Menu do usuário'}>
               <span className="relative shrink-0">
-                <Avatar className="size-8">
-                  <AvatarFallback>{initials(user.name)}</AvatarFallback>
-                </Avatar>
+                <UserAvatar user={user} size="sm" />
                 <CountBadge count={unread} className="absolute -top-1 -right-1 ring-2 ring-sidebar" />
               </span>
               <span className="grid min-w-0 flex-1 text-left leading-tight">

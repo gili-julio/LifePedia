@@ -3,11 +3,19 @@ package com.lifepedia.api;
 import com.jayway.jsonpath.JsonPath;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.List;
 import java.util.UUID;
 
@@ -72,6 +80,29 @@ abstract class ApiTestSupport {
         MvcTestResult result = send("POST", bearer, uri, json);
         assertThat(result).hasStatus(201);
         return body(result);
+    }
+
+    /** PUT multipart {@code file} (imagem de grupo ou de perfil). */
+    MvcTestResult uploadImage(String bearer, String uri, byte[] bytes) {
+        return mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PUT, uri)
+                .file(new MockMultipartFile("file", "f.png", "image/png", bytes))
+                .header(HttpHeaders.AUTHORIZATION, bearer));
+    }
+
+    static byte[] png(int side) {
+        BufferedImage image = new BufferedImage(side, side, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            ImageIO.write(image, "png", out);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+        return out.toByteArray();
+    }
+
+    /** Chave do arquivo a partir da URL versionada ({@code ...?v=<chave>}). */
+    static String imageKey(String imageUrl) {
+        return imageUrl.substring(imageUrl.indexOf("?v=") + 3);
     }
 
     static String body(MvcTestResult result) {

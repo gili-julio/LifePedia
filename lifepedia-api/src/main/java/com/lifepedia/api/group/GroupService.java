@@ -6,6 +6,7 @@ import com.lifepedia.api.group.GroupDtos.GroupSummary;
 import com.lifepedia.api.group.GroupDtos.MemberResponse;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
+import com.lifepedia.api.shared.image.ImageFile;
 import com.lifepedia.api.user.User;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import com.lifepedia.api.user.UserRepository;
@@ -137,10 +138,7 @@ public class GroupService {
 
     ImageFile imageOf(UserGroup group) {
         if (group.getImageKey() == null) throw new NotFoundException("O grupo não tem imagem.");
-        return new ImageFile(group.getImageKey(), images.read(group.getImageKey()));
-    }
-
-    public record ImageFile(String key, byte[] bytes) {
+        return images.file(group.getImageKey());
     }
 
     /** Sai do grupo. Último membro: o grupo é excluído; último admin: o membro mais antigo vira admin. */

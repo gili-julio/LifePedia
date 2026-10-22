@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { AccountSections } from '@/features/account/components/AccountSections'
 import { api, ApiError } from '@/lib/api'
 import { useAuth } from './auth-context'
+import { ProfilePhoto } from './ProfilePhoto'
 import type { ProfileRequest, User } from './types'
 import { usernameSchema } from './username'
 import { UsernameInput } from './UsernameInput'
@@ -69,7 +70,8 @@ export function ProfilePage() {
       )}
 
       <Card>
-        <CardContent>
+        <CardContent className="space-y-6">
+          <ProfilePhoto />
           <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
             <FieldGroup>
               <Field data-invalid={!!errors.name}>

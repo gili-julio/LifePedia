@@ -15,13 +15,10 @@ import com.lifepedia.api.planning.PlanningDtos.ScenarioResponse;
 import com.lifepedia.api.planning.PlanningDtos.Settings;
 import com.lifepedia.api.planning.PlanningDtos.SettingsRequest;
 import com.lifepedia.api.planning.PlanningDtos.Simulation;
-import com.lifepedia.api.planning.PlanningService.ImageFile;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.CurrentUser;
 import jakarta.validation.Valid;
-import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -37,7 +34,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -122,12 +118,7 @@ public class PlanningController {
     /** A URL leva {@code ?v=} (versão), então pode ficar em cache. */
     @GetMapping("/items/{id}/image")
     public ResponseEntity<byte[]> image(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId, @PathVariable UUID id) {
-        ImageFile image = service.image(CurrentUser.id(jwt), groupId, id);
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePrivate())
-                .eTag(image.key())
-                .body(image.bytes());
+        return service.image(CurrentUser.id(jwt), groupId, id).response();
     }
 
     @PutMapping("/settings")

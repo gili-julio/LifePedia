@@ -2,7 +2,13 @@
 export type GroupRole = 'ADMIN' | 'MEMBER'
 
 /** Dados públicos de um usuário. */
-export type UserSummary = { id: string; name: string; username: string | null }
+export type UserSummary = {
+  id: string
+  name: string
+  username: string | null
+  /** Nula sem foto; traz `?v=` (versão) */
+  imageUrl: string | null
+}
 
 export type GroupSummary = {
   id: string

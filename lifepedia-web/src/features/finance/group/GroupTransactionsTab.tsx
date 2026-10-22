@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UserAvatar } from '@/components/UserAvatar'
 import { ApiError } from '@/lib/api'
 import { defaultDateInMonth, formatDate, formatMonth, type YearMonth } from '@/lib/format'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
@@ -145,8 +146,13 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
                   </TableCell>
                   <TableCell><CategoryLabel category={t.category} /></TableCell>
                   <TableCell>
-                    <p className="truncate">{t.member.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">@{t.member.username}</p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <UserAvatar user={t.member} size="sm" />
+                      <div className="min-w-0">
+                        <p className="truncate">{t.member.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">@{t.member.username}</p>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="text-right"><Money value={t.amount} type={t.type} /></TableCell>
                   <TableCell>

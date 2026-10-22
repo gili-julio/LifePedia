@@ -1,20 +1,18 @@
 package com.lifepedia.api;
 
 import com.jayway.jsonpath.JsonPath;
+import com.lifepedia.api.config.StorageProperties;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.assertj.MvcTestResult;
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import java.nio.file.Path;
 import java.time.YearMonth;
 import java.util.List;
 
@@ -24,6 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @AutoConfigureMockMvc
 class GroupIntegrationTest extends ApiTestSupport {
+
+    @Autowired
+    StorageProperties storage;
 
     private final String month = YearMonth.now().toString();
     private final String day = YearMonth.now().atDay(1).toString();
@@ -202,24 +203,27 @@ class GroupIntegrationTest extends ApiTestSupport {
 
         MvcTestResult image = send("GET", alice, imageUrl, null);
         assertThat(image).hasStatusOk().hasContentType("image/jpeg");
-        BufferedImage stored = ImageIO.read(new java.io.ByteArrayInputStream(image.getResponse().getContentAsByteArray()));
+        BufferedImage stored = ImageIO.read(new ByteArrayInputStream(image.getResponse().getContentAsByteArray()));
         assertThat(stored.getWidth()).isEqualTo(512);
         assertThat(send("GET", outsider, imageUrl, null)).hasStatus(404);
 
+        Path first = groupsDir().resolve(imageKey(imageUrl) + ".jpg");
+        assertThat(first).exists();
+        String replacedUrl = JsonPath.read(body(upload(alice, groupId, png(600))), "$.imageUrl");
+        Path second = groupsDir().resolve(imageKey(replacedUrl) + ".jpg");
+        assertThat(first).doesNotExist();
+        assertThat(second).exists();
+
         assertThat(send("DELETE", alice, "/api/groups/" + groupId + "/image", null))
                 .bodyJson().extractingPath("$.imageUrl").isNull();
+        assertThat(second).doesNotExist();
     }
 
     private MvcTestResult upload(String bearer, String groupId, byte[] bytes) {
-        return mvc.perform(MockMvcRequestBuilders.multipart(HttpMethod.PUT, "/api/groups/" + groupId + "/image")
-                .file(new MockMultipartFile("file", "g.png", "image/png", bytes))
-                .header(HttpHeaders.AUTHORIZATION, bearer));
+        return uploadImage(bearer, "/api/groups/" + groupId + "/image", bytes);
     }
 
-    private static byte[] png(int side) throws IOException {
-        BufferedImage image = new BufferedImage(side, side, BufferedImage.TYPE_INT_RGB);
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ImageIO.write(image, "png", out);
-        return out.toByteArray();
+    private Path groupsDir() {
+        return storage.dir().resolve("groups").toAbsolutePath().normalize();
     }
 }

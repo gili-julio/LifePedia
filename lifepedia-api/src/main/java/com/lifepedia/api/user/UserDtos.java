@@ -15,11 +15,11 @@ public final class UserDtos {
             @NotBlank(message = "Informe um nome de usuário.") @Size(max = 31) String username) {
     }
 
-    /** Dados públicos de outro usuário (busca, membros). */
-    public record UserSummary(UUID id, String name, String username) {
+    /** Dados públicos de outro usuário (busca, membros). @param imageUrl nulo sem foto */
+    public record UserSummary(UUID id, String name, String username, String imageUrl) {
 
         public static UserSummary from(User user) {
-            return new UserSummary(user.getId(), user.getName(), user.getUsername());
+            return new UserSummary(user.getId(), user.getName(), user.getUsername(), user.imageUrl());
         }
     }
 }

@@ -5,6 +5,7 @@ import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Textarea } from '@/components/ui/textarea'
+import { UserAvatar } from '@/components/UserAvatar'
 import { ApiError } from '@/lib/api'
 import { useAddComment, useComments, useDeleteComment } from '../api'
 import type { TaskComment } from '../types'
@@ -59,6 +60,7 @@ export function TaskComments({ groupId, taskId }: { groupId: string; taskId: str
           {comments.map((c) => (
             <li key={c.id} className="space-y-0.5">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <UserAvatar user={c.author} size="xs" />
                 <span className="font-medium text-foreground">{c.author?.name ?? 'Conta excluída'}</span>
                 <time dateTime={c.createdAt}>{when.format(new Date(c.createdAt))}</time>
                 {c.canDelete && (

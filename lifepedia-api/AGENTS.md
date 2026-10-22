@@ -60,10 +60,13 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 - **Itens de grupo sincronizados**: editou fixo/ocasional pessoal? Chame `GroupFinanceSync` (já feito em
   `TransactionService.update`/`RecurringEntryService.update`); categoria reatribuída também vale para os grupos.
   Exclusão cascateia pela FK `source_id`.
-- **Arquivos**: imagens só por `shared/image` (`Images` valida bytes/dimensões e regrava JPEG; `ImageStore` grava com
-  nome aleatório e apaga depois do commit) — ex.: `GroupImageStore`, `PlanImageStore`, cada um numa subpasta de
-  `lifepedia.storage.dir` (`STORAGE_DIR`). Nunca sirva arquivo pelo nome vindo do cliente. Grupo excluído publica
-  `GroupDeletedEvent`: quem guarda arquivo do grupo apaga os seus (o banco apaga as linhas em cascata).
+- **Arquivos**: imagens só por `shared/image` (`Images` valida bytes/dimensões e regrava JPEG, `Images.uploadBytes`
+  lê o multipart; `ImageStore` grava com nome aleatório, apaga o arquivo novo se a transação falhar e o antigo só
+  depois do commit; `ImageFile.response()` serve com cache e ETag) — ex.: `UserImageStore`, `GroupImageStore`,
+  `PlanImageStore`, cada um numa subpasta de `lifepedia.storage.dir` (`STORAGE_DIR`). Trocou ou removeu a imagem?
+  `deleteAfterCommit(anterior)`: nada de arquivo órfão no disco. Nunca sirva arquivo pelo nome vindo do cliente. Grupo
+  excluído publica `GroupDeletedEvent`: quem guarda arquivo do grupo apaga os seus (o banco apaga as linhas em
+  cascata). Conta excluída apaga a foto de perfil (`UserService.deleteImageAfterCommit`).
 - **URL vinda do usuário**: acessar só por `shared/net/SafeHttpClient` (IP público checado na conexão, portas 80/443,
   redirecionamentos revalidados, tempo/tamanho limitados), fora de transação e com `RateLimiter` por usuário. Novo
   caso de rede interna ⇒ novo teste em `SafeHttpClientTest`.

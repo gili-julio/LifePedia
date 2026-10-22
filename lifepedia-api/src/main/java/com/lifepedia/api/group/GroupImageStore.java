@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class GroupImageStore extends ImageStore {
 
-    public static final int MAX_BYTES = Images.MAX_UPLOAD_BYTES;
     static final int MAX_SIDE = 512;
 
     public GroupImageStore(StorageProperties properties) {

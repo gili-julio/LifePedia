@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/lib/api'
 import { formatRelative } from '@/lib/format'
 import { useGroups, useReceivedInvites, useRespondInvite } from '../api'
+import { UserAvatar } from '@/components/UserAvatar'
 import { GroupAvatar } from '../components/GroupAvatar'
 import { GroupFormDialog } from '../components/GroupFormDialog'
 
@@ -74,7 +75,10 @@ function Requests() {
       {data.map((i) => (
         <li key={i.id} className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center">
           <div className="flex min-w-0 flex-1 items-center gap-3">
-            <GroupAvatar name={i.group.name} imageUrl={i.group.imageUrl} size="lg" />
+            <span className="relative shrink-0">
+              <GroupAvatar name={i.group.name} imageUrl={i.group.imageUrl} size="lg" />
+              <UserAvatar user={i.invitedBy} size="xs" className="absolute -right-1 -bottom-1 ring-2 ring-card" />
+            </span>
             <div className="min-w-0 space-y-0.5">
               <p className="text-sm">
                 <span className="font-medium">{i.invitedBy.name}</span> te chamou para participar do grupo{' '}

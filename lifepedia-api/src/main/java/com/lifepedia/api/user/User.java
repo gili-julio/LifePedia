@@ -22,6 +22,10 @@ public class User extends BaseEntity {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    /** Arquivo da foto no storage; nulo = sem foto. */
+    @Column(name = "image_key", length = 64)
+    private String imageKey;
+
     protected User() {
     }
 
@@ -63,5 +67,18 @@ public class User extends BaseEntity {
 
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public String getImageKey() {
+        return imageKey;
+    }
+
+    public void setImageKey(String imageKey) {
+        this.imageKey = imageKey;
+    }
+
+    /** URL da foto com versão (cache); nula sem foto. */
+    public String imageUrl() {
+        return imageKey == null ? null : "/api/users/" + getId() + "/image?v=" + imageKey;
     }
 }

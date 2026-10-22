@@ -32,7 +32,7 @@ Imagem Docker: `docker build -t lifepedia-api .` (o `docker-compose.yml` da raiz
 | `CORS_ORIGINS` | `http://localhost:5173` (no compose: localhost e 127.0.0.1, portas 3080 e 5173) | Origens liberadas (separadas por vírgula); origem fora da lista recebe 403 |
 | `PORT` | `8080` | Porta HTTP |
 | `TIME_ZONE` | `America/Sao_Paulo` | Fuso que define "hoje" nas tarefas (atrasadas, repetição); o container roda em UTC |
-| `STORAGE_DIR` | `data/uploads` (no compose: `/data/uploads`, volume `lifepedia-uploads`) | Pasta das imagens (`groups/<chave>.jpg`, `plan-items/<chave>.jpg`) |
+| `STORAGE_DIR` | `data/uploads` (no compose: `/data/uploads`, volume `lifepedia-uploads`) | Pasta das imagens (`users/`, `groups/`, `plan-items/`, cada uma com `<chave>.jpg`) |
 
 Limites de segurança ficam em `lifepedia.auth.*` no `application.yml` (tentativas por IP, bloqueio por e-mail).
 
@@ -65,6 +65,8 @@ e `sort=campo,asc|desc` (campos da lista de cada rota; outro campo → `400`). R
 | POST | `/api/auth/logout` | Apaga o cookie de sessão → `204` |
 | GET | `/api/users/me` | Usuário logado (`username`, `profileComplete`: false = falta dado obrigatório) |
 | PUT | `/api/users/me` | `{name, username}` — completa/edita o perfil · `409` se o username é de outro |
+| PUT / DELETE | `/api/users/me/image` | Foto de perfil: multipart `file` (JPEG/PNG até 1 MB, 64–4096 px), regravada como JPEG ≤ 512 px · remover. A anterior sai do disco |
+| GET | `/api/users/{id}/image?v=` | Foto de qualquer usuário (só logado); cache privado de 30 dias. `imageUrl` vem em `/me` e em todo `UserSummary` (membros, convites, autorias) |
 
 ### Conta (`/api/account`)
 
@@ -87,7 +89,7 @@ igual (título, dia, horário e repetição). O fixo ligado vem pelo `ref` do fi
 
 Exclusão: em cada grupo roda o mesmo `GroupService.leave` do "Sair do grupo" (itens da pessoa saem, admin passa ao
 membro mais antigo, grupo vazio é apagado com a imagem), os membros que ficam recebem `MEMBER_ACCOUNT_DELETED`, e o
-usuário é apagado — FKs em cascata cuidam do resto (`user_groups.created_by` vira nulo, V13).
+usuário é apagado com a foto de perfil — FKs em cascata cuidam do resto (`user_groups.created_by` vira nulo, V13).
 
 `username`: 3 a 30 caracteres, `a-z 0-9 . _`, sem `.`/`_` nas pontas; `@` inicial e maiúsculas são normalizados.
 
@@ -284,7 +286,7 @@ src/main/java/com/lifepedia/api/
 ├── auth/          cadastro, login/logout, cookie de sessão (SessionCookies), emissão de token, bloqueio por
 │                  tentativas, confirmação de senha
 ├── account/       exportar (JSON + XlsxWriter), importar (MERGE/REPLACE) e excluir a conta
-├── user/          entidade User (@username), /api/users/me (ver/editar perfil), UserRegisteredEvent
+├── user/          entidade User (@username), /api/users/me (ver/editar perfil, foto em UserImageStore), UserRegisteredEvent
 ├── notification/  notificações (tipo + dados JSON), contador de não lidas
 ├── group/         grupos, membros, convites, link de convite, imagens (GroupImageStore), GroupAccess,
 │                  GroupMemberRemovedEvent, GroupDeletedEvent

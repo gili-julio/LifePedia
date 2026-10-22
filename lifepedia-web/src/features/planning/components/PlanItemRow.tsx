@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
+import { UserAvatar } from '@/components/UserAvatar'
 import { formatCurrency, formatMonth } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import type { ItemResult } from '../types'
@@ -100,7 +101,10 @@ export function PlanItemRow({ result, index, count, onToggle, onMove, actions, o
           <p className="font-semibold tabular-nums sm:shrink-0">{formatCurrency(item.amount)}</p>
         </div>
         <p className="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground">
-          <span>{kind} · até {formatMonth(item.targetMonth, 'short')}{payment} · por {item.createdBy.name.split(' ')[0]}</span>
+          <span>{kind} · até {formatMonth(item.targetMonth, 'short')}{payment} ·</span>
+          <span className="inline-flex items-center gap-1">
+            por <UserAvatar user={item.createdBy} size="xs" /> {item.createdBy.name.split(' ')[0]}
+          </span>
           {overdue && <Badge variant="outline" className="h-4 px-1.5 text-[10px]">Prazo passou</Badge>}
         </p>
         <Status result={result} />

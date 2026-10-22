@@ -30,13 +30,21 @@ public class ImageStore {
         }
     }
 
-    /** Grava um JPEG já validado ({@link Images}); devolve a chave. */
+    /** Grava um JPEG já validado ({@link Images}); devolve a chave. Se a transação falhar, o arquivo é apagado. */
     public String saveJpeg(byte[] jpeg) {
         String key = UUID.randomUUID().toString().replace("-", "");
         try {
             Files.write(path(key), jpeg);
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != STATUS_COMMITTED) delete(key);
+                }
+            });
         }
         return key;
     }
@@ -47,6 +55,10 @@ public class ImageStore {
         } catch (IOException e) {
             throw new NotFoundException("Imagem não encontrada.");
         }
+    }
+
+    public ImageFile file(String key) {
+        return new ImageFile(key, read(key));
     }
 
     /** Apaga depois do commit (se a transação falhar, o arquivo continua valendo). */

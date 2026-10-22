@@ -14,6 +14,7 @@ import com.lifepedia.api.planning.PlanningDtos.Settings;
 import com.lifepedia.api.planning.PlanningDtos.SettingsRequest;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
+import com.lifepedia.api.shared.image.ImageFile;
 import com.lifepedia.api.user.User;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import com.lifepedia.api.user.UserRepository;
@@ -150,10 +151,7 @@ public class PlanningService {
         access.requireMember(groupId, userId);
         PlanItem item = find(groupId, id);
         if (item.getImageKey() == null) throw new NotFoundException("O item não tem imagem.");
-        return new ImageFile(item.getImageKey(), images.read(item.getImageKey()));
-    }
-
-    public record ImageFile(String key, byte[] bytes) {
+        return images.file(item.getImageKey());
     }
 
     @Transactional

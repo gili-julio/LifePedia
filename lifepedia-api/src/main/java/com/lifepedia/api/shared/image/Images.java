@@ -2,6 +2,7 @@ package com.lifepedia.api.shared.image;
 
 import com.lifepedia.api.shared.BusinessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -45,6 +46,16 @@ public final class Images {
             throw invalid("Envie uma imagem JPEG ou PNG.");
         }
         return encodeJpeg(resize(decode(bytes), maxSide));
+    }
+
+    /** Bytes do arquivo multipart, recusando acima de 1 MB antes de ler. */
+    public static byte[] uploadBytes(MultipartFile file) {
+        if (file.getSize() > MAX_UPLOAD_BYTES) throw invalid("A imagem deve ter até 1 MB.");
+        try {
+            return file.getBytes();
+        } catch (IOException e) {
+            throw invalid("Não foi possível ler a imagem.");
+        }
     }
 
     /** Imagem baixada da internet (JPEG, PNG ou WebP; tamanho já limitado no download). */

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { UserAvatar } from '@/components/UserAvatar'
 import { ApiError } from '@/lib/api'
 import { formatRelative } from '@/lib/format'
 import {
@@ -138,6 +139,7 @@ function InviteBody({ groupId }: { groupId: string }) {
             <ul className="divide-y rounded-lg border">
               {pending.data.map((i) => (
                 <li key={i.id} className="flex items-center gap-3 px-3 py-2">
+                  <UserAvatar user={i.user} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{i.user.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">

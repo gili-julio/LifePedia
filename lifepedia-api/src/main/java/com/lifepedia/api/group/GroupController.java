@@ -4,11 +4,9 @@ import com.lifepedia.api.group.GroupDtos.GroupDetail;
 import com.lifepedia.api.group.GroupDtos.GroupRequest;
 import com.lifepedia.api.group.GroupDtos.GroupSummary;
 import com.lifepedia.api.group.GroupDtos.RoleRequest;
-import com.lifepedia.api.group.GroupService.ImageFile;
-import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.CurrentUser;
+import com.lifepedia.api.shared.image.Images;
 import jakarta.validation.Valid;
-import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,8 +24,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 
@@ -73,14 +69,7 @@ public class GroupController {
     @PutMapping(value = "/{groupId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public GroupSummary setImage(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId,
                                  @RequestParam("file") MultipartFile file) {
-        if (file.getSize() > GroupImageStore.MAX_BYTES) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "A imagem deve ter até 1 MB.");
-        }
-        try {
-            return service.setImage(CurrentUser.id(jwt), groupId, file.getBytes());
-        } catch (IOException e) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "Não foi possível ler a imagem.");
-        }
+        return service.setImage(CurrentUser.id(jwt), groupId, Images.uploadBytes(file));
     }
 
     @DeleteMapping("/{groupId}/image")
@@ -91,7 +80,7 @@ public class GroupController {
     /** Membros e convidados. A URL leva {@code ?v=} (versão), então pode ficar em cache. */
     @GetMapping("/{groupId}/image")
     public ResponseEntity<byte[]> image(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId) {
-        return imageResponse(service.image(CurrentUser.id(jwt), groupId));
+        return service.image(CurrentUser.id(jwt), groupId).response();
     }
 
     @PostMapping("/{groupId}/leave")
@@ -111,13 +100,5 @@ public class GroupController {
     public void setRole(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId, @PathVariable UUID userId,
                         @Valid @RequestBody RoleRequest request) {
         service.setRole(CurrentUser.id(jwt), groupId, userId, request.role());
-    }
-
-    static ResponseEntity<byte[]> imageResponse(ImageFile image) {
-        return ResponseEntity.ok()
-                .contentType(MediaType.IMAGE_JPEG)
-                .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePrivate())
-                .eTag(image.key())
-                .body(image.bytes());
     }
 }

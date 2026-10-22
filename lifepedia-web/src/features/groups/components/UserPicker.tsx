@@ -1,6 +1,7 @@
 import { CheckIcon, Loader2Icon, SearchIcon, XIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { cn } from '@/lib/utils'
 import { useInviteCandidates } from '../api'
@@ -32,7 +33,8 @@ export function UserPicker({ groupId, selected, onChange }: Props) {
       {selected.length > 0 && (
         <ul className="flex flex-wrap gap-1.5" aria-label="Selecionados">
           {selected.map((u) => (
-            <li key={u.id} className="flex items-center gap-1 rounded-full bg-muted py-0.5 pr-1 pl-2.5 text-xs">
+            <li key={u.id} className="flex items-center gap-1.5 rounded-full bg-muted py-0.5 pr-1 pl-0.5 text-xs">
+              <UserAvatar user={u} size="xs" />
               {u.name}
               <button type="button" aria-label={`Remover ${u.name}`} onClick={() => onChange(selected.filter((s) => s.id !== u.id))}
                 className="rounded-full p-0.5 hover:bg-foreground/10">
@@ -59,6 +61,7 @@ export function UserPicker({ groupId, selected, onChange }: Props) {
                 <button type="button" disabled={!!user.status} onClick={() => toggle(user)}
                   className={cn('flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-60',
                     checked && 'bg-primary/5')}>
+                  <UserAvatar user={user} size="sm" />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{user.name}</span>
                     <span className="block truncate text-xs text-muted-foreground">@{user.username}</span>

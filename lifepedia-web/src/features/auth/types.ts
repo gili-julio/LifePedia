@@ -4,6 +4,8 @@ export type User = {
   /** Sem @; nulo em contas antigas até completarem o perfil */
   username: string | null
   email: string
+  /** Nula sem foto; traz `?v=` (versão) */
+  imageUrl: string | null
   createdAt: string
   /** false = falta dado obrigatório; o app leva ao perfil */
   profileComplete: boolean

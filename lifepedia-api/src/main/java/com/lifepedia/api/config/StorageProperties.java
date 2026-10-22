@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration;
 
 import java.nio.file.Path;
 
-/** @param dir pasta dos arquivos enviados (imagens de grupo); no Docker, um volume */
+/** @param dir pasta dos arquivos enviados (fotos de perfil, imagens de grupo e de itens); no Docker, um volume */
 @ConfigurationProperties("lifepedia.storage")
 public record StorageProperties(Path dir) {
 

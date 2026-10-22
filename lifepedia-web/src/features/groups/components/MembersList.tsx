@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { UserAvatar } from '@/components/UserAvatar'
 import { useAuth } from '@/features/auth/auth-context'
 import { ApiError } from '@/lib/api'
 import { useRemoveMember, useSetMemberRole } from '../api'
@@ -45,9 +46,7 @@ export function MembersList({ group }: { group: GroupDetail }) {
           const me = m.user.id === user?.id
           return (
             <li key={m.user.id} className="flex items-center gap-3 py-3">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-medium text-muted-foreground">
-                {m.user.name.charAt(0).toUpperCase()}
-              </span>
+              <UserAvatar user={m.user} />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{m.user.name}{me && <span className="text-muted-foreground"> (você)</span>}</p>
                 <p className="truncate text-xs text-muted-foreground">@{m.user.username} · desde {joined.format(new Date(m.joinedAt))}</p>

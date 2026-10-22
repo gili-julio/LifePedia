@@ -73,6 +73,8 @@ compartilham usuário, autenticação, design e padrões.
     (categoria com mesmo tipo e nome é reaproveitada; lançamento/fixo igual não duplica). *Substituir* apaga os
     lançamentos e fixos pessoais antes (e as tarefas pessoais, se o arquivo tiver tarefas; pede confirmação); categorias sem uso saem, e itens **sincronizados** em grupos
     viram **cópia** e continuam no grupo. Perfil e itens de grupo do arquivo não são importados.
+- **Foto de perfil** (em *Meu perfil*): mesmo recorte da imagem do grupo. Aparece na sidebar, nos membros, nos
+  convites, nos comentários e em quem cadastrou cada item do grupo. Trocar ou remover apaga o arquivo antigo do disco.
 - **Excluir conta** (em *Meu perfil*): mostra o que some e o que acontece em cada grupo, oferece baixar os dados e
   pede **senha + digitar EXCLUIR**. Em cada grupo é como "Sair do grupo": seus itens (lançamentos, fixos,
   planejamento) saem, se você era o único admin o membro mais antigo vira admin, e grupo só seu é excluído. Os membros
@@ -204,7 +206,7 @@ docker compose up -d --build
 Todas as portas escutam **só em `127.0.0.1`** (variável `BIND_ADDRESS`): outros dispositivos da rede não acessam.
 
 Os containers usam `restart: unless-stopped`: sobem de novo sozinhos junto com o Docker.
-Os dados ficam no volume `lifepedia-db` e as imagens (grupos e itens do planejamento) no volume
+Os dados ficam no volume `lifepedia-db` e as imagens (fotos de perfil, grupos e itens do planejamento) no volume
 `lifepedia-uploads` (sobrevivem a `docker compose down`; só somem com `down -v`).
 
 Comandos úteis:
@@ -243,10 +245,11 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Sessão no navegador | JWT (HS256, 8h) em **cookie HttpOnly + Secure + SameSite=Strict**, `Path=/api`. O JavaScript não lê o token (protege contra roubo via XSS). O token só carrega o id do usuário |
 | CSRF | SameSite=Strict + cabeçalho `X-Requested-With` obrigatório em requisições que alteram dados |
 | Força bruta | Limite de login/cadastro por IP (20 / 10 min) e bloqueio de 15 min por e-mail após 5 senhas erradas. Confirmação de senha (excluir conta): mesmo bloqueio, por usuário |
-| Conta | Excluir pede a senha atual + "EXCLUIR"; apaga tudo do usuário (FKs em cascata, fotos dos itens no disco) e o cookie. Token de conta que não existe mais é recusado (**401**) em toda requisição |
+| Conta | Excluir pede a senha atual + "EXCLUIR"; apaga tudo do usuário (FKs em cascata, foto de perfil e fotos dos itens no disco) e o cookie. Token de conta que não existe mais é recusado (**401**) em toda requisição |
 | Exportar/importar | Só os próprios dados, logado. Exportar: 20/h; importar: 10/h (prévia 60/h); arquivo até 25 MB (nginx), validado inteiro (versão, categorias, valores, datas) antes de gravar — tudo ou nada |
 | Enumeração de contas | Login responde igual e no mesmo tempo para e-mail inexistente e senha errada |
 | Isolamento | Todo dado tem dono; buscas sempre filtram pelo usuário do token (outro usuário recebe 404) |
+| Foto de perfil | Visível para qualquer usuário logado (nunca sem sessão); só o dono troca ou remove. Mesma validação e regravação das imagens de grupo |
 | Grupos | Tudo do grupo (itens, métricas, membros, imagem) só para membros; quem não é membro recebe **404**. Ações de admin → 403 para membro comum. Convite direto exige aceite |
 | Link de convite | Token aleatório de 256 bits, válido por 7 dias, um por grupo, revogável; entrar exige estar logado |
 | Uploads | Só JPEG/PNG até 1 MB (o front já envia recortado em 512 px); a API confere o tipo pelos bytes e as dimensões antes de decodificar e **regrava** um JPEG novo (sem metadados do arquivo). Servido só a membros/convidados |

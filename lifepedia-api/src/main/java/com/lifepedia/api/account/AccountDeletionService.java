@@ -96,6 +96,7 @@ public class AccountDeletionService {
                         "promoted", Boolean.toString(other.equals(departure.newAdminId()))));
             }
         }
+        userService.deleteImageAfterCommit(user);
         users.delete(user);
         users.flush();
     }

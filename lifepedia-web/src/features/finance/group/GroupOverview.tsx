@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UserAvatar } from '@/components/UserAvatar'
 import { formatCurrency, type YearMonth } from '@/lib/format'
 import { CategoryBreakdownList, CategoryItemList } from '../components/CategoryBreakdownList'
 import { FixedVsOccasionalChart, HistoryChart } from '../components/charts'
@@ -30,10 +31,13 @@ function MemberBreakdown({ members, totalExpense }: { members: MemberTotals[]; t
     <ul className="space-y-4">
       {members.map((m) => (
         <li key={m.member.id} className="space-y-1.5">
-          <div className="flex items-baseline justify-between gap-2 text-sm">
-            <span className="min-w-0">
-              <span className="block truncate font-medium">{m.member.name}</span>
-              <span className="block truncate text-xs text-muted-foreground">@{m.member.username}</span>
+          <div className="flex items-center justify-between gap-2 text-sm">
+            <span className="flex min-w-0 items-center gap-2">
+              <UserAvatar user={m.member} size="sm" />
+              <span className="min-w-0">
+                <span className="block truncate font-medium">{m.member.name}</span>
+                <span className="block truncate text-xs text-muted-foreground">@{m.member.username}</span>
+              </span>
             </span>
             <span className="shrink-0 text-right">
               <span className="block font-medium tabular-nums">{formatCurrency(m.expense)}</span>

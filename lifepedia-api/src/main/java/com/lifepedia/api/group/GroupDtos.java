@@ -44,7 +44,7 @@ public final class GroupDtos {
     }
 
     /** @param status MEMBER, INVITED ou nulo (pode convidar) */
-    public record InviteCandidate(UUID id, String name, String username, String status) {
+    public record InviteCandidate(UUID id, String name, String username, String imageUrl, String status) {
     }
 
     public record SentInvite(UUID id, UserSummary user, UserSummary invitedBy, OffsetDateTime createdAt) {

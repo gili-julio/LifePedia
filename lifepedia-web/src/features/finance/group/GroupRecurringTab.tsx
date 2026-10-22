@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { UserAvatar } from '@/components/UserAvatar'
 import { ApiError } from '@/lib/api'
 import { formatMonth } from '@/lib/format'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
@@ -147,8 +148,13 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
                   </TableCell>
                   <TableCell><CategoryLabel category={r.category} /></TableCell>
                   <TableCell>
-                    <p className="truncate">{r.member.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">@{r.member.username}</p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      <UserAvatar user={r.member} size="sm" />
+                      <div className="min-w-0">
+                        <p className="truncate">{r.member.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">@{r.member.username}</p>
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell className="tabular-nums">{r.dayOfMonth ?? '—'}</TableCell>
                   <TableCell className="text-right"><Money value={r.amount} type={r.type} /></TableCell>

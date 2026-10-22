@@ -43,8 +43,11 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   ação principal (ex.: título da tarefa nova).
 - **Datas**: `DatePicker` (dia) e `MonthField` (mês) de `src/components`; não use `<input type="date|month">`.
 - **Imagens enviadas**: sempre por `components/image/ImagePicker` (valida tipo/tamanho, recorta em 512 px JPEG);
-  `shape="rect"` para foto de produto (padrão: redondo, avatar). Envio por `FormData` via `lib/api.ts` (grupo) ou
-  data URL no JSON (`imageData` do item do planejamento). A CSP permite `blob:`/`data:` só em `img-src` (prévia).
+  `shape="rect"` para foto de produto (padrão: redondo, avatar). Envio por `FormData` via `lib/api.ts` (grupo, foto
+  de perfil) ou data URL no JSON (`imageData` do item do planejamento). A CSP permite `blob:`/`data:` só em `img-src` (prévia).
+- **Pessoas**: mostre sempre com `components/UserAvatar` (foto do `imageUrl` do `UserSummary`; sem foto ou se falhar,
+  iniciais). Grupo: `GroupAvatar`. Os dois usam `PhotoAvatar`. Trocou a foto de perfil? `setUser` + invalidar todas as
+  queries (a URL aparece em vários módulos).
 - **Estado de dialog que recomeça a cada abertura**: coloque-o num componente filho do `DialogContent` (desmonta ao
   fechar) em vez de `useEffect` com `setState` (ver `InviteDialog`, `BringItemsDialog`).
 - **Login/cadastro**: `RequireAuth` guarda a página pedida em `state.from`; login, cadastro e `GuestOnly` voltam para
