@@ -23,7 +23,8 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 - `SecurityFilters.RequireCustomHeaderFilter`: CSRF — escrita sem `Authorization` exige `X-Requested-With`.
 - `SecurityFilters.AuthRateLimitFilter` + `RateLimiter` (memória): limite por IP em login/cadastro.
   `AuthService.login`: bloqueio por e-mail após N falhas, hash "dummy" para tempo constante, upgrade de hash BCrypt.
-- `server.forward-headers-strategy: native` — o IP do cliente vem do `X-Forwarded-For` que o nginx define.
+- `server.forward-headers-strategy: native` — o IP do cliente vem do `X-Forwarded-For` que o nginx define (o nginx
+  já resolve o IP real atrás do proxy do Coolify com `real_ip`; a API nunca é exposta direto).
 - Sem segredo padrão: `JWT_SECRET` e `DB_PASSWORD` são obrigatórios (perfil `dev` lê `../.env`).
 - `jwtDecoder` também valida que o usuário do `sub` existe (conta excluída → 401). Cookie de sessão só por
   `SessionCookies` (login, logout, excluir conta).

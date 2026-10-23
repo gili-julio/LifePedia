@@ -1,0 +1,67 @@
+# Produção (Coolify): nenhuma porta publicada; o proxy do Coolify (Traefik) atende HTTPS no domínio do serviço web
+# (porta 8080). Variáveis definidas no painel do Coolify. Desenvolvimento: docker-compose.yml.
+name: lifepedia
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    environment:
+      POSTGRES_DB: lifepedia
+      POSTGRES_USER: ${DB_USER:-lifepedia}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
+    volumes:
+      - lifepedia-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d lifepedia"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./lifepedia-api
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/lifepedia
+      DB_USER: ${DB_USER:-lifepedia}
+      DB_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?defina JWT_SECRET}
+      COOKIE_SECURE: "true"
+      CORS_ORIGINS: ${CORS_ORIGINS:?defina CORS_ORIGINS com o endereço público (https://...)}
+      STORAGE_DIR: /data/uploads
+      TIME_ZONE: ${TIME_ZONE:-America/Sao_Paulo}
+      # Heap proporcional ao limite do container (cabe numa VPS de 4 GB junto com o Coolify).
+      JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
+    volumes:
+      - lifepedia-uploads:/data/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep -q UP"]
+      interval: 10s
+      timeout: 3s
+      start_period: 60s
+      retries: 10
+
+  web:
+    build: ./lifepedia-web
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 128m
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "8080"
+
+volumes:
+  lifepedia-db:
+  lifepedia-uploads:

@@ -13,7 +13,8 @@ Visão de produto e roadmap: [`README.md`](README.md).
 ```
 LifePedia/                 ← monorepo (único repo git)
 ├── README.md / AGENTS.md  ← visão geral e este guia
-├── docker-compose.yml     ← stack completo: db + api + web
+├── docker-compose.yml     ← stack completo: db + api + web (local)
+├── docker-compose.prod.yml ← produção no Coolify: sem portas, limites de memória
 ├── .env / .env.example    ← segredos locais (.env nunca vai para git)
 ├── lifepedia-api/         ← Spring Boot 4 + Java 21 + PostgreSQL
 ├── lifepedia-web/         ← React 19 + TS + Vite + Tailwind v4 + shadcn/ui
@@ -68,6 +69,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   tamanho e tempo limitados) e com limite por usuário. Imagem de fora é baixada e regravada pela API; o front nunca
   carrega recurso externo. Link exibido: só `http(s)`, com `rel="noopener noreferrer"`.
 - **Infra**: portas só em `127.0.0.1`; containers sem root; segredos só no `.env`; nada de valor padrão para segredo.
+  Mudou serviço, variável ou volume no `docker-compose.yml`? Repita no `docker-compose.prod.yml` (produção, sem
+  portas publicadas, variáveis no painel do Coolify) e atualize a seção **Deploy** do `README.md`.
 - **Front**: respeitar a CSP (sem scripts inline, sem CDN/recursos externos, sem `dangerouslySetInnerHTML`).
 - Mudou algo de segurança? Atualize a seção **Segurança** do `README.md` da raiz e o `SecurityIntegrationTest`.
 

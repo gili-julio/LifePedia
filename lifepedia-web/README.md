@@ -21,6 +21,7 @@ A API precisa estar no ar (veja o [README da raiz](../README.md)). Para apontar 
 
 No container (`docker compose up -d --build` na raiz), um nginx **sem root** serve o build em http://localhost:3080,
 faz o proxy de `/api` para o serviço `api` e envia os cabeçalhos de segurança (CSP, `X-Frame-Options`, etc.).
+Atrás do proxy do Coolify, pega o IP real do cliente (`real_ip`, só de rede privada) e repassa o protocolo HTTPS.
 
 **Sessão**: o login é guardado pela API num cookie HttpOnly — o front não lê nem guarda token. Ao abrir o app,
 `AuthProvider` chama `/api/users/me` para saber se há sessão.

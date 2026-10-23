@@ -63,6 +63,6 @@ services:
 volumes:
   lifepedia-db:
     name: lifepedia-db
-  # Imagens de grupo enviadas pelos usuários.
+  # Fotos de perfil e imagens de grupo e de itens enviadas pelos usuários.
   lifepedia-uploads:
     name: lifepedia-uploads

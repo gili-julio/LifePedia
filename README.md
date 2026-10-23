@@ -235,6 +235,34 @@ cd lifepedia-web && npm install && npm run dev                     # front em :5
 Nenhum usuário é semeado: crie o seu pela tela de cadastro. Use uma senha só desse ambiente e nunca reaproveite
 credenciais de teste fora dele.
 
+## Deploy (Coolify)
+
+Produção usa o `docker-compose.prod.yml`: nenhuma porta publicada (o proxy do Coolify, Traefik, atende HTTPS e fala
+com o serviço `web` pela rede interna), limites de memória (db 512 MB, API 1 GB com heap em 70%, web 128 MB; cabe numa
+VPS de 4 GB com o Coolify) e `COOKIE_SECURE` sempre ligado.
+
+1. **Coolify** → New Resource → repositório (GitHub App) → build pack **Docker Compose**, arquivo
+   `/docker-compose.prod.yml`.
+2. Serviço `web`: domínio `https://app.seudominio.com.br` (porta interna 8080). O certificado sai sozinho.
+3. Variáveis (o deploy falha se faltar alguma obrigatória):
+
+   | Variável | Valor |
+   |---|---|
+   | `JWT_SECRET` | aleatório, 48 bytes (comando no `.env.example`); **diferente** do local |
+   | `DB_PASSWORD` | aleatório; vale só na criação do volume do banco (trocar depois: `ALTER USER`) |
+   | `CORS_ORIGINS` | o endereço público, ex.: `https://app.seudominio.com.br` |
+   | `TIME_ZONE` | opcional, padrão `America/Sao_Paulo` |
+   | `DB_USER` | opcional, padrão `lifepedia` |
+
+4. Deploy. O primeiro build demora (Maven e npm baixam tudo).
+
+O nginx do web confia no `X-Forwarded-For` só vindo de rede privada (o Traefik) e usa o último IP de fora da rede:
+o limite de login por IP vale por cliente e não dá para forjar. Com a **Cloudflare**, deixe o registro DNS como
+"DNS only" (nuvem cinza); com o proxy dela ligado, todos os acessos chegariam com IPs da Cloudflare.
+
+**Backups**: o Coolify não copia os volumes deste compose. Faça `pg_dump` diário do banco e copie o volume
+`lifepedia-uploads` (fotos) para fora do servidor (ex.: `rclone` para Cloudflare R2/Backblaze B2), e teste restaurar.
+
 ## Segurança
 
 Os dados são sensíveis, então a segurança é parte do projeto, não um extra. Resumo do que está implementado:
@@ -244,7 +272,7 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Senhas | **BCrypt custo 12** (hash com salt; nunca texto puro). Hashes antigos são atualizados no login. Senha mín. 8 caracteres |
 | Sessão no navegador | JWT (HS256, 8h) em **cookie HttpOnly + Secure + SameSite=Strict**, `Path=/api`. O JavaScript não lê o token (protege contra roubo via XSS). O token só carrega o id do usuário |
 | CSRF | SameSite=Strict + cabeçalho `X-Requested-With` obrigatório em requisições que alteram dados |
-| Força bruta | Limite de login/cadastro por IP (20 / 10 min) e bloqueio de 15 min por e-mail após 5 senhas erradas. Confirmação de senha (excluir conta): mesmo bloqueio, por usuário |
+| Força bruta | Limite de login/cadastro por IP (20 / 10 min; IP real do cliente atrás de proxy, sem dar para forjar) e bloqueio de 15 min por e-mail após 5 senhas erradas. Confirmação de senha (excluir conta): mesmo bloqueio, por usuário |
 | Conta | Excluir pede a senha atual + "EXCLUIR"; apaga tudo do usuário (FKs em cascata, foto de perfil e fotos dos itens no disco) e o cookie. Token de conta que não existe mais é recusado (**401**) em toda requisição |
 | Exportar/importar | Só os próprios dados, logado. Exportar: 20/h; importar: 10/h (prévia 60/h); arquivo até 25 MB (nginx), validado inteiro (versão, categorias, valores, datas) antes de gravar — tudo ou nada |
 | Enumeração de contas | Login responde igual e no mesmo tempo para e-mail inexistente e senha errada |
