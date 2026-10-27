@@ -77,7 +77,9 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   regra/lista/etiquetas/duração/subtarefas/hábito/lembrete/fixo não mudaram (`changesSeries`). Ações das linhas e seus dialogs em
   `useTaskActions`. Horário: `<Input type="time">`; dia: `DatePicker`.
   Semana (`WeekView`): `@dnd-kit/core` (colunas droppable, alça, `DragOverlay`), mostra no dia novo até a agenda
-  recarregar; grade por container query (7 colunas só com 76rem de largura útil) e título em `line-clamp-2` + `title`. Sequência/% do hábito sempre da API (`streak`, `/habits`). Fixo ligado só em tarefa pessoal
+  recarregar. Desktop (`lg`): quadro com os 7 dias lado a lado; cada dia recolhe numa faixa (lembrado por dia da
+  semana no `localStorage`, só preferência de tela) e o espaço vai para os outros; cartão estreito (container query)
+  põe o título na linha de baixo. Celular: dias empilhados, sem recolher. Título em `line-clamp-2` + `title`. Sequência/% do hábito sempre da API (`streak`, `/habits`). Fixo ligado só em tarefa pessoal
   (`FixedField`); ao concluir, `FixedPaymentDialog` grava o ajuste do mês pelas rotas do financeiro (valor igual ao
   cadastrado remove o ajuste).
 - **Amigos** (`features/friends`): chaves `['friends', ...]`; mutações invalidam o módulo e as notificações.
@@ -139,5 +141,7 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 ```bash
 npm run build && npm run lint
 ```
+
+O CI (`.github/workflows/web.yml`) roda os dois quando muda código em `lifepedia-web/` (só `.md` não dispara).
 
 Para testar no navegador: API no ar (compose da raiz) + `npm run dev`.

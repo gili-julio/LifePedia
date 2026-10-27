@@ -17,7 +17,8 @@ public final class AuthDtos {
             @NotBlank(message = "Informe seu nome.") @Size(max = 120) String name,
             @NotBlank(message = "Informe um nome de usuário.") @Size(max = 31) String username,
             @NotBlank(message = "Informe seu e-mail.") @Email(message = "E-mail inválido.") @Size(max = 180) String email,
-            @NotBlank(message = "Informe uma senha.") @Size(min = 8, max = 72, message = "A senha deve ter entre 8 e 72 caracteres.") String password) {
+            @NotBlank(message = "Informe uma senha.")
+            @Size(min = 8, max = 72, message = "A senha deve ter entre 8 e 72 caracteres.") String password) {
     }
 
     public record LoginRequest(

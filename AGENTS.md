@@ -15,6 +15,7 @@ LifePedia/                 ← monorepo (único repo git)
 ├── README.md / AGENTS.md  ← visão geral e este guia
 ├── docker-compose.yml     ← stack completo: db + api + web (local)
 ├── docker-compose.prod.yml ← produção no Coolify: sem portas, limites de memória
+├── .github/workflows/     ← CI: api.yml, web.yml (cada um só quando a pasta muda), secrets.yml (gitleaks)
 ├── .env / .env.example    ← segredos locais (.env nunca vai para git)
 ├── lifepedia-api/         ← Spring Boot 4 + Java 21 + PostgreSQL
 ├── lifepedia-web/         ← React 19 + TS + Vite + Tailwind v4 + shadcn/ui
@@ -183,7 +184,17 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 ## Como verificar
 
 ```bash
-cd lifepedia-api && ./mvnw test          # precisa do Docker rodando (Testcontainers)
+cd lifepedia-api && ./mvnw checkstyle:check && ./mvnw test   # testes precisam do Docker (Testcontainers)
 cd lifepedia-web && npm run build && npm run lint
 docker compose up -d --build             # na raiz: sobe tudo e confere em http://localhost:3080
 ```
+
+**CI (GitHub Actions)**, em push na `main` e PR para a `main`:
+
+- `api.yml` (só se mudar código/config em `lifepedia-api/**`; `.md` não conta): Checkstyle, testes e build da imagem
+  Docker (sem publicar).
+- `web.yml` (só se mudar código/config em `lifepedia-web/**`; `.md` não conta): lint (oxlint) e build (tsc + vite).
+- `secrets.yml` (sempre, inclusive docs: segredo também vaza em `.md`): gitleaks nos commits; segredo commitado falha o check.
+
+Novo projeto (ex.: `lifepedia-mobile`) ganha o próprio workflow com filtro `paths` da pasta dele (e `!pasta/**/*.md`). Workflow com filtro
+`paths` não roda quando a pasta não muda: não marque esses checks como obrigatórios na proteção da branch.

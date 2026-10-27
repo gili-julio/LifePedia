@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -307,7 +308,7 @@ public class PlanningService {
     }
 
     private Map<UUID, User> usersOf(Collection<UUID> ids) {
-        Set<UUID> distinct = ids.stream().filter(java.util.Objects::nonNull).collect(Collectors.toSet());
+        Set<UUID> distinct = ids.stream().filter(Objects::nonNull).collect(Collectors.toSet());
         return users.findAllById(distinct).stream().collect(Collectors.toMap(User::getId, Function.identity()));
     }
 

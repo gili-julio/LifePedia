@@ -93,7 +93,8 @@ class LinkMetadataParserTest {
                 + "?go=https%3A%2F%2Fwww.mercadolivre.com.br%2Ffone-jbl-tune-520bt%2Fp%2FMLB26296412&tid=1")))
                 .isEqualTo("Fone jbl tune 520bt");
         assertThat(LinkMetadataParser.titleFromRedirect(URI.create("https://loja.com/gz/account-verification?tid=1"))).isNull();
-        assertThat(LinkMetadataParser.titleFromRedirect(URI.create("https://loja.com/sofa-3-lugares-cinza"))).isEqualTo("Sofa 3 lugares cinza");
+        assertThat(LinkMetadataParser.titleFromRedirect(URI.create("https://loja.com/sofa-3-lugares-cinza")))
+                .isEqualTo("Sofa 3 lugares cinza");
     }
 
     @Test

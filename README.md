@@ -187,6 +187,11 @@ compartilham usuário, autenticação, design e padrões.
                 └──────────────────────┘
 ```
 
+## CI
+
+GitHub Actions em `.github/workflows/`: **API** (Checkstyle, testes, imagem Docker) só quando muda código em `lifepedia-api/`,
+**Web** (lint, build) só quando muda código em `lifepedia-web/` (alterar só `.md` não dispara) e **Segredos** (gitleaks) em todo push/PR na `main`.
+
 ## Projetos
 
 Monorepo (um único repositório git nesta pasta) com três projetos:

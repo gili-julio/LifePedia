@@ -143,7 +143,8 @@ public class TaskTransferService {
         Map<String, Integer> existing = new HashMap<>();
         if (!replace) {
             for (Task t : tasks.findByUserIdOrderByPositionAscCreatedAtAsc(userId)) {
-                existing.merge(key(t.getTitle(), t.getDueDate(), String.valueOf(t.getDueTime()), TaskService.repeat(t.rule())), 1, Integer::sum);
+                String key = key(t.getTitle(), t.getDueDate(), String.valueOf(t.getDueTime()), TaskService.repeat(t.rule()));
+                existing.merge(key, 1, Integer::sum);
             }
             long open = tasks.countOpen(userId, null) + data.stream().filter(t -> t.completedAt() == null).count();
             if (open > TaskService.MAX_OPEN) throw bad("Ficaria com mais de " + TaskService.MAX_OPEN + " tarefas abertas.");

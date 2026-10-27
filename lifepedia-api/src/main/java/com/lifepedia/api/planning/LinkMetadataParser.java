@@ -7,14 +7,17 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -59,7 +62,9 @@ final class LinkMetadataParser {
         if (price == null) price = parsePrice(first(meta.get("product:price:amount"), meta.get("og:price:amount"), meta.get("price")));
         if (price == null) price = amazonPrice(doc);
         String currency = product == null ? null : offerCurrency(product.get("offers"));
-        if (currency == null) currency = first(meta.get("product:price:currency"), meta.get("og:price:currency"), meta.get("pricecurrency"));
+        if (currency == null) {
+            currency = first(meta.get("product:price:currency"), meta.get("og:price:currency"), meta.get("pricecurrency"));
+        }
 
         String image = first(product == null ? null : imageOf(product.get("image")), meta.get("og:image:secure_url"),
                 meta.get("og:image"), meta.get("twitter:image"), amazonImage(doc), linkHref(doc, "link[rel=image_src]"));
@@ -136,7 +141,7 @@ final class LinkMetadataParser {
             value = value.replace(".", "");
         }
         try {
-            BigDecimal price = new BigDecimal(value).setScale(2, java.math.RoundingMode.HALF_UP);
+            BigDecimal price = new BigDecimal(value).setScale(2, RoundingMode.HALF_UP);
             return price.signum() > 0 && price.compareTo(new BigDecimal("999999999999")) < 0 ? price : null;
         } catch (NumberFormatException e) {
             return null;
@@ -202,13 +207,17 @@ final class LinkMetadataParser {
 
     private static String offerCurrency(JsonNode offers) {
         if (offers == null) return null;
-        if (offers.isArray()) return offers.values().stream().map(LinkMetadataParser::offerCurrency).filter(c -> c != null).findFirst().orElse(null);
+        if (offers.isArray()) {
+            return offers.values().stream().map(LinkMetadataParser::offerCurrency).filter(Objects::nonNull).findFirst().orElse(null);
+        }
         return text(offers.get("priceCurrency"));
     }
 
     private static String imageOf(JsonNode image) {
         if (image == null) return null;
-        if (image.isArray()) return image.values().stream().map(LinkMetadataParser::imageOf).filter(i -> i != null).findFirst().orElse(null);
+        if (image.isArray()) {
+            return image.values().stream().map(LinkMetadataParser::imageOf).filter(Objects::nonNull).findFirst().orElse(null);
+        }
         if (image.isObject()) return text(image.get("url"));
         return text(image);
     }
@@ -240,7 +249,7 @@ final class LinkMetadataParser {
         String root = url.getHost() == null ? "" : url.getHost().replaceFirst("^(www|m)\\.", "").split("\\.")[0];
         String[] parts = title.split("\\s+[|–—-]\\s+");
         if (parts.length > 1 && !root.isEmpty() && parts[parts.length - 1].toLowerCase(Locale.ROOT).contains(root)) {
-            return String.join(" - ", java.util.Arrays.copyOf(parts, parts.length - 1)).trim();
+            return String.join(" - ", Arrays.copyOf(parts, parts.length - 1)).trim();
         }
         return title.trim();
     }

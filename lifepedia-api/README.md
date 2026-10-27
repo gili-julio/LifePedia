@@ -8,6 +8,7 @@ API REST do [LifePedia](../README.md). Spring Boot 4 · Java 21 · PostgreSQL 17
 cd .. && docker compose up -d db && cd lifepedia-api     # Postgres em localhost:5440 (compose da raiz)
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev    # API em http://localhost:8080, lendo ../.env
 ./mvnw test                                              # testes com Testcontainers (Docker precisa estar rodando)
+./mvnw checkstyle:check                                  # estilo (checkstyle.xml); também roda no CI
 ```
 
 O perfil `dev` (`application-dev.yml`) importa o `.env` da pasta raiz, então `JWT_SECRET` e `DB_PASSWORD` são os

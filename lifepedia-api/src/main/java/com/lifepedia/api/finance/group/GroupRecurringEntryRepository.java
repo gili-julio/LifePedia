@@ -52,6 +52,7 @@ public interface GroupRecurringEntryRepository extends JpaRepository<GroupRecurr
 
     /** Sincronizados viram cópias (o item pessoal vai ser apagado, o do grupo fica). */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query(value = "update group_recurring_entries set source_id = null where user_id = :userId and source_id is not null", nativeQuery = true)
+    @Query(value = "update group_recurring_entries set source_id = null where user_id = :userId and source_id is not null",
+            nativeQuery = true)
     int detachSynced(UUID userId);
 }

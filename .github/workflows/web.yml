@@ -1,0 +1,53 @@
+name: Web
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lifepedia-web/**"
+      - "!lifepedia-web/**/*.md"
+      - ".github/workflows/web.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "lifepedia-web/**"
+      - "!lifepedia-web/**/*.md"
+      - ".github/workflows/web.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: lifepedia-web
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: lifepedia-web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    name: Build (tsc + vite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: lifepedia-web/package-lock.json
+      - run: npm ci
+      - run: npm run build

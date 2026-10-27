@@ -117,7 +117,8 @@ public class TaskAgendaService {
         }
         Comparator<Entry> order = order(sort);
         List<Day> days = byDay.entrySet().stream()
-                .map(e -> new Day(e.getKey(), items(e.getValue(), Comparator.comparing((Entry x) -> x.item.status() != Status.PENDING).thenComparing(order))))
+                .map(e -> new Day(e.getKey(), items(e.getValue(),
+                        Comparator.comparing((Entry x) -> x.item.status() != Status.PENDING).thenComparing(order))))
                 .toList();
         return new Agenda(today, items(overdue, Comparator.comparing((Entry x) -> x.item.scheduledDate()).thenComparing(order)), days);
     }

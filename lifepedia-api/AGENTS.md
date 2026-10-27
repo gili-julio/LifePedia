@@ -34,7 +34,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 
 ## Convenções
 
-- Comentários: regra da raiz (só o essencial, Javadoc de uma linha). Não edite migrations já aplicadas, nem para
+- Estilo verificado pelo Checkstyle (ver Testes). Comentários: regra da raiz (só o essencial, Javadoc de uma linha). Não edite migrations já aplicadas, nem para
   mudar comentário — o Flyway valida o checksum e a API não sobe.
 - **Pacote por módulo** (`auth`, `user`, `finance/...`), não por camada. Cada feature tem entity, repository,
   service, controller e `*Dtos` (records aninhados) juntos.
@@ -129,8 +129,14 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 - Cubra sempre: fluxo feliz, validação (400), isolamento entre usuários (404/400) e acesso sem token (401).
 
 ```bash
+./mvnw checkstyle:check   # regras em checkstyle.xml (também no CI)
 ./mvnw test
 ```
+
+**Checkstyle** (`checkstyle.xml`, rodado à parte, não no `package`, porque o Dockerfile não copia o arquivo):
+linha até 140 (conteúdo de text block liberado), sem tab, sem import coringa/não usado, nomes no padrão Java (logger
+estático pode ser `log`), chaves no fim da linha e **nada de nome totalmente qualificado no meio do código** (importe a
+classe). O CI (`.github/workflows/api.yml`) roda Checkstyle, testes e build da imagem.
 
 ## Rodar local
 

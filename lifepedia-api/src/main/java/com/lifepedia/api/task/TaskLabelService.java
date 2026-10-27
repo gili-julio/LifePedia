@@ -41,7 +41,8 @@ public class TaskLabelService {
         Map<UUID, Long> listCounts = counts(ownLists.isEmpty() ? List.of() : tasks.openByList(ids(ownLists)));
         Map<UUID, Long> tagCounts = counts(ownTags.isEmpty() ? List.of() : tasks.openByTag(tagIds(ownTags)));
         return new Labels(
-                ownLists.stream().map(l -> new Label(l.getId(), l.getName(), l.getColor(), listCounts.getOrDefault(l.getId(), 0L))).toList(),
+                ownLists.stream()
+                        .map(l -> new Label(l.getId(), l.getName(), l.getColor(), listCounts.getOrDefault(l.getId(), 0L))).toList(),
                 ownTags.stream().map(t -> new Label(t.getId(), t.getName(), t.getColor(), tagCounts.getOrDefault(t.getId(), 0L))).toList());
     }
 

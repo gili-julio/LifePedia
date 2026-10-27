@@ -1,0 +1,61 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
+<!-- Regras do projeto (ver AGENTS.md). Rodar: ./mvnw checkstyle:check -->
+<module name="Checker">
+    <property name="charset" value="UTF-8"/>
+    <property name="severity" value="error"/>
+    <property name="fileExtensions" value="java"/>
+
+    <module name="FileTabCharacter"/>
+    <module name="NewlineAtEndOfFile">
+        <property name="lineSeparator" value="lf_cr_crlf"/>
+    </module>
+    <!-- Conteúdo de text block (XML, JSON) pode passar do limite. -->
+    <module name="LineLength">
+        <property name="max" value="140"/>
+        <property name="ignorePattern" value="^\s*[&lt;{\[]"/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- Imports -->
+        <module name="AvoidStarImport"/>
+        <module name="RedundantImport"/>
+        <module name="UnusedImports"/>
+        <module name="IllegalImport"/>
+        <!-- Nome qualificado no meio do código: importe a classe e use o nome simples. -->
+        <module name="RegexpSinglelineJava">
+            <property name="format"
+                      value="^(?!\s*(import|package)\b).*(?&lt;![\w.&quot;/])(java|javax|jakarta|org|com|tools)\.[a-z]\w*\.[\w.]*\b[A-Z]\w*"/>
+            <property name="ignoreComments" value="true"/>
+            <property name="message" value="Nome totalmente qualificado no código: importe a classe e use o nome simples."/>
+        </module>
+
+        <!-- Nomes -->
+        <module name="PackageName"/>
+        <module name="TypeName"/>
+        <module name="MethodName"/>
+        <module name="MemberName"/>
+        <module name="ParameterName"/>
+        <module name="LocalVariableName"/>
+        <!-- Logger estático pode se chamar "log". -->
+        <module name="ConstantName">
+            <property name="format" value="^(log|[A-Z][A-Z0-9]*(_[A-Z0-9]+)*)$"/>
+        </module>
+
+        <!-- Erros comuns -->
+        <module name="EmptyStatement"/>
+        <module name="EqualsHashCode"/>
+        <module name="StringLiteralEquality"/>
+        <module name="SimplifyBooleanExpression"/>
+        <module name="OneStatementPerLine"/>
+        <module name="EmptyCatchBlock">
+            <property name="commentFormat" value=".+"/>
+        </module>
+        <module name="UpperEll"/>
+        <module name="ArrayTypeStyle"/>
+        <module name="ModifierOrder"/>
+        <module name="LeftCurly"/>
+        <module name="RightCurly"/>
+    </module>
+</module>
