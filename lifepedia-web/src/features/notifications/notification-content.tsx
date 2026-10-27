@@ -3,10 +3,12 @@ import {
   BellIcon,
   BellRingIcon,
   CircleCheckIcon,
+  HeartHandshakeIcon,
   type LucideIcon,
   MessageCircleIcon,
   RepeatIcon,
   UserMinusIcon,
+  UserPlusIcon,
   UserRoundCheckIcon,
   UsersIcon,
 } from 'lucide-react'
@@ -101,6 +103,18 @@ export function notificationContent(n: AppNotification): Content {
         ),
         link: n.groupId ? `/grupos/${n.groupId}` : '/grupos',
         icon: UserMinusIcon,
+      }
+    case 'FRIEND_REQUEST':
+      return {
+        text: <>{strong(n.data.actorName)} quer ser seu amigo</>,
+        link: '/amigos?aba=pedidos',
+        icon: UserPlusIcon,
+      }
+    case 'FRIEND_ACCEPTED':
+      return {
+        text: <>{strong(n.data.actorName)} aceitou seu pedido de amizade</>,
+        link: '/amigos',
+        icon: HeartHandshakeIcon,
       }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }

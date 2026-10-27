@@ -5,6 +5,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 /** Grupo de usuários (família, casal, república...). */
@@ -23,12 +24,17 @@ public class UserGroup extends BaseEntity {
     @Column(name = "created_by", updatable = false)
     private UUID createdBy;
 
+    /** Última escrita no grupo (tarefa, financeiro, planejamento, membros); atualizada por {@link GroupActivity}. */
+    @Column(name = "last_activity_at", nullable = false)
+    private OffsetDateTime lastActivityAt;
+
     protected UserGroup() {
     }
 
     public UserGroup(String name, UUID createdBy) {
         this.name = name;
         this.createdBy = createdBy;
+        this.lastActivityAt = OffsetDateTime.now();
     }
 
     /** URL da imagem com versão (cache); nulo sem imagem. */
@@ -54,5 +60,9 @@ public class UserGroup extends BaseEntity {
 
     public UUID getCreatedBy() {
         return createdBy;
+    }
+
+    public OffsetDateTime getLastActivityAt() {
+        return lastActivityAt;
     }
 }

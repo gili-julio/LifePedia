@@ -1,6 +1,7 @@
-import { ChevronRightIcon } from 'lucide-react'
+import { ChevronRightIcon, PinIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router'
+import { toast } from 'sonner'
 import { Logo } from '@/components/Logo'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import {
@@ -26,6 +27,9 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar'
+import { GroupAvatar } from '@/features/groups/components/GroupAvatar'
+import { usePinGroup } from '@/features/groups/api'
+import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { isLinkActive, itemLinks, linksByTab, NAV_SECTIONS, type NavItem, type NavLink } from './nav-items'
 import { useDynamicLinks } from './use-dynamic-links'
@@ -104,7 +108,9 @@ function NavEntry({ item, links }: { item: NavItem; links: NavLink[] }) {
               <DropdownMenuItem key={link.to} asChild>
                 <Link to={link.to} aria-current={linkActive(link) ? 'page' : undefined}
                   className={cn(linkActive(link) && 'font-semibold')}>
+                  <LinkIcon link={link} />
                   <span className="truncate">{link.label}</span>
+                  {link.group?.pinned && <PinIcon className="ml-auto size-3 text-muted-foreground" aria-label="Fixado" />}
                 </Link>
               </DropdownMenuItem>
             ))}
@@ -127,14 +133,46 @@ function NavEntry({ item, links }: { item: NavItem; links: NavLink[] }) {
           <SidebarMenuSub>
             {links.map((link) => (
               <SidebarMenuSubItem key={link.to}>
-                <SidebarMenuSubButton asChild isActive={linkActive(link)}>
-                  <Link to={link.to} aria-current={linkActive(link) ? 'page' : undefined}><span>{link.label}</span></Link>
+                <SidebarMenuSubButton asChild isActive={linkActive(link)} className={cn(link.group && 'pr-8')}>
+                  <Link to={link.to} aria-current={linkActive(link) ? 'page' : undefined}>
+                    <LinkIcon link={link} />
+                    <span>{link.label}</span>
+                  </Link>
                 </SidebarMenuSubButton>
+                {link.group && <PinButton group={link.group} alwaysVisible={isMobile} />}
               </SidebarMenuSubItem>
             ))}
           </SidebarMenuSub>
         </CollapsibleContent>
       </SidebarMenuItem>
     </Collapsible>
+  )
+}
+
+function LinkIcon({ link }: { link: NavLink }) {
+  if (link.group) return <GroupAvatar name={link.group.name} imageUrl={link.group.imageUrl} size="xs" className="-ml-0.5" />
+  const Icon = link.icon
+  return Icon ? <Icon /> : null
+}
+
+/** Fixa/desafixa o grupo (até 3). Fixado: alfinete cheio sempre à vista; os outros aparecem ao passar o mouse ou focar. */
+function PinButton({ group, alwaysVisible }: { group: NonNullable<NavLink['group']>; alwaysVisible: boolean }) {
+  const pin = usePinGroup()
+  const label = group.pinned ? `Desafixar ${group.name}` : `Fixar ${group.name}`
+  async function toggle() {
+    try {
+      await pin.mutateAsync({ id: group.id, pinned: !group.pinned })
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Não foi possível fixar o grupo.')
+    }
+  }
+  return (
+    <button type="button" onClick={toggle} disabled={pin.isPending} aria-label={label} title={label}
+      className={cn('absolute top-1/2 right-1 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground outline-none',
+        'transition-opacity hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sidebar-ring motion-reduce:transition-none',
+        'group-data-[collapsible=icon]:hidden [&>svg]:size-3.5',
+        group.pinned || alwaysVisible ? 'opacity-100' : 'opacity-0 group-hover/menu-sub-item:opacity-100')}>
+      <PinIcon className={cn(group.pinned && 'fill-current')} />
+    </button>
   )
 }

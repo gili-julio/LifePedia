@@ -33,8 +33,10 @@ Atrás do proxy do Coolify, pega o IP real do cliente (`real_ip`, só de rede pr
 | `/login`, `/cadastro` | Autenticação (cadastro pede o @username) |
 | `/` | **Início** (logo no topo): tarefas de hoje e atrasadas (até 5, abrem a tarefa), hábitos com a sequência e o mês no financeiro (entradas, saídas, saldo) |
 | `/perfil` | Meu perfil: foto (envia ao confirmar o recorte), nome e @username (conta sem dado obrigatório é trazida para cá com um aviso); **Meus dados** (exportar .json/.xlsx, importar com prévia *Somar*/*Substituir*) e **Excluir conta** (prévia por grupo, baixar dados, senha + EXCLUIR) |
-| `/tarefas` | Tarefas: **Hoje** (atrasadas + hoje, campo rápido), **Semana** (seg–dom em colunas; arrastar pela alça muda o dia), **Próximos** (por dia, +7 dias por vez), **Sem data**, **Hábitos** (sequência, recorde, % do mês, últimos 7 dias clicáveis) e **Concluídas** (`?aba=`; `?tarefa=<id>` abre a tarefa). Lembrete, hábito e fixo do financeiro no formulário; concluir tarefa ligada a fixo abre *Registrar no financeiro?*. Filtro por lista/etiqueta, ordem (minha ordem arrastando, prioridade, horário). Concluir, subtarefas, mover para, pular, editar/excluir com "só esta / esta e as próximas / todas"; listas e etiquetas no ⋮. Mostra também as de grupo em que você é o responsável (com o nome do grupo) |
-| `/grupos` | Meus grupos e **Solicitações (n)** (convites recebidos: aceitar/recusar); criar grupo com imagem |
+| `/tarefas` | Tarefas: **Hoje** (atrasadas + hoje, campo rápido), **Semana** (dias como "Seg - 26/10"; 7 colunas quando cabe, senão 4/2/1; título do cartão até 2 linhas com "..."; arrastar pela alça muda o dia), **Próximos** (por dia, +7 dias por vez), **Sem data**, **Hábitos** (sequência, recorde, % do mês, últimos 7 dias clicáveis) e **Concluídas** (`?aba=`; `?tarefa=<id>` abre a tarefa). Lembrete, hábito e fixo do financeiro no formulário; concluir tarefa ligada a fixo abre *Registrar no financeiro?*. Filtro por lista/etiqueta, ordem (minha ordem arrastando, prioridade, horário). Concluir, subtarefas, mover para, pular, editar/excluir com "só esta / esta e as próximas / todas"; listas e etiquetas no ⋮. Mostra também as de grupo em que você é o responsável (com o nome do grupo) |
+| `/grupos` | Meus grupos (alfinete fixa na sidebar, até 3) e **Solicitações (n)** (convites recebidos: aceitar/recusar); criar grupo com imagem |
+| `/amigos` | **Meus amigos** (abre o perfil), **Pedidos (n)** (recebidos: aceitar/recusar; enviados: cancelar) e **Conquistas** (as minhas, com nível, data em que foi conquistado e barra até a próxima meta) (`?aba=pedidos\|conquistas`); *Adicionar amigo* busca por nome/@username |
+| `/amigos/:id` | Perfil do amigo: foto, desde quando são amigos e as conquistas dele (sem as "só você vê"); *Desfazer amizade* no ⋮ |
 | `/grupos/:id` | Grupo: visão geral (totais, por membro, fixos x ocasionais, 6 meses, categorias), lançamentos, fixos, **planejamento**, **tarefas** (`?aba=tarefas&vista=`; responsável/rodízio, comentários, filtro por responsável; `&tarefa=<id>` abre a tarefa) e membros; levar meus itens, novo lançamento/fixo direto no grupo (mesmos formulários do pessoal), convidar (admin). No celular as abas rolam na própria faixa |
 | `/grupos/convite/:token` | Entrar num grupo pelo link de convite (sem sessão: depois de entrar ou criar a conta, volta para o convite) |
 | `/financeiro` | Visão geral do mês: totais, % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, categorias (expandem os itens agrupados pelo nome) |
@@ -58,7 +60,9 @@ que bloqueia: aviso "não deu para ler X" + preço/foto de produto parecido no B
 link, "Buscar preço e foto pelo nome". O item mostra "Preço/foto de referência: Buscapé" ao lado do link.
 
 **Navegação**: sidebar (shadcn `Sidebar`) com a logo no topo, seções (Finanças, Organização, Social) com itens que
-expandem (Financeiro → telas do módulo; Tarefas → abas; Grupos → seus grupos + todos) e o usuário no rodapé
+expandem, cada subitem com ícone (Financeiro → telas do módulo; Tarefas → abas; Grupos → 3 atalhos com a foto, fixados
+primeiro e depois os de atividade recente, alfinete ao passar o mouse, + *Ver todos*; Amigos → amigos, pedidos,
+conquistas) e o usuário no rodapé
 (notificações, perfil, tema, sair). A partir de 1024px fica fixa e recolhe para só ícones (botão no topo ou
 `Ctrl+B`; subitens abrem num menu ao lado; a escolha fica no cookie `sidebar_state`). Abaixo disso vira gaveta
 lateral aberta pelo ☰ do topo, que fecha ao navegar. O topo mostra o caminho (ex.: Financeiro › Lançamentos).
@@ -149,6 +153,8 @@ src/
 │   ├── notifications/        hooks, NotificationsSheet, texto por tipo (notification-content), use-reminder-toasts
 │   │                         (lembrete que chega com o app aberto vira toast)
 │   ├── groups/               grupos: api, GroupAvatar, GroupFormDialog, InviteDialog + UserPicker, MembersList, páginas
+│   ├── friends/              amigos e conquistas: api, achievements (texto/ícone por código), AchievementGrid,
+│   │                         AddFriendDialog, FriendsPage, FriendProfilePage
 │   ├── planning/             planejamento do grupo: api, link.ts (isSafeLink), PlanningTab, PlanItemDialog (link → prévia),
 │   │                         PlanItemRow, PlanTimelineChart, ScenariosCard, AcquireDialog, BaseSettingsDialog
 │   ├── tasks/                tarefas: api, dates (repetição em texto, dias), labels (listas/etiquetas por id),
@@ -172,6 +178,6 @@ src/
 │       ├── group/                    financeiro dentro dos grupos: visão geral, abas de itens, BringItemsDialog, GroupShareSection
 │       └── pages/                    Dashboard, Fixos, Lançamentos, Importar, Categorias
 ├── hooks/use-mobile.ts       gerado pelo shadcn (sidebar); celular = abaixo de 1024px
-├── lib/                      api (fetch com cookie + X-Requested-With), format (moeda/mês/data), colors (paleta), utils (cn), skipAutoFocusOnTouch
+├── lib/                      api (fetch com cookie + X-Requested-With), format (moeda/mês/data, formatInstantDate no fuso local), colors (paleta), utils (cn), skipAutoFocusOnTouch
 └── index.css                 tema shadcn (maia) + Manrope + cores de significado (--income/--expense/--data)
 ```

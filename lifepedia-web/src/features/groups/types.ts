@@ -18,6 +18,8 @@ export type GroupSummary = {
   memberCount: number
   /** Papel do usuário atual (nulo em convites recebidos) */
   role: GroupRole | null
+  /** Fixado na sidebar do usuário atual (até 3) */
+  pinned: boolean
 }
 
 export type GroupMember = { user: UserSummary; role: GroupRole; joinedAt: string }

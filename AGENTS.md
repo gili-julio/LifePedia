@@ -91,6 +91,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Regra do @username (`user/Usernames.java`) ↔ `features/auth/username.ts`
   - Versão do arquivo da conta (`account/AccountDtos.FORMAT`) ↔ `features/account/types.ts` (`ACCOUNT_FORMAT`)
   - Tarefas: `Priority`, `Recurrence.Unit/MonthMode`, `TaskOccurrence.Status`, `TaskDtos.Sort/Scope` ↔ `features/tasks/types.ts`
+  - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Mês do ocasional** = campo `month` (padrão: mês da data; fatura do cartão: mês da fatura). Listagem e totais usam `month`, não `date`.
 - **Totais vêm da API** (`/summary`) e consideram todos os itens, não a página; o front não soma valores salvos.
@@ -107,6 +108,22 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   (`source_id`) é atualizado junto com o pessoal (`GroupFinanceSync`) e some com ele (FK em cascata); **cópia**
   (`source_id` nulo) é independente; item cadastrado direto no grupo é uma cópia sem `origin_id`. A categoria é a de quem levou; nas métricas do grupo as categorias somam pelo
   nome (`categoryId` do resumo = `TIPO:nome`). Fixo sincronizado usa os ajustes mensais do pessoal.
+- **Atividade do grupo**: escrita com sucesso em `/api/groups/{groupId}/...` atualiza `user_groups.last_activity_at`
+  (`GroupActivityInterceptor`; escrita que não é atividade leva `@NoGroupActivity`, ex.: fixar, prévia de link). Entrar
+  no grupo também conta. `GET /api/groups/shortcuts` = até 3 grupos para a sidebar: fixados (`group_members.pinned_at`,
+  até 3 por pessoa, `PUT /{id}/pin {pinned}`) e depois os de atividade mais recente. Como a atividade vem de qualquer
+  módulo, o front invalida `['groups', 'shortcuts']` após toda mutação (`MutationCache` em `main.tsx`).
+- **Amigos** (`/api/friends`): `friendships` com um registro por par (`PENDING` ou `ACCEPTED`; recusar, cancelar e
+  desfazer apagam a linha). Pedido para quem já pediu vira amizade na hora. Perfil (`GET /{userId}`) só entre amigos
+  (senão 404) e traz as conquistas sem as `ownerOnly`. Lista completa (até 200), sem paginação, como grupos. Amizades
+  não entram no arquivo exportado (relação com outras pessoas, como os grupos).
+- **Conquistas** (`/api/achievements`): cada nível alcançado é gravado em `user_achievements` com a data e **nunca se
+  perde** (dados que diminuem não baixam o nível; a barra não fica abaixo da meta do nível). Só o próximo nível usa as
+  contagens atuais; no nível máximo nada é contado. Confere depois do commit de cada ação (`AchievementProgress`,
+  publicado ao concluir tarefa, lançar, entrar/criar grupo, virar amigo, importar a conta) e também ao ler (dados de
+  antes da tabela). Cada código tem os valores de cada nível em `Achievement`; nível, meta e `unlockedAt` vêm da API.
+  Conquista nova = valor no enum + `value(...)` em `AchievementService` + evento na ação + texto no front. Dado
+  financeiro só como contagem e marcado `ownerOnly`.
 - **Planejamento** (`/api/groups/{id}/planning`): a simulação inteira vem da API (`GET` devolve base, itens com o
   resultado de cada um, linha do tempo e totais); o front não calcula saldo nem falta. Saldo do mês = fixos do grupo
   naquele mês (com ajustes) + média dos ocasionais dos N meses completos anteriores que têm lançamentos (nenhum → mês

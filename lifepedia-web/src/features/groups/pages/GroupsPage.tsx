@@ -1,4 +1,4 @@
-import { CheckIcon, PlusIcon, ShieldIcon, XIcon } from 'lucide-react'
+import { CheckIcon, PinIcon, PlusIcon, ShieldIcon, XIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -10,7 +10,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/lib/api'
 import { formatRelative } from '@/lib/format'
-import { useGroups, useReceivedInvites, useRespondInvite } from '../api'
+import { cn } from '@/lib/utils'
+import { usePinGroup, useGroups, useReceivedInvites, useRespondInvite } from '../api'
 import { UserAvatar } from '@/components/UserAvatar'
 import { GroupAvatar } from '../components/GroupAvatar'
 import { GroupFormDialog } from '../components/GroupFormDialog'
@@ -21,6 +22,17 @@ function participants(count: number) {
 
 function MyGroups({ onCreate }: { onCreate: () => void }) {
   const { data, isLoading } = useGroups()
+  const pin = usePinGroup()
+
+  async function togglePin(id: string, pinned: boolean) {
+    try {
+      await pin.mutateAsync({ id, pinned })
+      toast.success(pinned ? 'Grupo fixado na sidebar.' : 'Grupo desafixado.')
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : 'Não foi possível fixar o grupo.')
+    }
+  }
+
   if (isLoading) return <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-20" />)}</div>
   if (!data?.length) {
     return (
@@ -35,9 +47,9 @@ function MyGroups({ onCreate }: { onCreate: () => void }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {data.map((g) => (
-        <li key={g.id}>
+        <li key={g.id} className="relative">
           <Link to={`/grupos/${g.id}`}
-            className="flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
+            className="flex items-center gap-3 rounded-lg border bg-card p-3 pr-12 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
             <GroupAvatar name={g.name} imageUrl={g.imageUrl} size="lg" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium">{g.name}</span>
@@ -45,6 +57,13 @@ function MyGroups({ onCreate }: { onCreate: () => void }) {
             </span>
             {g.role === 'ADMIN' && <Badge variant="secondary" className="gap-1"><ShieldIcon className="size-3" /> Admin</Badge>}
           </Link>
+          <Button variant="ghost" size="icon-sm" disabled={pin.isPending}
+            className={cn('absolute top-1/2 right-2 -translate-y-1/2', !g.pinned && 'text-muted-foreground')}
+            aria-label={g.pinned ? `Desafixar ${g.name} da sidebar` : `Fixar ${g.name} na sidebar`}
+            title={g.pinned ? 'Desafixar da sidebar' : 'Fixar na sidebar'}
+            onClick={() => togglePin(g.id, !g.pinned)}>
+            <PinIcon className={cn(g.pinned && 'fill-current')} />
+          </Button>
         </li>
       ))}
     </ul>

@@ -8,6 +8,8 @@ export type NotificationType =
   | 'TASK_COMMENT'
   | 'TASK_OVERDUE'
   | 'TASK_REMINDER'
+  | 'FRIEND_REQUEST'
+  | 'FRIEND_ACCEPTED'
 
 export type AppNotification = {
   id: string

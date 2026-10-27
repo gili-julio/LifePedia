@@ -80,6 +80,18 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 - **DTO de entrada com booleano opcional**: use `Boolean` (Jackson 3 recusa campo `boolean` ausente → 400).
 - **Notificações**: `NotificationService.notify(...)` na mesma transação da ação; tipo novo = valor em
   `NotificationType` + texto no front.
+- **Atividade de grupo**: rota nova de escrita sob `/api/groups/{groupId}/...` já conta como atividade
+  (`GroupActivityInterceptor`, registrado em `config/WebConfig`); se não for atividade (preferência pessoal, consulta via
+  POST), anote o método com `@NoGroupActivity`. Atalhos e fixar: `GroupService.shortcuts`/`pin` (teste em
+  `GroupIntegrationTest`).
+- **Amigos** (`friend/`): `FriendService` (pedido com `RateLimiter` por usuário, limites `MAX_FRIENDS`/`MAX_PENDING_SENT`);
+  amizade sempre buscada por `between(a, b)` (par em qualquer ordem; índice único `LEAST/GREATEST`). Perfil de amigo =
+  `AchievementService.of(id, false)`. Teste em `FriendIntegrationTest`.
+- **Conquistas** (`achievement/`): nível gravado em `user_achievements` (`UserAchievementRepository.unlock`, insert com
+  `on conflict do nothing`) e nunca apagado. Ação que pode subir nível publica `AchievementProgress(userId, códigos)`;
+  `AchievementService.onProgress` roda depois do commit em transação própria (falha não desfaz a ação). Ler também
+  grava nível novo (por isso `of` e o perfil do amigo não são `readOnly`). Resposta pela função pura
+  `AchievementResponse.of` (`AchievementResponseTest`); fluxo em `AchievementIntegrationTest`.
 - Entidade de grupo chama `UserGroup` (tabela `user_groups`): `Group` é palavra reservada no JPQL.
 - Valor de fixo num mês: sempre considerar `RecurringAdjustment` (ver `SummaryService.amountIn`).
 - **"Hoje"**: use o `Clock` do contexto (`config/TimeProperties`, fuso `TIME_ZONE`), nunca `LocalDate.now()` sem

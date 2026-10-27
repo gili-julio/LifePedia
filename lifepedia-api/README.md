@@ -107,7 +107,8 @@ grupo (`data`: `groupName`, `taskId`, `taskTitle`, `date` se houver e `actorName
 `TASK_ASSIGNED` (virou responsável), `TASK_TURN` (sua vez no rodízio), `TASK_COMPLETED` (outra pessoa concluiu a
 sua), `TASK_COMMENT` (+ `preview`, até 100 caracteres) e `TASK_OVERDUE` (aviso diário às 8h, sem ator).
 `TASK_REMINDER` (lembrete; pessoal ou de grupo, sem ator): `taskId`, `taskTitle`, `date`, `time` (`HH:mm`), `minutes`
-e `groupName` (só grupo).
+e `groupName` (só grupo). Amizade: `FRIEND_REQUEST` (`actorName`, `actorUsername`, `requestId`) e `FRIEND_ACCEPTED`
+(`actorName`, `actorUsername`).
 
 ### Grupos
 
@@ -115,7 +116,9 @@ Não membro recebe `404`; ação de admin feita por membro comum, `403`.
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET / POST | `/api/groups` | Meus grupos (`{id, name, imageUrl, memberCount, role}`) · cria `{name}` (quem cria é admin) |
+| GET / POST | `/api/groups` | Meus grupos por nome (`{id, name, imageUrl, memberCount, role, pinned}`) · cria `{name}` (quem cria é admin) |
+| GET | `/api/groups/shortcuts` | Até 3 grupos para a sidebar: fixados (na ordem em que foram fixados) e depois os de atividade mais recente |
+| PUT | `/api/groups/{id}/pin` | `{pinned}` fixa/desafixa na sidebar de quem pede (até 3; o 4º → 400). Não conta como atividade |
 | GET / PUT / DELETE | `/api/groups/{id}` | Detalhe com membros · renomear (admin) · excluir (admin) |
 | PUT / DELETE | `/api/groups/{id}/image` | Multipart `file` (JPEG/PNG até 1 MB, 64–4096 px), regravado como JPEG ≤ 512 px · remover (admin) |
 | GET | `/api/groups/{id}/image?v=` | Imagem (membros e convidados); cache privado de 30 dias (a URL muda a cada imagem) |
@@ -130,6 +133,27 @@ Não membro recebe `404`; ação de admin feita por membro comum, `403`.
 | GET / POST / DELETE | `/api/groups/{id}/invite-link` | Link ativo (`{token, expiresAt}`) · gerar novo (7 dias; invalida o anterior) · desativar |
 | GET | `/api/groups/join/{token}` (+ `/image`) | Prévia do grupo pelo link (`{groupId, name, imageUrl, memberCount, member}`) |
 | POST | `/api/groups/join/{token}` | Entrar pelo link (aceita convites pendentes do mesmo grupo) |
+
+Toda escrita com sucesso em `/api/groups/{id}/...` (e entrar no grupo) atualiza a **última atividade** do grupo
+(`last_activity_at`), usada nos atalhos.
+
+### Amigos (`/api/friends`) e conquistas
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/friends` | Amigos por nome (`[{user, since}]`, até 200) |
+| GET | `/api/friends/candidates?q=` | Busca por nome/@username (mín. 2 caracteres, até 10) com `status` `FRIEND`/`SENT`/`RECEIVED`/nulo |
+| GET | `/api/friends/requests` · `/requests/count` | Pendentes `{received, sent}` (`[{id, user, createdAt}]`) · `{count}` recebidos |
+| POST | `/api/friends/requests` | `{userId}` envia o pedido (`{status: PENDING}`) ou, se a pessoa já tinha pedido, aceita (`ACCEPTED`). 30/h, até 50 sem resposta |
+| POST | `/api/friends/requests/{id}/accept` | Aceitar (só quem recebeu) |
+| DELETE | `/api/friends/requests/{id}` | Recusar (recebido) ou cancelar (enviado) |
+| GET / DELETE | `/api/friends/{userId}` | Perfil do amigo `{user, since, achievements}` (sem as `ownerOnly`) · desfazer amizade. Não amigo → 404 |
+| GET | `/api/achievements` | Minhas conquistas `[{code, value, level, maxLevel, target, unlockedAt, ownerOnly}]` (todas) |
+
+Conquistas: cada nível alcançado fica em `user_achievements` com a data (`unlockedAt` = do nível atual) e não se perde
+se os dados diminuírem; no nível máximo a contagem para. Confere depois de cada ação e ao ler. Códigos: `TASKS_DONE` (ocorrências concluídas por mim), `GROUP_TASKS_DONE` (as de
+grupo), `HABIT_STREAK` (maior sequência entre os hábitos pessoais em andamento), `FRIENDS`, `GROUPS` e
+`TRANSACTIONS` (lançamentos; `ownerOnly`). Os valores de cada nível ficam em `achievement/Achievement`.
 
 ### Financeiro em grupo (`/api/groups/{groupId}/finance`)
 
@@ -280,7 +304,8 @@ Erros seguem RFC 9457 (`application/problem+json`), com `errors: {campo: mensage
 
 ```
 src/main/java/com/lifepedia/api/
-├── config/        SecurityConfig (JWT, cookie, CORS, BCrypt), SecurityFilters (CSRF, rate limit), propriedades
+├── config/        SecurityConfig (JWT, cookie, CORS, BCrypt), SecurityFilters (CSRF, rate limit), WebConfig
+│                  (interceptors), propriedades
 ├── shared/        BaseEntity, exceções, handler global, CurrentUser, RateLimiter, Paging/PageResponse,
 │                  image/ (validação e gravação de imagens), net/SafeHttpClient (busca de URL do usuário, anti-SSRF)
 ├── auth/          cadastro, login/logout, cookie de sessão (SessionCookies), emissão de token, bloqueio por
@@ -289,7 +314,9 @@ src/main/java/com/lifepedia/api/
 ├── user/          entidade User (@username), /api/users/me (ver/editar perfil, foto em UserImageStore), UserRegisteredEvent
 ├── notification/  notificações (tipo + dados JSON), contador de não lidas
 ├── group/         grupos, membros, convites, link de convite, imagens (GroupImageStore), GroupAccess,
-│                  GroupMemberRemovedEvent, GroupDeletedEvent
+│                  GroupMemberRemovedEvent, GroupDeletedEvent, atividade (GroupActivityInterceptor), atalhos/fixar
+├── friend/        pedidos de amizade, amigos, perfil do amigo
+├── achievement/   conquistas (Achievement: níveis; AchievementService: contagens + níveis gravados; AchievementProgress)
 ├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda, listas/etiquetas, grupo
 │                 (responsável, rodízio, comentários, avisos, aviso diário de atrasadas), hábitos (HabitStats),
 │                 lembretes (TaskReminderJob), export/import (TaskTransferService)
@@ -309,5 +336,6 @@ src/main/resources/
                     · V6 descrição original · V7 username · V8 grupos · V9 itens de grupo · V10 notificações
                     · V11 planejamento · V12 preço de referência do item · V13 criador do grupo anulável
                     · V14 tarefas · V15 tarefas de grupo (responsável, rodízio, comentários)
-                    · V16 lembrete e fixo do financeiro nas tarefas
+                    · V16 lembrete e fixo do financeiro nas tarefas · V17 foto de perfil
+                    · V18 atividade/fixar grupo e amizades · V19 níveis de conquista
 ```

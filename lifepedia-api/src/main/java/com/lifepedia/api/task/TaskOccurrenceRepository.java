@@ -28,6 +28,12 @@ public interface TaskOccurrenceRepository extends JpaRepository<TaskOccurrence, 
 
     List<TaskOccurrence> findByTaskIdIn(Collection<UUID> taskIds);
 
+    long countByCompletedByAndStatus(UUID userId, Status status);
+
+    @Query("select count(o) from TaskOccurrence o join Task t on t.id = o.taskId "
+            + "where o.completedBy = :userId and o.status = :status and t.groupId is not null")
+    long countInGroupsByCompletedBy(UUID userId, Status status);
+
     @Query("select o from TaskOccurrence o where o.taskId in :taskIds and o.date is null")
     List<TaskOccurrence> undated(Collection<UUID> taskIds);
 

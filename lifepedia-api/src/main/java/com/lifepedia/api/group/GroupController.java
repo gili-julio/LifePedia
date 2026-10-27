@@ -3,6 +3,7 @@ package com.lifepedia.api.group;
 import com.lifepedia.api.group.GroupDtos.GroupDetail;
 import com.lifepedia.api.group.GroupDtos.GroupRequest;
 import com.lifepedia.api.group.GroupDtos.GroupSummary;
+import com.lifepedia.api.group.GroupDtos.PinRequest;
 import com.lifepedia.api.group.GroupDtos.RoleRequest;
 import com.lifepedia.api.shared.CurrentUser;
 import com.lifepedia.api.shared.image.Images;
@@ -40,6 +41,12 @@ public class GroupController {
     @GetMapping
     public List<GroupSummary> list(@AuthenticationPrincipal Jwt jwt) {
         return service.list(CurrentUser.id(jwt));
+    }
+
+    /** Até 3 grupos para a sidebar: fixados primeiro, depois os com atividade mais recente. */
+    @GetMapping("/shortcuts")
+    public List<GroupSummary> shortcuts(@AuthenticationPrincipal Jwt jwt) {
+        return service.shortcuts(CurrentUser.id(jwt));
     }
 
     @PostMapping
@@ -81,6 +88,13 @@ public class GroupController {
     @GetMapping("/{groupId}/image")
     public ResponseEntity<byte[]> image(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId) {
         return service.image(CurrentUser.id(jwt), groupId).response();
+    }
+
+    @PutMapping("/{groupId}/pin")
+    @NoGroupActivity
+    public GroupSummary pin(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId,
+                            @Valid @RequestBody PinRequest request) {
+        return service.pin(CurrentUser.id(jwt), groupId, request.pinned());
     }
 
     @PostMapping("/{groupId}/leave")

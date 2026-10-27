@@ -14,7 +14,8 @@ compartilham usuário, autenticação, design e padrões.
 | Módulo | Status | O que faz |
 |---|---|---|
 | **Usuários** | ✅ v1.2 | Cadastro com **@username** único e obrigatório, login (sessão em cookie HttpOnly), perfil, **notificações**, **exportar/importar dados** e **excluir conta** |
-| **Grupos** | ✅ v1.1 | Grupos com nome e **imagem** (recorte antes de salvar), convites diretos (aceitar/recusar) ou por **link**, admins e membros, e **planejamento** (compras e investimentos com prazo, simulação, cenários e "e se") |
+| **Grupos** | ✅ v1.2 | Grupos com nome e **imagem** (recorte antes de salvar), convites diretos (aceitar/recusar) ou por **link**, admins e membros, **atalhos na sidebar** (até 3 fixados ou com atividade recente) e **planejamento** (compras e investimentos com prazo, simulação, cenários e "e se") |
+| **Amigos** | ✅ v1.0 | Pedidos de amizade por nome ou @username (aceitar/recusar/cancelar), perfil do amigo e **conquistas** com níveis (tarefas, hábitos, amigos, grupos, lançamentos) |
 | **Financeiro** | ✅ v1.2 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **importação de extrato/fatura via agente de IA** e **finanças em grupo** |
 | **Tarefas** | ✅ v1.0 | Tarefas pessoais e **em grupo** para hoje, outros dias ou sem data, **atrasadas**, **repetição** (a cada N dias/semanas/meses/anos, dias da semana, dia do mês, a partir da conclusão), prioridade, horário e duração, **subtarefas**, **listas** e **etiquetas**; no grupo, **responsável**, **rodízio**, **comentários** e avisos; **semana** (arrastar muda o dia), **hábitos** (sequência e % do mês), **lembretes** e **ligação com fixos do financeiro** |
 | Metas | 💡 ideia | Objetivos pessoais e financeiros com acompanhamento |
@@ -60,8 +61,9 @@ compartilham usuário, autenticação, design e padrões.
 - **Notificações**: no menu do perfil (avatar com contador): convite para grupo
   ("*Fulano* te chamou para participar do grupo *X*" · **Ver**), com a foto do grupo, membro que excluiu a conta
   (avisa também quem virou admin) e tarefas de grupo (responsável, sua vez no rodízio, alguém concluiu a sua,
-  comentário, atrasada) e **lembretes** de tarefa (na hora ou X min antes; com o app aberto aparecem também na tela)
-  — **Ver** abre a tarefa (em *Tarefas* ou na aba *Tarefas* do grupo).
+  comentário, atrasada), **lembretes** de tarefa (na hora ou X min antes; com o app aberto aparecem também na tela)
+  e **amizade** (pedido recebido, pedido aceito) — **Ver** abre a tarefa (em *Tarefas* ou na aba *Tarefas* do grupo)
+  ou *Amigos*.
 - **Início** (`/`, logo no topo): resumo do dia — tarefas de hoje e atrasadas, sequência dos hábitos e o mês no
   financeiro (entradas, saídas, saldo).
 - **Meus dados** (em *Meu perfil*):
@@ -73,6 +75,14 @@ compartilham usuário, autenticação, design e padrões.
     (categoria com mesmo tipo e nome é reaproveitada; lançamento/fixo igual não duplica). *Substituir* apaga os
     lançamentos e fixos pessoais antes (e as tarefas pessoais, se o arquivo tiver tarefas; pede confirmação); categorias sem uso saem, e itens **sincronizados** em grupos
     viram **cópia** e continuam no grupo. Perfil e itens de grupo do arquivo não são importados.
+- **Amigos** (menu *Social → Amigos*): *Adicionar amigo* busca por nome ou @username e envia o pedido (se a pessoa
+  já tinha pedido, viram amigos na hora). Pedidos recebidos e enviados ficam em *Amigos → Pedidos*; desfazer a amizade
+  fica no perfil do amigo. Até 200 amigos e 50 pedidos sem resposta.
+  - **Conquistas** (*Amigos → Conquistas* e no perfil de cada amigo): cada nível fica gravado com a data em que foi
+    conquistado e **não se perde** (excluir tarefas, sair de grupo etc. não tira o nível); no nível máximo a contagem
+    para. Níveis: *Mãos à obra* (tarefas concluídas), *Trabalho em equipe* (tarefas de grupo concluídas),
+    *Constância* (maior sequência num hábito em andamento), *Turma* (amigos), *Em grupo* (grupos) e *Organizado*
+    (lançamentos registrados, **só você vê**). Amigos veem as demais no seu perfil.
 - **Foto de perfil** (em *Meu perfil*): mesmo recorte da imagem do grupo. Aparece na sidebar, nos membros, nos
   convites, nos comentários e em quem cadastrou cada item do grupo. Trocar ou remover apaga o arquivo antigo do disco.
 - **Excluir conta** (em *Meu perfil*): mostra o que some e o que acontece em cada grupo, oferece baixar os dados e
@@ -82,6 +92,9 @@ compartilham usuário, autenticação, design e padrões.
 - **Grupos** (menu *Social → Grupos*): nome e imagem (JPEG/PNG/WebP; você arrasta, dá zoom e gira antes de salvar,
   como no WhatsApp). Quem cria vira **admin**; admins editam, convidam, geram o link, promovem e removem membros.
   Último admin que sai passa o posto ao membro mais antigo; último membro que sai apaga o grupo.
+  - **Sidebar**: mostra 3 grupos com a foto: primeiro os **fixados** (alfinete no item da sidebar ou no cartão em
+    *Grupos*; até 3, cada pessoa fixa os seus), depois os de **atividade mais recente** (qualquer escrita no grupo:
+    tarefa, comentário, lançamento, fixo, planejamento, membros; fixar não conta). *Ver todos* abre a lista.
   - **Convite direto**: busca por nome ou @username; a pessoa recebe a notificação e aceita ou recusa em
     *Grupos → Solicitações (n)*.
   - **Link de convite**: vale 7 dias; gerar outro invalida o anterior; dá para desativar. Quem abre logado entra direto.
@@ -282,7 +295,8 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Link de convite | Token aleatório de 256 bits, válido por 7 dias, um por grupo, revogável; entrar exige estar logado |
 | Uploads | Só JPEG/PNG até 1 MB (o front já envia recortado em 512 px); a API confere o tipo pelos bytes e as dimensões antes de decodificar e **regrava** um JPEG novo (sem metadados do arquivo). Servido só a membros/convidados |
 | Prévia de links | A API busca a página do link (proteção contra **SSRF**): só http(s) nas portas 80/443, só **IPs públicos** (checado na conexão, sem brecha de DNS rebinding), sem proxy/cookies, redirecionamentos revalidados, 12 s e 3 MB no máximo, 20 buscas por usuário a cada 10 min (inclui a busca de produto parecido no Buscapé). A foto é baixada, validada e **regravada** pela API (o navegador nunca carrega imagem de fora). Links só abrem em http(s), em outra aba, sem `Referer` |
-| Busca de usuários | Só para admins de grupo, mín. 2 caracteres, até 10 resultados, devolve apenas nome e @username (nunca e-mail) |
+| Busca de usuários | Convite de grupo (só admins) e adicionar amigo: mín. 2 caracteres, até 10 resultados, devolve apenas nome, @username e foto (nunca e-mail) |
+| Amigos | Perfil e conquistas de alguém só para quem é amigo (senão **404**); conquistas financeiras nunca aparecem para amigos (só contagem, nunca valores). Pedidos: 30/h por usuário, até 50 sem resposta; aceitar só quem recebeu |
 | Rede | Portas só em `127.0.0.1`; banco com senha aleatória; API e nginx rodam **sem root**; `no-new-privileges` |
 | Navegador | CSP restritiva, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, sem versão do servidor |
 | Segredos | Só em `.env` (fora do git). A API **não sobe** sem `JWT_SECRET` |
@@ -293,7 +307,7 @@ Pontos em aberto / recomendações:
 - **HTTPS**: hoje é só local. Antes de expor fora da máquina, coloque um proxy com TLS (Caddy/Traefik) na frente.
 - **Criptografia em disco**: o volume do Postgres não é criptografado — ative o **BitLocker** no Windows.
 - **Backup**: ainda não há rotina de backup dos volumes `lifepedia-db` e `lifepedia-uploads`.
-- **Busca de usuários**: qualquer admin de grupo encontra outros usuários pelo nome/@username (sem opção de ficar oculto).
+- **Busca de usuários**: qualquer usuário logado encontra outros pelo nome/@username ao adicionar amigo (sem opção de ficar oculto).
 - **Logout** apaga o cookie, mas o JWT é stateless: um token copiado valeria até expirar (8h).
 - **Importação com IA**: a fatura vai para o serviço de IA escolhido pelo usuário; a tela orienta a ocultar dados do cartão.
 - **Prévia de links**: ao buscar um link, a loja vê um acesso vindo do servidor do LifePedia (não do navegador). O nome

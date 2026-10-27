@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from 'next-themes'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -17,7 +17,13 @@ try {
   // storage indisponível
 }
 
-const queryClient = new QueryClient({
+const queryClient: QueryClient = new QueryClient({
+  // Escrita em qualquer módulo pode ser atividade de grupo (ordem dos atalhos da sidebar).
+  mutationCache: new MutationCache({
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['groups', 'shortcuts'] })
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

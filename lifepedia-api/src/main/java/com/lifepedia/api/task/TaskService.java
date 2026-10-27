@@ -1,5 +1,7 @@
 package com.lifepedia.api.task;
 
+import com.lifepedia.api.achievement.Achievement;
+import com.lifepedia.api.achievement.AchievementProgress;
 import com.lifepedia.api.finance.recurring.RecurringEntryRepository;
 import com.lifepedia.api.group.GroupMember;
 import com.lifepedia.api.group.GroupMemberRemovedEvent;
@@ -18,6 +20,7 @@ import com.lifepedia.api.task.TaskDtos.SubtaskInput;
 import com.lifepedia.api.task.TaskDtos.TaskRequest;
 import com.lifepedia.api.task.TaskDtos.TaskResponse;
 import com.lifepedia.api.task.TaskOccurrence.Status;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,6 +32,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -60,10 +64,12 @@ public class TaskService {
     private final TaskNotifier notifier;
     private final RecurringEntryRepository recurring;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
 
     public TaskService(TaskRepository tasks, TaskOccurrenceRepository occurrences, TaskSubtaskRepository subtasks,
                        TaskLabelService labels, GroupMemberRepository members, TaskCommentRepository comments,
-                       TaskNotifier notifier, RecurringEntryRepository recurring, Clock clock) {
+                       TaskNotifier notifier, RecurringEntryRepository recurring, Clock clock,
+                       ApplicationEventPublisher events) {
         this.tasks = tasks;
         this.occurrences = occurrences;
         this.subtasks = subtasks;
@@ -73,6 +79,7 @@ public class TaskService {
         this.notifier = notifier;
         this.recurring = recurring;
         this.clock = clock;
+        this.events = events;
     }
 
     public LocalDate today() {
@@ -427,8 +434,15 @@ public class TaskService {
         UUID assignee = task.getGroupId() == null ? null : assignee(task, date, row);
         // Guarda quem era o responsável (o rodízio pode mudar depois).
         if (assignee != null) row.setAssigneeId(assignee);
-        if (status == Status.DONE) row.complete(OffsetDateTime.now(clock), userId);
-        else row.setStatus(status);
+        if (status == Status.DONE) {
+            row.complete(OffsetDateTime.now(clock), userId);
+            events.publishEvent(new AchievementProgress(userId, task.getGroupId() != null
+                    ? EnumSet.of(Achievement.TASKS_DONE, Achievement.GROUP_TASKS_DONE)
+                    : task.isHabit() ? EnumSet.of(Achievement.TASKS_DONE, Achievement.HABIT_STREAK)
+                    : EnumSet.of(Achievement.TASKS_DONE)));
+        } else {
+            row.setStatus(status);
+        }
         occurrences.save(row);
         if (task.getRepeatUnit() == null) {
             task.setCompletedAt(status == Status.DONE ? row.getCompletedAt() : null);

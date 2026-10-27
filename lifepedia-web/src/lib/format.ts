@@ -53,6 +53,11 @@ export function formatDate(isoDate: string) {
   return `${day}/${month}/${year}`
 }
 
+/** Instante ISO → "15/09/2026" no fuso do navegador. */
+export function formatInstantDate(iso: string) {
+  return new Date(iso).toLocaleDateString('pt-BR')
+}
+
 /** Instante ISO → "há 5 minutos" ("há menos de um minuto" no início). */
 export function formatRelative(iso: string) {
   return formatDistanceToNow(new Date(iso), { locale: ptBR, addSuffix: true })

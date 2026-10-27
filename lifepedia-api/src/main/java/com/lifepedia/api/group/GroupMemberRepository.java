@@ -20,6 +20,10 @@ public interface GroupMemberRepository extends JpaRepository<GroupMember, UUID> 
 
     long countByGroupId(UUID groupId);
 
+    long countByUserId(UUID userId);
+
+    long countByUserIdAndPinnedAtIsNotNull(UUID userId);
+
     long countByGroupIdAndRole(UUID groupId, GroupMember.Role role);
 
     @Query("select m.groupId as groupId, count(m) as total from GroupMember m "

@@ -15,6 +15,7 @@ import type {
 const keys = {
   all: ['groups'] as const,
   list: ['groups', 'list'] as const,
+  shortcuts: ['groups', 'shortcuts'] as const,
   detail: (id: string) => ['groups', 'detail', id] as const,
   received: ['groups', 'invites', 'received'] as const,
   receivedCount: ['groups', 'invites', 'count'] as const,
@@ -26,6 +27,11 @@ const keys = {
 
 export function useGroups() {
   return useQuery({ queryKey: keys.list, queryFn: () => api<GroupSummary[]>('/api/groups') })
+}
+
+/** Atalhos da sidebar (até 3, ordem da API). A atividade muda por mutações de outros módulos: ver `main.tsx`. */
+export function useGroupShortcuts() {
+  return useQuery({ queryKey: keys.shortcuts, queryFn: () => api<GroupSummary[]>('/api/groups/shortcuts') })
 }
 
 export function useGroup(id: string) {
@@ -109,6 +115,12 @@ export function useUploadGroupImage() {
 
 export function useRemoveGroupImage() {
   return useGroupMutation((id: string) => api<GroupSummary>(`/api/groups/${id}/image`, { method: 'DELETE' }))
+}
+
+export function usePinGroup() {
+  return useGroupMutation(({ id, pinned }: { id: string; pinned: boolean }) =>
+    api<GroupSummary>(`/api/groups/${id}/pin`, { method: 'PUT', body: { pinned } }),
+  )
 }
 
 export function useDeleteGroup() {

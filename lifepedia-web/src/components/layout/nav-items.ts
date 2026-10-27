@@ -1,4 +1,26 @@
-import { HouseIcon, ListTodoIcon, UsersIcon, WalletIcon, type LucideIcon } from 'lucide-react'
+import {
+  CalendarClockIcon,
+  CalendarDaysIcon,
+  CircleCheckIcon,
+  FlameIcon,
+  HeartHandshakeIcon,
+  HouseIcon,
+  InboxIcon,
+  LayoutDashboardIcon,
+  LayoutGridIcon,
+  ListTodoIcon,
+  ReceiptTextIcon,
+  RepeatIcon,
+  SparklesIcon,
+  SunIcon,
+  TagsIcon,
+  TrophyIcon,
+  UserPlusIcon,
+  UsersIcon,
+  UsersRoundIcon,
+  WalletIcon,
+  type LucideIcon,
+} from 'lucide-react'
 
 export type NavLink = {
   /** Caminho, podendo ter `?aba=` (ativo só com essa aba). */
@@ -6,9 +28,12 @@ export type NavLink = {
   label: string
   /** Ativo só no caminho exato. */
   end?: boolean
+  icon?: LucideIcon
+  /** Atalho de grupo (subitem vindo da API): foto no lugar do ícone e opção de fixar. */
+  group?: { id: string; name: string; imageUrl: string | null; pinned: boolean }
 }
 
-export type NavItem = NavLink & {
+export type NavItem = Omit<NavLink, 'icon'> & {
   icon: LucideIcon
   /** Subitens fixos. */
   children?: NavLink[]
@@ -35,11 +60,11 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Financeiro',
         icon: WalletIcon,
         children: [
-          { to: '/financeiro', label: 'Visão geral', end: true },
-          { to: '/financeiro/fixos', label: 'Fixos' },
-          { to: '/financeiro/lancamentos', label: 'Lançamentos' },
-          { to: '/financeiro/importar', label: 'Importar' },
-          { to: '/financeiro/categorias', label: 'Categorias' },
+          { to: '/financeiro', label: 'Visão geral', end: true, icon: LayoutDashboardIcon },
+          { to: '/financeiro/fixos', label: 'Fixos', icon: RepeatIcon },
+          { to: '/financeiro/lancamentos', label: 'Lançamentos', icon: ReceiptTextIcon },
+          { to: '/financeiro/importar', label: 'Importar com IA', icon: SparklesIcon },
+          { to: '/financeiro/categorias', label: 'Categorias', icon: TagsIcon },
         ],
       },
     ],
@@ -52,12 +77,12 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Tarefas',
         icon: ListTodoIcon,
         children: [
-          { to: '/tarefas', label: 'Hoje', end: true },
-          { to: '/tarefas?aba=semana', label: 'Semana' },
-          { to: '/tarefas?aba=proximos', label: 'Próximos' },
-          { to: '/tarefas?aba=sem-data', label: 'Sem data' },
-          { to: '/tarefas?aba=habitos', label: 'Hábitos' },
-          { to: '/tarefas?aba=concluidas', label: 'Concluídas' },
+          { to: '/tarefas', label: 'Hoje', end: true, icon: SunIcon },
+          { to: '/tarefas?aba=semana', label: 'Semana', icon: CalendarDaysIcon },
+          { to: '/tarefas?aba=proximos', label: 'Próximos', icon: CalendarClockIcon },
+          { to: '/tarefas?aba=sem-data', label: 'Sem data', icon: InboxIcon },
+          { to: '/tarefas?aba=habitos', label: 'Hábitos', icon: FlameIcon },
+          { to: '/tarefas?aba=concluidas', label: 'Concluídas', icon: CircleCheckIcon },
         ],
       },
     ],
@@ -70,7 +95,17 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Grupos',
         icon: UsersIcon,
         dynamic: 'groups',
-        children: [{ to: '/grupos', label: 'Todos os grupos', end: true }],
+        children: [{ to: '/grupos', label: 'Ver todos', end: true, icon: LayoutGridIcon }],
+      },
+      {
+        to: '/amigos',
+        label: 'Amigos',
+        icon: HeartHandshakeIcon,
+        children: [
+          { to: '/amigos', label: 'Meus amigos', icon: UsersRoundIcon },
+          { to: '/amigos?aba=pedidos', label: 'Pedidos', icon: UserPlusIcon },
+          { to: '/amigos?aba=conquistas', label: 'Conquistas', icon: TrophyIcon },
+        ],
       },
     ],
   },

@@ -17,5 +17,9 @@ public enum NotificationType {
     /** Ocorrência que ficou atrasada (aviso diário). data: groupName, taskId, taskTitle, date */
     TASK_OVERDUE,
     /** Lembrete (pessoal ou de grupo). data: taskId, taskTitle, date (dia mostrado), time, minutes, groupName (grupo) */
-    TASK_REMINDER
+    TASK_REMINDER,
+    /** data: actorName, actorUsername, requestId */
+    FRIEND_REQUEST,
+    /** Pedido aceito. data: actorName, actorUsername */
+    FRIEND_ACCEPTED
 }

@@ -18,12 +18,17 @@ public final class GroupDtos {
     public record GroupRequest(@NotBlank(message = "Informe o nome do grupo.") @Size(max = 60) String name) {
     }
 
-    /** @param imageUrl nulo sem imagem; @param role papel do usuário atual */
-    public record GroupSummary(UUID id, String name, String imageUrl, long memberCount, GroupMember.Role role) {
+    /** @param imageUrl nulo sem imagem; @param role e {@code pinned}: do usuário atual (nulo/false em convites) */
+    public record GroupSummary(UUID id, String name, String imageUrl, long memberCount, GroupMember.Role role,
+                               boolean pinned) {
 
-        static GroupSummary of(UserGroup group, long memberCount, GroupMember.Role role) {
-            return new GroupSummary(group.getId(), group.getName(), group.imageUrl(), memberCount, role);
+        static GroupSummary of(UserGroup group, long memberCount, GroupMember member) {
+            return new GroupSummary(group.getId(), group.getName(), group.imageUrl(), memberCount,
+                    member == null ? null : member.getRole(), member != null && member.getPinnedAt() != null);
         }
+    }
+
+    public record PinRequest(@NotNull(message = "Informe se o grupo fica fixado.") Boolean pinned) {
     }
 
     public record MemberResponse(UserSummary user, GroupMember.Role role, OffsetDateTime joinedAt) {

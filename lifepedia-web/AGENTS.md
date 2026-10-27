@@ -77,9 +77,14 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   regra/lista/etiquetas/duração/subtarefas/hábito/lembrete/fixo não mudaram (`changesSeries`). Ações das linhas e seus dialogs em
   `useTaskActions`. Horário: `<Input type="time">`; dia: `DatePicker`.
   Semana (`WeekView`): `@dnd-kit/core` (colunas droppable, alça, `DragOverlay`), mostra no dia novo até a agenda
-  recarregar. Sequência/% do hábito sempre da API (`streak`, `/habits`). Fixo ligado só em tarefa pessoal
+  recarregar; grade por container query (7 colunas só com 76rem de largura útil) e título em `line-clamp-2` + `title`. Sequência/% do hábito sempre da API (`streak`, `/habits`). Fixo ligado só em tarefa pessoal
   (`FixedField`); ao concluir, `FixedPaymentDialog` grava o ajuste do mês pelas rotas do financeiro (valor igual ao
   cadastrado remove o ajuste).
+- **Amigos** (`features/friends`): chaves `['friends', ...]`; mutações invalidam o módulo e as notificações.
+  Conquistas: nível (nunca cai), meta, valor e `unlockedAt` sempre da API; o front só tem texto/ícone por código (`achievements.ts`, espelha
+  `Achievement`). Perfil de não amigo → 404 (tela com volta para Amigos).
+- **Instante x dia**: `yyyy-MM-dd` → `formatDate` (texto, sem fuso); instante ISO (`createdAt`, `since`) →
+  `formatInstantDate`/`formatRelative` (fuso do navegador). Nunca `slice(0, 10)` num instante (vira o dia em UTC).
 - **Início** (`features/home`, rota índice `/`): só lê hooks de outros módulos (`useAgenda`, `useHabits`, `useSummary`);
   não some valores nem calcule sequência no front.
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
@@ -107,8 +112,10 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   ícone de seta (`TypeIcon`) e, nos gráficos, ganho à esquerda e perda à direita com legenda. Saldo negativo:
   `text-destructive`. Botão principal é neutro (branco/preto), não verde. Tarefa/hábito feito usa `bg-income`.
   Cores de **categoria** são do usuário: use-as em marcas (bolinha, barras), nunca como cor de texto.
-- **Navegação**: só em `components/layout/nav-items.ts` (seção → item com ícone → subitens; `dynamic` para subitens
-  da API, em `use-dynamic-links.ts`). A sidebar (`AppSidebar`) é fixa a partir de `lg` (o `useIsMobile` de
+- **Navegação**: só em `components/layout/nav-items.ts` (seção → item com ícone → subitens, todos com `icon`;
+  `dynamic` para subitens da API, em `use-dynamic-links.ts`; subitem de grupo leva `group` e mostra a foto + alfinete).
+  Grupos na sidebar = `useGroupShortcuts` (`/api/groups/shortcuts`, ordem da API); o `MutationCache` do `main.tsx`
+  invalida `['groups', 'shortcuts']` após qualquer mutação (atividade de grupo vem de todo módulo). A sidebar (`AppSidebar`) é fixa a partir de `lg` (o `useIsMobile` de
   `hooks/use-mobile.ts` foi ajustado para 1024px) e gaveta abaixo disso. Com a sidebar aberta o conteúdo perde
   256px: grades de 4 colunas só em `xl`. Coisa que precisa existir com a gaveta fechada (notificações, toasts)
   fica no `AppLayout`, não dentro da sidebar.

@@ -69,6 +69,16 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/groups/pages/GroupPage')).GroupPage }),
           },
           {
+            path: '/amigos',
+            lazy: async () => ({ Component: (await import('@/features/friends/pages/FriendsPage')).FriendsPage }),
+          },
+          {
+            path: '/amigos/:friendId',
+            lazy: async () => ({
+              Component: (await import('@/features/friends/pages/FriendProfilePage')).FriendProfilePage,
+            }),
+          },
+          {
             path: '/perfil',
             lazy: async () => ({ Component: (await import('@/features/auth/ProfilePage')).ProfilePage }),
           },

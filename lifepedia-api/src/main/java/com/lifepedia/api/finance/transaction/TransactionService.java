@@ -1,5 +1,7 @@
 package com.lifepedia.api.finance.transaction;
 
+import com.lifepedia.api.achievement.Achievement;
+import com.lifepedia.api.achievement.AchievementProgress;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryService;
@@ -11,6 +13,7 @@ import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.shared.PageResponse;
 import com.lifepedia.api.shared.Paging;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -20,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -34,13 +38,16 @@ public class TransactionService {
     private final CategoryService categoryService;
     private final GroupFinanceService groupFinance;
     private final GroupFinanceSync groupSync;
+    private final ApplicationEventPublisher events;
 
     public TransactionService(TransactionRepository repository, CategoryService categoryService,
-                              GroupFinanceService groupFinance, GroupFinanceSync groupSync) {
+                              GroupFinanceService groupFinance, GroupFinanceSync groupSync,
+                              ApplicationEventPublisher events) {
         this.repository = repository;
         this.categoryService = categoryService;
         this.groupFinance = groupFinance;
         this.groupSync = groupSync;
+        this.events = events;
     }
 
     private static final Map<String, String> SORT_FIELDS = Map.of(
@@ -93,6 +100,7 @@ public class TransactionService {
         categoryService.requireUsable(userId, request.categoryId(), request.type());
         requireValidMonth(request);
         Transaction transaction = repository.save(newTransaction(userId, request));
+        events.publishEvent(new AchievementProgress(userId, EnumSet.of(Achievement.TRANSACTIONS)));
         groupFinance.shareNew(userId, request.groupIds(), request.shareMode(), transaction);
         return TransactionResponse.from(transaction);
     }
@@ -116,6 +124,7 @@ public class TransactionService {
             }
             transactions.add(newTransaction(userId, request));
         }
+        events.publishEvent(new AchievementProgress(userId, EnumSet.of(Achievement.TRANSACTIONS)));
         return repository.saveAll(transactions).stream().map(TransactionResponse::from).toList();
     }
 

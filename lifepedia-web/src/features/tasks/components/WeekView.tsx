@@ -124,16 +124,19 @@ export function WeekView({ today, filters, actions, onEdit }: Props) {
             onDragCancel: () => 'Cancelado.',
           },
         }}>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-7 lg:gap-2">
-          {days.map((day) => (
-            <DayColumn key={day.date} date={day.date} today={today}
-              onAdd={() => onEdit({ mode: 'new', groupId, dueDate: day.date, listId: filters.list })}>
-              {day.items.map((item) => (
-                <WeekCard key={occurrenceKey(item)} item={item} actions={actions} onEdit={onEdit}
-                  busy={actions.busyKey === occurrenceKey(item)} />
-              ))}
-            </DayColumn>
-          ))}
+        {/* 7 colunas só com largura para o título (a sidebar aberta tira 256px). */}
+        <div className="@container">
+          <div className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-4 @min-[76rem]:grid-cols-7 @min-[76rem]:gap-2">
+            {days.map((day) => (
+              <DayColumn key={day.date} date={day.date} today={today}
+                onAdd={() => onEdit({ mode: 'new', groupId, dueDate: day.date, listId: filters.list })}>
+                {day.items.map((item) => (
+                  <WeekCard key={occurrenceKey(item)} item={item} actions={actions} onEdit={onEdit}
+                    busy={actions.busyKey === occurrenceKey(item)} />
+                ))}
+              </DayColumn>
+            ))}
+          </div>
         </div>
         <DragOverlay dropAnimation={null}>
           {dragging && <CardBody item={dragging} overlay />}
@@ -146,20 +149,21 @@ export function WeekView({ today, filters, actions, onEdit }: Props) {
 function DayColumn({ date, today, onAdd, children }: { date: string; today: string; onAdd: () => void; children: ReactNode[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: date })
   const isToday = date === today
-  const label = `${WEEKDAYS_SHORT[isoWeekday(date) - 1]} ${Number(date.slice(8))}`
+  const weekday = WEEKDAYS_SHORT[isoWeekday(date) - 1]
+  const label = `${weekday[0].toUpperCase()}${weekday.slice(1)} - ${formatDate(date).slice(0, 5)}`
   return (
     <section ref={setNodeRef} aria-label={formatDate(date)}
-      className={cn('flex min-w-0 flex-col gap-1.5 rounded-xl border bg-card p-2 transition-colors motion-reduce:transition-none lg:min-h-48',
+      className={cn('flex min-w-0 flex-col gap-1.5 rounded-xl border bg-card p-2 transition-colors motion-reduce:transition-none @min-[76rem]:min-h-48',
         isOver && 'border-primary bg-primary/5', date < today && 'bg-card/60')}>
       <div className="flex items-center justify-between gap-1 px-1">
-        <h3 className={cn('text-xs font-medium text-muted-foreground uppercase', isToday && 'text-foreground')}>
+        <h3 className={cn('text-xs font-medium whitespace-nowrap text-muted-foreground tabular-nums', isToday && 'text-foreground')}>
           {isToday ? <span className="rounded-full bg-primary px-1.5 py-0.5 text-primary-foreground">{label}</span> : label}
         </h3>
         <Button variant="ghost" size="icon-xs" aria-label={`Nova tarefa em ${formatDate(date)}`} onClick={onAdd}>
           <PlusIcon />
         </Button>
       </div>
-      {children.length ? children : <p className="px-1 py-2 text-xs text-muted-foreground lg:hidden">Nada marcado.</p>}
+      {children.length ? children : <p className="px-1 py-2 text-xs text-muted-foreground @min-[76rem]:hidden">Nada marcado.</p>}
     </section>
   )
 }
@@ -239,10 +243,10 @@ function CardBody({ item, overlay, busy, onToggle, onOpen, handle, menu }: {
         {done && <CheckIcon className="size-3" strokeWidth={3} />}
       </button>
       <div className="min-w-0 flex-1">
-        <button type="button" onClick={onOpen} disabled={overlay}
+        <button type="button" onClick={onOpen} disabled={overlay} title={item.title}
           className={cn('block w-full text-left leading-snug break-words outline-none focus-visible:underline',
             done && 'text-muted-foreground line-through')}>
-          {item.title}
+          <span className="line-clamp-2">{item.title}</span>
         </button>
         {(time || item.streak || item.recurringEntryId || (item.groupId && item.groupId !== groupId)) && (
           <p className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">

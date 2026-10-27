@@ -1,5 +1,7 @@
 package com.lifepedia.api.group;
 
+import com.lifepedia.api.achievement.Achievement;
+import com.lifepedia.api.achievement.AchievementProgress;
 import com.lifepedia.api.group.GroupDtos.GroupDetail;
 import com.lifepedia.api.group.GroupDtos.GroupRequest;
 import com.lifepedia.api.group.GroupDtos.GroupSummary;
@@ -16,8 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.Collator;
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -29,6 +33,8 @@ import java.util.stream.Collectors;
 public class GroupService {
 
     private static final Collator PT_BR = Collator.getInstance(Locale.of("pt", "BR"));
+    static final int SHORTCUTS = 3;
+    static final int MAX_PINNED = 3;
 
     private final UserGroupRepository groups;
     private final GroupMemberRepository members;
@@ -59,8 +65,43 @@ public class GroupService {
         Map<UUID, Long> counts = memberCounts(mine.keySet());
         return groups.findAllById(mine.keySet()).stream()
                 .sorted(Comparator.comparing(UserGroup::getName, PT_BR))
-                .map(g -> GroupSummary.of(g, counts.getOrDefault(g.getId(), 0L), mine.get(g.getId()).getRole()))
+                .map(g -> GroupSummary.of(g, counts.getOrDefault(g.getId(), 0L), mine.get(g.getId())))
                 .toList();
+    }
+
+    /** Atalhos da sidebar: fixados (pela ordem em que foram fixados) e, até completar, os de atividade mais recente. */
+    @Transactional(readOnly = true)
+    public List<GroupSummary> shortcuts(UUID userId) {
+        Map<UUID, GroupMember> mine = members.findByUserId(userId).stream()
+                .collect(Collectors.toMap(GroupMember::getGroupId, Function.identity()));
+        if (mine.isEmpty()) return List.of();
+        Comparator<GroupMember> pinned = Comparator.comparing(GroupMember::getPinnedAt,
+                Comparator.nullsLast(Comparator.naturalOrder()));
+        Map<UUID, UserGroup> byId = groups.findAllById(mine.keySet()).stream()
+                .collect(Collectors.toMap(UserGroup::getId, Function.identity()));
+        List<UserGroup> top = mine.values().stream()
+                .sorted(pinned.thenComparing(m -> byId.get(m.getGroupId()).getLastActivityAt(), Comparator.reverseOrder()))
+                .limit(SHORTCUTS)
+                .map(m -> byId.get(m.getGroupId()))
+                .toList();
+        Map<UUID, Long> counts = memberCounts(top.stream().map(UserGroup::getId).toList());
+        return top.stream().map(g -> GroupSummary.of(g, counts.getOrDefault(g.getId(), 0L), mine.get(g.getId()))).toList();
+    }
+
+    /** Fixa ou desafixa o grupo na sidebar de quem pediu (até {@value #MAX_PINNED}). */
+    @Transactional
+    public GroupSummary pin(UUID userId, UUID groupId, boolean pinned) {
+        GroupMember me = access.requireMember(groupId, userId);
+        if (pinned && me.getPinnedAt() == null) {
+            if (members.countByUserIdAndPinnedAtIsNotNull(userId) >= MAX_PINNED) {
+                throw new BusinessException(HttpStatus.BAD_REQUEST,
+                        "Você pode fixar até " + MAX_PINNED + " grupos. Desafixe um antes.");
+            }
+            me.setPinnedAt(OffsetDateTime.now());
+        } else if (!pinned) {
+            me.setPinnedAt(null);
+        }
+        return summary(access.group(groupId), me);
     }
 
     @Transactional(readOnly = true)
@@ -72,8 +113,9 @@ public class GroupService {
     @Transactional
     public GroupSummary create(UUID userId, GroupRequest request) {
         UserGroup group = groups.save(new UserGroup(request.name().trim(), userId));
-        members.save(new GroupMember(group.getId(), userId, GroupMember.Role.ADMIN));
-        return GroupSummary.of(group, 1, GroupMember.Role.ADMIN);
+        GroupMember me = members.save(new GroupMember(group.getId(), userId, GroupMember.Role.ADMIN));
+        events.publishEvent(new AchievementProgress(userId, EnumSet.of(Achievement.GROUPS)));
+        return GroupSummary.of(group, 1, me);
     }
 
     @Transactional(readOnly = true)
@@ -93,10 +135,10 @@ public class GroupService {
 
     @Transactional
     public GroupSummary rename(UUID userId, UUID groupId, GroupRequest request) {
-        access.requireAdmin(groupId, userId);
+        GroupMember me = access.requireAdmin(groupId, userId);
         UserGroup group = access.group(groupId);
         group.setName(request.name().trim());
-        return summary(group, GroupMember.Role.ADMIN);
+        return summary(group, me);
     }
 
     @Transactional
@@ -110,21 +152,21 @@ public class GroupService {
 
     @Transactional
     public GroupSummary setImage(UUID userId, UUID groupId, byte[] bytes) {
-        access.requireAdmin(groupId, userId);
+        GroupMember me = access.requireAdmin(groupId, userId);
         UserGroup group = access.group(groupId);
         String previous = group.getImageKey();
         group.setImageKey(images.save(bytes));
         images.deleteAfterCommit(previous);
-        return summary(group, GroupMember.Role.ADMIN);
+        return summary(group, me);
     }
 
     @Transactional
     public GroupSummary removeImage(UUID userId, UUID groupId) {
-        access.requireAdmin(groupId, userId);
+        GroupMember me = access.requireAdmin(groupId, userId);
         UserGroup group = access.group(groupId);
         images.deleteAfterCommit(group.getImageKey());
         group.setImageKey(null);
-        return summary(group, GroupMember.Role.ADMIN);
+        return summary(group, me);
     }
 
     /** Imagem para membros e convidados (a notificação do convite mostra a foto). */
@@ -215,7 +257,7 @@ public class GroupService {
         members.flush();
     }
 
-    private GroupSummary summary(UserGroup group, GroupMember.Role role) {
-        return GroupSummary.of(group, members.countByGroupId(group.getId()), role);
+    private GroupSummary summary(UserGroup group, GroupMember member) {
+        return GroupSummary.of(group, members.countByGroupId(group.getId()), member);
     }
 }

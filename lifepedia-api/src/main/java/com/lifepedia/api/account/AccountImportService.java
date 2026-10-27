@@ -9,6 +9,8 @@ import com.lifepedia.api.account.AccountDtos.ImportRequest;
 import com.lifepedia.api.account.AccountDtos.ImportResult;
 import com.lifepedia.api.account.AccountDtos.RecurringData;
 import com.lifepedia.api.account.AccountDtos.TransactionData;
+import com.lifepedia.api.achievement.Achievement;
+import com.lifepedia.api.achievement.AchievementProgress;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryRepository;
@@ -23,6 +25,7 @@ import com.lifepedia.api.finance.transaction.TransactionRepository;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.RateLimiter;
 import com.lifepedia.api.task.TaskTransferService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +36,7 @@ import java.time.YearMonth;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -60,11 +64,13 @@ public class AccountImportService {
     private final GroupRecurringEntryRepository groupRecurring;
     private final TaskTransferService taskTransfer;
     private final RateLimiter rateLimiter;
+    private final ApplicationEventPublisher events;
 
     public AccountImportService(CategoryRepository categories, RecurringEntryRepository recurring,
                                 RecurringAdjustmentRepository adjustments, TransactionRepository transactions,
                                 GroupTransactionRepository groupTransactions, GroupRecurringEntryRepository groupRecurring,
-                                TaskTransferService taskTransfer, RateLimiter rateLimiter) {
+                                TaskTransferService taskTransfer, RateLimiter rateLimiter,
+                                ApplicationEventPublisher events) {
         this.categories = categories;
         this.recurring = recurring;
         this.adjustments = adjustments;
@@ -73,6 +79,7 @@ public class AccountImportService {
         this.groupRecurring = groupRecurring;
         this.taskTransfer = taskTransfer;
         this.rateLimiter = rateLimiter;
+        this.events = events;
     }
 
     /** Com {@code dryRun} só calcula o resultado (prévia). */
@@ -139,6 +146,8 @@ public class AccountImportService {
         TaskTransferService.Outcome todo = data.tasks() == null ? new TaskTransferService.Outcome(0, 0, 0, 0)
                 : taskTransfer.importTasks(userId, list(data.taskLists()), list(data.taskTags()), data.tasks(), replace,
                 apply, fixed.idByRef);
+        if (apply) events.publishEvent(new AchievementProgress(userId, EnumSet.of(Achievement.TASKS_DONE,
+                Achievement.HABIT_STREAK, Achievement.TRANSACTIONS)));
 
         return new ImportResult(apply,
                 new Counts(created.size(), occasional[0], fixed.created, fixed.adjustmentsCreated, todo.created(),

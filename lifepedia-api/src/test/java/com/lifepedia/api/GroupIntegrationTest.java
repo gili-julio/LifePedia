@@ -30,6 +30,45 @@ class GroupIntegrationTest extends ApiTestSupport {
     private final String day = YearMonth.now().atDay(1).toString();
 
     @Test
+    void shortcutsFollowPinsAndLatestActivity() {
+        String alice = registerAndGetBearer();
+        String bob = registerAndGetBearer();
+        List<String> ids = List.of("A", "B", "C", "D").stream()
+                .map(name -> JsonPath.<String>read(post(alice, "/api/groups", """
+                        {"name":"%s"}""".formatted(name)), "$.id"))
+                .toList();
+        assertThat(shortcutNames(alice)).containsExactly("D", "C", "B");
+
+        post(alice, "/api/groups/" + ids.get(0) + "/tasks", """
+                {"title":"Lavar louça"}""");
+        assertThat(shortcutNames(alice)).containsExactly("A", "D", "C");
+
+        assertThat(send("PUT", alice, "/api/groups/" + ids.get(1) + "/pin", """
+                {"pinned":true}""")).bodyJson().extractingPath("$.pinned").isEqualTo(true);
+        assertThat(shortcutNames(alice)).containsExactly("B", "A", "D");
+        assertThat(send("GET", alice, "/api/groups", null)).bodyJson()
+                .extractingPath("$[?(@.name == 'B')].pinned").asArray().containsExactly(true);
+
+        send("PUT", alice, "/api/groups/" + ids.get(2) + "/pin", """
+                {"pinned":true}""");
+        send("PUT", alice, "/api/groups/" + ids.get(3) + "/pin", """
+                {"pinned":true}""");
+        assertThat(shortcutNames(alice)).containsExactly("B", "C", "D");
+        assertThat(send("PUT", alice, "/api/groups/" + ids.get(0) + "/pin", """
+                {"pinned":true}""")).hasStatus(400);
+
+        // Fixar não é atividade: desafixado, B volta para o lugar dele.
+        send("PUT", alice, "/api/groups/" + ids.get(1) + "/pin", """
+                {"pinned":false}""");
+        assertThat(shortcutNames(alice)).containsExactly("C", "D", "A");
+
+        assertThat(send("PUT", bob, "/api/groups/" + ids.get(0) + "/pin", """
+                {"pinned":true}""")).hasStatus(404);
+        assertThat(send("PUT", alice, "/api/groups/" + ids.get(0) + "/pin", "{}")).hasStatus(400);
+        assertThat(JsonPath.<List<?>>read(body(send("GET", bob, "/api/groups/shortcuts", null)), "$")).isEmpty();
+    }
+
+    @Test
     void invitesNotificationsLinkAndMembership() {
         String aliceName = newUsername();
         String bobName = newUsername();
@@ -217,6 +256,10 @@ class GroupIntegrationTest extends ApiTestSupport {
         assertThat(send("DELETE", alice, "/api/groups/" + groupId + "/image", null))
                 .bodyJson().extractingPath("$.imageUrl").isNull();
         assertThat(second).doesNotExist();
+    }
+
+    private List<String> shortcutNames(String bearer) {
+        return JsonPath.read(body(send("GET", bearer, "/api/groups/shortcuts", null)), "$[*].name");
     }
 
     private MvcTestResult upload(String bearer, String groupId, byte[] bytes) {

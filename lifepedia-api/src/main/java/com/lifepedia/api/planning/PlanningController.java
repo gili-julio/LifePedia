@@ -1,5 +1,6 @@
 package com.lifepedia.api.planning;
 
+import com.lifepedia.api.group.NoGroupActivity;
 import com.lifepedia.api.planning.PlanningDtos.AcquireRequest;
 import com.lifepedia.api.planning.PlanningDtos.ActiveRequest;
 import com.lifepedia.api.planning.PlanningDtos.LinkPreview;
@@ -166,6 +167,7 @@ public class PlanningController {
 
     /** Lê nome, preço e foto do link (busca feita pela API, com proteção contra SSRF e limite por usuário). */
     @PostMapping("/link-preview")
+    @NoGroupActivity
     public LinkPreview linkPreview(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId,
                                    @Valid @RequestBody LinkPreviewRequest request) {
         return linkPreview.preview(CurrentUser.id(jwt), groupId, request.url());
@@ -173,6 +175,7 @@ public class PlanningController {
 
     /** Preço e foto de produto parecido com o nome (Buscapé); mesmo limite por usuário da prévia de link. */
     @PostMapping("/price-reference")
+    @NoGroupActivity
     public ReferenceLookup priceReference(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId,
                                           @Valid @RequestBody ReferenceRequest request) {
         return new ReferenceLookup(linkPreview.referenceByName(CurrentUser.id(jwt), groupId, request.name()));

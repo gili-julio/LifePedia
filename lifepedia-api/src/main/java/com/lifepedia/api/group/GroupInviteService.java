@@ -1,5 +1,7 @@
 package com.lifepedia.api.group;
 
+import com.lifepedia.api.achievement.Achievement;
+import com.lifepedia.api.achievement.AchievementProgress;
 import com.lifepedia.api.group.GroupDtos.GroupSummary;
 import com.lifepedia.api.group.GroupDtos.InviteCandidate;
 import com.lifepedia.api.group.GroupDtos.InviteLinkResponse;
@@ -16,6 +18,7 @@ import com.lifepedia.api.user.User;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import com.lifepedia.api.user.UserRepository;
 import com.lifepedia.api.user.Usernames;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,7 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Base64;
+import java.util.EnumSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -49,10 +53,13 @@ public class GroupInviteService {
     private final GroupAccess access;
     private final GroupService groupService;
     private final NotificationService notifications;
+    private final GroupActivity activity;
+    private final ApplicationEventPublisher events;
 
     public GroupInviteService(GroupInviteRepository invites, GroupInviteLinkRepository links,
                               GroupMemberRepository members, UserGroupRepository groups, UserRepository users,
-                              GroupAccess access, GroupService groupService, NotificationService notifications) {
+                              GroupAccess access, GroupService groupService, NotificationService notifications,
+                              GroupActivity activity, ApplicationEventPublisher events) {
         this.invites = invites;
         this.links = links;
         this.members = members;
@@ -61,6 +68,8 @@ public class GroupInviteService {
         this.access = access;
         this.groupService = groupService;
         this.notifications = notifications;
+        this.activity = activity;
+        this.events = events;
     }
 
     /** Busca por nome ou @username (mín. 2 caracteres, até 10), marcando quem já é membro ou convidado. */
@@ -205,7 +214,9 @@ public class GroupInviteService {
     private GroupSummary join(UUID userId, UserGroup group) {
         GroupMember member = members.findByGroupIdAndUserId(group.getId(), userId)
                 .orElseGet(() -> members.save(new GroupMember(group.getId(), userId, GroupMember.Role.MEMBER)));
-        return GroupSummary.of(group, members.countByGroupId(group.getId()), member.getRole());
+        activity.touch(group.getId(), OffsetDateTime.now());
+        events.publishEvent(new AchievementProgress(userId, EnumSet.of(Achievement.GROUPS)));
+        return GroupSummary.of(group, members.countByGroupId(group.getId()), member);
     }
 
     private GroupInviteLink validLink(String token) {
