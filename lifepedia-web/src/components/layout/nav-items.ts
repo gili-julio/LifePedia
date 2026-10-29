@@ -10,6 +10,7 @@ import {
   InboxIcon,
   LayoutDashboardIcon,
   LayoutGridIcon,
+  NotebookPenIcon,
   ListTodoIcon,
   ReceiptTextIcon,
   RepeatIcon,
@@ -90,6 +91,7 @@ export const NAV_SECTIONS: NavSection[] = [
       },
       { to: '/agenda', label: 'Agenda', icon: CalendarRangeIcon },
       { to: '/frequencia', label: 'Frequência', icon: CalendarCheck2Icon },
+      { to: '/notas', label: 'Notas', icon: NotebookPenIcon },
     ],
   },
   {

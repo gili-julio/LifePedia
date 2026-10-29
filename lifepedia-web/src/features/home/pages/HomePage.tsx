@@ -1,4 +1,4 @@
-import { AlarmClockIcon, ArrowRightIcon, CalendarCheckIcon, ClockIcon, FlameIcon, UsersIcon, WalletIcon } from 'lucide-react'
+import { AlarmClockIcon, ArrowRightIcon, CalendarCheckIcon, ClockIcon, FlameIcon, PinIcon, UsersIcon, WalletIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -8,15 +8,17 @@ import { absenceTone, remainingLabel, TONE_BAR, TONE_TEXT } from '@/features/att
 import { useCommitments } from '@/features/attendance/api'
 import { useAuth } from '@/features/auth/auth-context'
 import { useSummary } from '@/features/finance/api'
+import { useNotes } from '@/features/notes/api'
 import { useAgenda, useHabits } from '@/features/tasks/api'
 import { formatTime } from '@/features/tasks/dates'
 import type { TaskFilters, TaskItem } from '@/features/tasks/types'
-import { currentYearMonth, formatDate, formatMonth, todayIso } from '@/lib/format'
+import { currentYearMonth, formatDate, formatMonth, formatRelative, todayIso } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import { RecentChanges } from '../components/RecentChanges'
 
 const FILTERS: TaskFilters = { list: null, tag: null, assignee: null, sort: 'MANUAL' }
+const NOTE_FILTERS = { status: 'ACTIVE', q: '', folderId: null, tagId: null, taskId: null, commitmentId: null } as const
 const SHOWN = 5
 
 const longDate = new Intl.DateTimeFormat('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -27,7 +29,7 @@ function taskLink(item: TaskItem) {
   return item.groupId ? `/grupos/${item.groupId}?aba=tarefas&tarefa=${id}` : `/tarefas?tarefa=${id}`
 }
 
-/** Início: resumo de tarefas de hoje, hábitos, frequência, o mês no financeiro e as mudanças recentes do sistema. */
+/** Início: resumo de tarefas de hoje, hábitos, frequência, o mês no financeiro, notas e as mudanças recentes do sistema. */
 export function HomePage() {
   const { user } = useAuth()
   const today = todayIso()
@@ -43,6 +45,7 @@ export function HomePage() {
         <HabitsCard />
         <AttendanceCard />
         <FinanceCard />
+        <NotesCard />
       </div>
       <section aria-labelledby="recent-changes" className="space-y-4">
         <div className="flex items-center justify-between gap-3">
@@ -246,6 +249,36 @@ function FinanceCard() {
               </dd>
             </div>
           </dl>
+        )}
+    </HomeCard>
+  )
+}
+
+/** Notas fixadas primeiro e depois as editadas por último (ordem da API). */
+function NotesCard() {
+  const { data, isLoading, isError } = useNotes(null, NOTE_FILTERS, { page: 0, size: SHOWN, sort: 'updatedAt,desc' })
+  return (
+    <HomeCard title="Notas" to="/notas" description="Fixadas e editadas por último">
+      {isError ? <p className="text-sm text-destructive">Não foi possível carregar as notas.</p>
+        : isLoading || !data ? <Skeleton className="h-32 w-full" />
+        : data.items.length === 0 ? (
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-sm text-muted-foreground">Anote ideias, aulas, reuniões e listas em um lugar só.</p>
+            <Button asChild variant="outline" size="sm"><Link to="/notas">Criar nota</Link></Button>
+          </div>
+        ) : (
+          <ul className="space-y-2">
+            {data.items.map((n) => (
+              <li key={n.id}>
+                <Link to={`/notas/${n.id}`} className="flex items-center gap-2 rounded-lg text-sm hover:underline">
+                  <span aria-hidden>{n.icon ?? '📄'}</span>
+                  <span className="min-w-0 flex-1 truncate">{n.title}</span>
+                  {n.pinned && <PinIcon className="size-3.5 shrink-0 fill-current text-muted-foreground" aria-label="Fixada" />}
+                  <span className="shrink-0 text-xs text-muted-foreground">{formatRelative(n.updatedAt)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         )}
     </HomeCard>
   )

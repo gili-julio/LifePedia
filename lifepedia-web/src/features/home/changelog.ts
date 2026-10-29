@@ -5,6 +5,7 @@ export type ChangeModule =
   | 'Tarefas'
   | 'Agenda'
   | 'Frequência'
+  | 'Notas'
   | 'Grupos'
   | 'Chat'
   | 'Amigos'
@@ -25,6 +26,24 @@ export type Change = {
 
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
+  {
+    id: 'notas',
+    date: '2026-10-29',
+    title: 'Notas: anotações com formatação, pastas e modelos',
+    modules: ['Notas', 'Grupos'],
+    details: [
+      'Nova área Notas no menu Organização para anotar aulas, reuniões, ideias e listas.',
+      'Formate com a barra de botões ou digitando "/" para escolher títulos, listas, checklist, tabela, código e imagem.',
+      'Veja a nota pronta, o texto em markdown ou os dois lado a lado no computador.',
+      'Salva sozinha enquanto você escreve e avisa se a nota mudou em outro lugar.',
+      'Organize com pastas, etiquetas, cores e ícones; fixe as importantes no topo, arquive ou mande para a lixeira (fica 30 dias).',
+      'Comece de um modelo pronto (reunião, aula, diário, compras) ou crie os seus.',
+      'Escreva [[Nome da nota]] para ligar notas entre si e veja onde cada nota é citada.',
+      'Ligue uma nota a uma tarefa ou a um compromisso da Frequência e abra as notas direto pelo menu deles.',
+      'Grupos ganham a aba Notas, com o registro de quem fez o quê em cada nota.',
+      'Baixe qualquer nota como arquivo .md e veja as notas fixadas e recentes no Início.',
+    ],
+  },
   {
     id: 'frequencia-restantes',
     date: '2026-10-29',

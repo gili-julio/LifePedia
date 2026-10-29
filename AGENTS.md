@@ -114,6 +114,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Versão do arquivo da conta (`account/AccountDtos.FORMAT`) ↔ `features/account/types.ts` (`ACCOUNT_FORMAT`)
   - Tarefas: `Priority`, `Recurrence.Unit/MonthMode`, `TaskOccurrence.Status`, `TaskDtos.Sort/Scope` ↔ `features/tasks/types.ts`
   - Frequência: `AttendanceDtos.DayStatus`, `CommitmentMark.Mark` ↔ `features/attendance/types.ts`
+  - Notas: `NoteDtos.Status`, `NoteActivity.Action` ↔ `features/notes/types.ts`
   - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
@@ -173,11 +174,11 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@3`, anexo; importa `@1`, `@2` e `@3`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@4`, anexo; importa `@1`, `@2`, `@3` e `@4`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
-  `profile`, `groups` e `commitments` (frequência, desde o `@3`) são só registro. Mudou o formato? Crie `@4` e mantenha a importação dos anteriores (usuários guardam
+  `profile`, `groups`, `commitments` (frequência, desde o `@3`) e `notes` (desde o `@4`) são só registro. Mudou o formato? Crie `@5` e mantenha a importação dos anteriores (usuários guardam
   arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -210,6 +211,18 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   `POST /import {commitment | targetId, marks}` (cria, ou usa o existente sem mudar os dados, e grava as marcações; tudo
   ou nada). O texto do SIGAA é lido só no front (`features/attendance/sigaa.ts`) e nunca vai para a API.
   Tarefa excluída: `task_id` vira nulo. Mutação de tarefa invalida `['attendance']` no front.
+- **Notas** (`/api/notes` e `/api/groups/{id}/notes`, mesmas rotas): dono é o usuário ou o grupo (`NoteOwner`), como
+  nas tarefas; pastas (`note_folders`) e etiquetas (`note_tags`) também. Conteúdo é **markdown** (até 200 mil
+  caracteres). `GET` paginado (`status` `ACTIVE`/`ARCHIVED`/`TRASH`/`TEMPLATE`, `q` no título e no texto, `folderId`,
+  `tagId`, `taskId`, `commitmentId`; `sort` `updatedAt`/`createdAt`/`title`; fixadas sempre primeiro; item sem o conteúdo,
+  com `excerpt`), `GET /all` (id/título/ícone das notas em uso, para `[[Nome]]`), `GET /{id}` (com `backlinks` = notas
+  que citam `[[título]]`), `POST`, `PUT /{id}` (nota inteira + `version`: diferente da atual → **409**), `PUT /{id}/pin`,
+  `PUT /{id}/archive`, `DELETE /{id}` (lixeira), `POST /{id}/restore`, `DELETE /{id}/permanent` (só da lixeira),
+  `GET /{id}/activity` (30 últimas; edições seguidas da mesma pessoa em 30 min viram uma linha), `POST /{id}/images`
+  (multipart `file`, devolve a URL) e `GET /{id}/images/{key}`, `GET/POST/PUT/DELETE /folders` e `/tags`, `GET /labels`
+  e `GET /link-options`. Modelo (`template`) só pessoal; compromisso só em nota pessoal; tarefa do mesmo dono (pela
+  fachada `TaskLinks`). Lixeira: só criador ou admin; `NoteTrashJob` apaga de vez depois de 30 dias. Foto fora do
+  texto há mais de 1 h é apagada ao salvar.
 - **Importação por IA**: `POST /api/finance/import` grava ocasionais + ajustes de fixos (tudo ou nada). O modelo de
   resposta é `lifepedia/transactions@3`: `descriptionOficial` (como no documento, só leitura, gravada em
   `original_description` e nunca alterada depois) e `descriptionNormal` (nome padronizado, editável, vira

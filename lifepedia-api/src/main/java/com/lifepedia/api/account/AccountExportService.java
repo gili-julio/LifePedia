@@ -25,6 +25,7 @@ import com.lifepedia.api.group.GroupMember;
 import com.lifepedia.api.group.GroupMemberRepository;
 import com.lifepedia.api.group.UserGroup;
 import com.lifepedia.api.group.UserGroupRepository;
+import com.lifepedia.api.note.NoteService;
 import com.lifepedia.api.planning.PlanItem;
 import com.lifepedia.api.planning.PlanItemRepository;
 import com.lifepedia.api.shared.BusinessException;
@@ -69,6 +70,7 @@ public class AccountExportService {
     private final PlanItemRepository planItems;
     private final TaskTransferService taskTransfer;
     private final AttendanceService attendance;
+    private final NoteService notes;
     private final RateLimiter rateLimiter;
 
     public AccountExportService(UserService users, CategoryRepository categories, RecurringEntryRepository recurring,
@@ -76,7 +78,7 @@ public class AccountExportService {
                                 GroupMemberRepository members, UserGroupRepository groups,
                                 GroupTransactionRepository groupTransactions, GroupRecurringEntryRepository groupRecurring,
                                 PlanItemRepository planItems, TaskTransferService taskTransfer,
-                                AttendanceService attendance, RateLimiter rateLimiter) {
+                                AttendanceService attendance, NoteService notes, RateLimiter rateLimiter) {
         this.users = users;
         this.categories = categories;
         this.recurring = recurring;
@@ -89,6 +91,7 @@ public class AccountExportService {
         this.planItems = planItems;
         this.taskTransfer = taskTransfer;
         this.attendance = attendance;
+        this.notes = notes;
         this.rateLimiter = rateLimiter;
     }
 
@@ -120,7 +123,8 @@ public class AccountExportService {
         return new AccountData(AccountDtos.FORMAT, OffsetDateTime.now(),
                 new Profile(user.getName(), user.getUsername(), user.getEmail()),
                 cats.stream().map(c -> new CategoryData(ref(c.getId()), c.getName(), c.getType(), c.getColor())).toList(),
-                fixed, occasional, groups(userId, names), own.lists(), own.tags(), own.tasks(), attendance.export(userId));
+                fixed, occasional, groups(userId, names), own.lists(), own.tags(), own.tasks(), attendance.export(userId),
+                notes.export(userId));
     }
 
     /** Planilha com as mesmas informações, para abrir no Excel/Google Planilhas. */

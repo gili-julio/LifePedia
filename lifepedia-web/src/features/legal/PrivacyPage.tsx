@@ -36,8 +36,10 @@ export function PrivacyPage() {
             você importa de extratos e faturas (inclusive a descrição original de cada lançamento).</li>
           <li>Tarefas, hábitos, agenda (inclusive as horas de sono que você informa), listas, etiquetas, lembretes e comentários.</li>
           <li>Frequência: compromissos que você cadastra (dias, horário, período, limite de faltas) e as presenças e faltas marcadas.</li>
-          <li>Grupos: nome, imagem, membros, itens financeiros que você leva, planejamento (com links e fotos de produtos)
-            e mensagens do chat.</li>
+          <li>Notas: o texto, as fotos que você coloca nelas, pastas, etiquetas, modelos e o histórico de quem criou,
+            editou, arquivou ou mandou para a lixeira. Notas na lixeira são apagadas de vez depois de 30 dias.</li>
+          <li>Grupos: nome, imagem, membros, itens financeiros que você leva, planejamento (com links e fotos de produtos),
+            notas do grupo e mensagens do chat.</li>
           <li>Amigos, pedidos de amizade, conquistas e notificações.</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
@@ -50,7 +52,7 @@ export function PrivacyPage() {
         </List>
         <p>
           Não pedimos dados sensíveis (saúde, religião, biometria etc.). Evite escrevê-los em campos livres, como
-          observações e mensagens.
+          observações, notas e mensagens.
         </p>
       </Section>
 

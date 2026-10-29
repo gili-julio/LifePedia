@@ -26,6 +26,7 @@ import { GroupRecurringTab } from '@/features/finance/group/GroupRecurringTab'
 import { GroupTransactionsTab } from '@/features/finance/group/GroupTransactionsTab'
 import { MonthPicker } from '@/features/finance/components/MonthPicker'
 import { useMonthParam } from '@/features/finance/use-month-param'
+import { GroupNotesTab } from '@/features/notes/components/GroupNotesTab'
 import { PlanningTab } from '@/features/planning/components/PlanningTab'
 import { AgendaBoard } from '@/features/tasks/agenda/AgendaBoard'
 import { GroupTasksTab } from '@/features/tasks/components/GroupTasksTab'
@@ -36,7 +37,7 @@ import { GroupFormDialog } from '../components/GroupFormDialog'
 import { InviteDialog } from '../components/InviteDialog'
 import { MembersList } from '../components/MembersList'
 
-const TABS = ['visao-geral', 'chat', 'lancamentos', 'fixos', 'planejamento', 'tarefas', 'agenda', 'membros'] as const
+const TABS = ['visao-geral', 'chat', 'lancamentos', 'fixos', 'planejamento', 'tarefas', 'agenda', 'notas', 'membros'] as const
 type Tab = (typeof TABS)[number]
 const MONEY_TABS: Tab[] = ['visao-geral', 'lancamentos', 'fixos', 'planejamento']
 
@@ -129,6 +130,7 @@ export function GroupPage() {
           <TabsTrigger value="planejamento">Planejamento</TabsTrigger>
           <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
           <TabsTrigger value="agenda">Agenda</TabsTrigger>
+          <TabsTrigger value="notas">Notas</TabsTrigger>
           <TabsTrigger value="membros">Membros ({group.members.length})</TabsTrigger>
         </ScrollTabsList>
         <TabsContent value="visao-geral" className="pt-4">
@@ -151,6 +153,9 @@ export function GroupPage() {
         </TabsContent>
         <TabsContent value="agenda" className="pt-4">
           <AgendaBoard group={group} />
+        </TabsContent>
+        <TabsContent value="notas" className="pt-4">
+          {tab === 'notas' && <GroupNotesTab groupId={group.id} />}
         </TabsContent>
         <TabsContent value="membros" className="pt-4">
           <Card>

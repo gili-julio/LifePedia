@@ -85,9 +85,9 @@ e `sort=campo,asc|desc` (campos da lista de cada rota; outro campo → `400`). R
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@3` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) e `commitments` (frequência com `marks`, só registro) · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@4` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) e `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro) · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
-| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1`, `@2` ou `@3`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
+| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1`, `@2`, `@3` ou `@4`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
 | DELETE | `/` | `{password, confirmation: "EXCLUIR"}` → `204` + cookie apagado · `400` senha errada · `429` após 5 erros |
 
@@ -310,6 +310,30 @@ atrasadas: `TaskOverdueJob` (8h no fuso `TIME_ZONE`). Agendamentos ligam com `li
 `status` do dia: marcação gravada; senão `PRESENT` com `fromTask` se a tarefa ligada foi concluída naquele dia (pela
 regra); senão `PENDING` se já terminou (hoje: depois de `time + durationMinutes`, fuso `TIME_ZONE`) ou `UPCOMING`.
 
+### Notas (`/api/notes` e `/api/groups/{groupId}/notes`)
+
+Mesmas rotas para as notas pessoais e as do grupo (só membros; quem não é membro recebe 404).
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/` | Paginado (`page`, `size` 1–100, padrão 20; `sort` `updatedAt` (padrão, desc), `createdAt` ou `title`; fixadas sempre primeiro) · filtros `status` (`ACTIVE` padrão, `ARCHIVED`, `TRASH`, `TEMPLATE` só pessoal), `q` (título e texto), `folderId`, `tagId`, `taskId`, `commitmentId` · item sem o conteúdo, com `excerpt` (começo sem markdown), `editedBy` e `canDelete` |
+| GET | `/all` | `[{id, title, icon}]` das notas em uso (sem modelos nem lixeira), para os links `[[Nome]]` |
+| GET | `/{id}` | Nota inteira com `version`, `task`/`commitment` ligados, `backlinks` (notas que citam `[[título]]`), `createdBy`/`editedBy` |
+| POST | `/` | `{title ≤200, content ≤200 mil, folderId?, tagIds ≤20, icon?, color?, taskId?, commitmentId?, template?}` → `201` · até 2000 por dono · modelo e compromisso só pessoal · pasta/etiqueta/tarefa de outro dono → 400 |
+| PUT | `/{id}` | Mesmo corpo + `version` (a que a pessoa tinha): diferente da atual → `409` · na lixeira → 400 · tira fotos que saíram do texto há mais de 1 h |
+| PUT | `/{id}/pin` · `/{id}/archive` | `{pinned}` · `{archived}` → `204` |
+| DELETE | `/{id}` | Lixeira → `204` · só quem criou ou admin do grupo (403) |
+| POST | `/{id}/restore` · DELETE `/{id}/permanent` | Restaura · apaga de vez (só da lixeira) com as fotos |
+| GET | `/{id}/activity` | 30 últimas `{action, user, at}` (`CREATED`, `EDITED`, `ARCHIVED`, `UNARCHIVED`, `TRASHED`, `RESTORED`) |
+| POST | `/{id}/images` | Multipart `file` (JPEG/PNG até 1 MB) → `201 {url}` (JPEG de até 1600 px) · até 30 por nota |
+| GET | `/{id}/images/{key}` | A foto (cache privado) |
+| GET | `/labels` | `{folders: [{id, name, count}], tags: [{id, name, color, count}]}` |
+| POST / PUT / DELETE | `/folders` · `/folders/{id}` | `{name ≤80}`; nome repetido → 409; excluir só tira das notas |
+| POST / PUT / DELETE | `/tags` · `/tags/{id}` | `{name ≤40, color}`; nome repetido → 409 |
+| GET | `/link-options` | `{tasks, commitments}` em aberto que dá para ligar (grupo: tarefas do grupo, sem compromissos) |
+
+`NoteTrashJob` (3h45) apaga de vez o que está na lixeira há mais de 30 dias.
+
 ### Financeiro
 
 | Método | Rota | Descrição |
@@ -385,8 +409,11 @@ src/main/java/com/lifepedia/api/
 ├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda (e choque de horário),
 │                 horas visíveis e sono da agenda (AgendaPreference), listas/etiquetas, grupo (responsáveis, Completion)
 │                 (responsável, rodízio, comentários, avisos, aviso diário de atrasadas), hábitos (HabitStats),
-│                 lembretes (TaskReminderJob), export/import (TaskTransferService), TaskLinks (leitura para a frequência)
-├── attendance/    frequência: compromissos (Commitment), marcações por dia (CommitmentMark), contagem e agenda
+│                 lembretes (TaskReminderJob), export/import (TaskTransferService), TaskLinks (leitura para frequência e notas)
+├── attendance/    frequência: compromissos (Commitment), marcações por dia (CommitmentMark), contagem e agenda,
+│                  CommitmentLinks (leitura para as notas)
+├── note/          notas pessoais e de grupo (NoteOwner), pastas/etiquetas, fotos (NoteImageStore), atividade,
+│                  lixeira (NoteTrashJob)
 ├── planning/      planejamento do grupo: itens, cenários, base, simulação (PlanningSimulator), prévia de link,
 │                  preço de referência (PriceReferenceService + ProductMatcher)
 └── finance/
@@ -408,5 +435,5 @@ src/main/resources/
                     · V20 sessões, Google e observações de 10 mil · V21 chat do grupo
                     · V22 vários responsáveis, "cada um conclui", horas da agenda
                     · V23 push · V24 aceite dos termos · V25 sono por dia na agenda
-                    · V26 frequência · V27 lembrete até 30 dias
+                    · V26 frequência · V27 lembrete até 30 dias · V28 notas
 ```

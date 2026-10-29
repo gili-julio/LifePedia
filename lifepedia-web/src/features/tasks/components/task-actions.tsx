@@ -1,5 +1,6 @@
-import { CalendarClockIcon, CheckCheckIcon, PencilIcon, SkipForwardIcon, Trash2Icon, UserRoundIcon, UsersIcon } from 'lucide-react'
+import { CalendarClockIcon, CheckCheckIcon, NotebookPenIcon, PencilIcon, SkipForwardIcon, Trash2Icon, UserRoundIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
@@ -53,6 +54,7 @@ export function useTaskActions({ today, groupId, onEdit }: {
   const assign = useAssignOccurrence()
   const toGroup = useMoveToGroup()
   const meId = useAuth().user?.id ?? null
+  const navigate = useNavigate()
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [payment, setPayment] = useState<{ value: FixedPayment; open: boolean } | null>(null)
@@ -147,6 +149,10 @@ export function useTaskActions({ today, groupId, onEdit }: {
         { label: `Concluir as ${group} atrasadas`, icon: CheckCheckIcon, onSelect: () => void resolveOverdue(item, 'DONE') },
         { label: `Pular as ${group} atrasadas`, icon: SkipForwardIcon, onSelect: () => void resolveOverdue(item, 'SKIPPED') },
       )
+    }
+    if (!item.groupId) {
+      actions.push({ label: 'Notas da tarefa', icon: NotebookPenIcon,
+        onSelect: () => navigate(`/notas?tarefa=${encodeURIComponent(item.taskId)}`) })
     }
     if (!item.groupId && groupId === null) {
       actions.push({ label: 'Levar para um grupo…', icon: UsersIcon, onSelect: () => setDialog({ kind: 'group', item, open: true }) })

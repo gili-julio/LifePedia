@@ -13,6 +13,7 @@ import com.lifepedia.api.group.GroupMember;
 import com.lifepedia.api.group.GroupMemberRepository;
 import com.lifepedia.api.group.GroupService;
 import com.lifepedia.api.group.GroupService.Departure;
+import com.lifepedia.api.note.NoteService;
 import com.lifepedia.api.notification.NotificationService;
 import com.lifepedia.api.notification.NotificationType;
 import com.lifepedia.api.planning.PlanItemRepository;
@@ -47,13 +48,14 @@ public class AccountDeletionService {
     private final GroupRecurringEntryRepository groupRecurring;
     private final PlanItemRepository planItems;
     private final TaskRepository tasks;
+    private final NoteService notes;
 
     public AccountDeletionService(AuthService auth, UserService userService, UserRepository users, GroupService groups,
                                   GroupMemberRepository members, NotificationService notifications,
                                   CategoryRepository categories, TransactionRepository transactions,
                                   RecurringEntryRepository recurring, GroupTransactionRepository groupTransactions,
                                   GroupRecurringEntryRepository groupRecurring, PlanItemRepository planItems,
-                                  TaskRepository tasks) {
+                                  TaskRepository tasks, NoteService notes) {
         this.auth = auth;
         this.userService = userService;
         this.users = users;
@@ -67,6 +69,7 @@ public class AccountDeletionService {
         this.groupRecurring = groupRecurring;
         this.planItems = planItems;
         this.tasks = tasks;
+        this.notes = notes;
     }
 
     @Transactional(readOnly = true)
@@ -97,6 +100,7 @@ public class AccountDeletionService {
             }
         }
         userService.deleteImageAfterCommit(user);
+        notes.deleteUserImagesAfterCommit(userId);
         users.delete(user);
         users.flush();
     }

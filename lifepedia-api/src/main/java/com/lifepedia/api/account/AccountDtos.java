@@ -3,6 +3,7 @@ package com.lifepedia.api.account;
 import com.lifepedia.api.attendance.AttendanceDtos.CommitmentData;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.group.GroupMember;
+import com.lifepedia.api.note.NoteDtos.NoteData;
 import com.lifepedia.api.planning.PlanItem;
 import com.lifepedia.api.task.TaskDtos.LabelData;
 import com.lifepedia.api.task.TaskDtos.TaskData;
@@ -28,9 +29,10 @@ import java.util.UUID;
 public final class AccountDtos {
 
     /** Versão do arquivo exportado; mudou o formato? Crie {@code @4} e mantenha a importação das anteriores. */
-    public static final String FORMAT = "lifepedia/account@3";
-    /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência). */
-    public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2", FORMAT);
+    public static final String FORMAT = "lifepedia/account@4";
+    /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência; {@code @3}: sem notas). */
+    public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2",
+            "lifepedia/account@3", FORMAT);
 
     private AccountDtos() {
     }
@@ -57,7 +59,7 @@ public final class AccountDtos {
 
     /**
      * Arquivo de exportação. Categorias, fixos, listas e etiquetas são ligados pelo {@code ref}; {@code groups} e
-     * {@code commitments} (frequência, desde o {@code @3}) são só registro (não importam).
+     * {@code commitments} (frequência, desde o {@code @3}) e {@code notes} (desde o {@code @4}) são só registro (não importam).
      *
      * @param profile ignorado na importação
      * @param tasks   tarefas pessoais (nulo no {@code @1}: a importação não mexe nas tarefas)
@@ -76,7 +78,8 @@ public final class AccountDtos {
             @Size(max = 500, message = "Listas demais no arquivo.") List<@NotNull @Valid LabelData> taskLists,
             @Size(max = 500, message = "Etiquetas demais no arquivo.") List<@NotNull @Valid LabelData> taskTags,
             @Size(max = 50_000, message = "Tarefas demais no arquivo.") List<@NotNull @Valid TaskData> tasks,
-            List<CommitmentData> commitments) {
+            List<CommitmentData> commitments,
+            List<NoteData> notes) {
     }
 
     public record Profile(String name, String username, String email) {

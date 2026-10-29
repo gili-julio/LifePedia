@@ -69,6 +69,14 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/attendance/pages/AttendancePage')).AttendancePage }),
           },
           {
+            path: '/notas',
+            lazy: async () => ({ Component: (await import('@/features/notes/pages/NotesPage')).NotesPage }),
+          },
+          {
+            path: '/notas/:noteId',
+            lazy: async () => ({ Component: (await import('@/features/notes/pages/NotePage')).NotePage }),
+          },
+          {
             path: '/grupos',
             lazy: async () => ({ Component: (await import('@/features/groups/pages/GroupsPage')).GroupsPage }),
           },
@@ -79,6 +87,10 @@ export const router = createBrowserRouter([
           {
             path: '/grupos/:groupId',
             lazy: async () => ({ Component: (await import('@/features/groups/pages/GroupPage')).GroupPage }),
+          },
+          {
+            path: '/grupos/:groupId/notas/:noteId',
+            lazy: async () => ({ Component: (await import('@/features/notes/pages/NotePage')).NotePage }),
           },
           {
             path: '/amigos',

@@ -142,7 +142,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@3`; aceita `AccountDtos.IMPORTABLE` = `@1`, `@2` e `@3`; frequência só como registro); mudou o arquivo ⇒ `@4` e importação dos
+  (`lifepedia/account@4`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@4`; frequência e notas só como registro); mudou o arquivo ⇒ `@5` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para
@@ -152,6 +152,16 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `task/TaskLinks` (pessoal e do usuário; nunca ler `task_occurrences` direto). "Hoje"/horário pelo `Clock`. Teste em
   `AttendanceIntegrationTest` (período já encerrado para não depender da hora). Importação (`importDays`) valida cada
   dia com a mesma regra da marcação (`checkMark`) numa transação só; a leitura do SIGAA é do front.
+  Outros módulos leem compromissos só por `attendance/CommitmentLinks`.
+- **Notas** (`note/`): dono por `NoteOwner` (usuário ou grupo, como as tarefas) e quem age por `NoteScope` (admin =
+  pessoal ou admin do grupo; lixeira/restaurar/apagar só criador ou admin). Gravação com `version`: `update` trava a
+  linha (`NoteRepository.lockById`) e compara; diferente → 409. Tarefa ligada só por `TaskLinks.owned` e compromisso por
+  `CommitmentLinks` (nunca as tabelas deles). Busca e `[[título]]` com `like` em minúsculas e escape `!`
+  (`escapeLike`). Atividade em `note_activities`: edição da mesma pessoa em 30 min só atualiza a linha
+  (`NoteActivityRepository.touch`). Fotos por `NoteImageStore` (1600 px); foto fora do texto há mais de 1 h sai ao salvar;
+  apagar de vez, lixeira vencida (`NoteTrashJob` → `purgeTrash`), grupo excluído (`onGroupDeleted`) e conta excluída
+  (`deleteUserImagesAfterCommit`) apagam os arquivos. Resumo da lista em `NoteService.excerpt` (`NoteExcerptTest`).
+  Teste em `NoteIntegrationTest` (organização, versão, lixeira, fotos, grupo e isolamento).
 
 ## Testes
 

@@ -141,3 +141,131 @@
     @apply font-sans;
     }
 }
+/* Conteúdo das notas (editor e leitura). */
+@layer components {
+  .note-content {
+    @apply text-base leading-7 break-words outline-none md:text-[15px];
+  }
+  .note-content > * + * {
+    @apply mt-3;
+  }
+  .note-content h1 {
+    @apply mt-6 text-2xl font-bold tracking-tight;
+  }
+  .note-content h2 {
+    @apply mt-5 text-xl font-semibold tracking-tight;
+  }
+  .note-content h3 {
+    @apply mt-4 text-lg font-semibold;
+  }
+  .note-content > :first-child {
+    @apply mt-0;
+  }
+  .note-content ul:not([data-type="taskList"]) {
+    @apply list-disc pl-6;
+  }
+  .note-content ol {
+    @apply list-decimal pl-6;
+  }
+  .note-content li > p {
+    @apply my-0;
+  }
+  .note-content li + li {
+    @apply mt-1;
+  }
+  .note-content ul[data-type="taskList"] {
+    @apply list-none pl-0;
+  }
+  .note-content ul[data-type="taskList"] li {
+    @apply flex items-start gap-2;
+  }
+  .note-content ul[data-type="taskList"] li > label {
+    @apply mt-1 flex shrink-0 select-none;
+  }
+  .note-content ul[data-type="taskList"] li > label input {
+    @apply size-4 cursor-pointer accent-primary;
+  }
+  .note-content ul[data-type="taskList"] li > div {
+    @apply min-w-0 flex-1;
+  }
+  .note-content ul[data-type="taskList"] li[data-checked="true"] > div {
+    @apply text-muted-foreground line-through;
+  }
+  .note-content blockquote {
+    @apply border-l-4 pl-4 text-muted-foreground;
+  }
+  .note-content a {
+    @apply text-data underline underline-offset-2;
+  }
+  .note-content code {
+    @apply rounded bg-muted px-1 py-0.5 font-mono text-[0.9em];
+  }
+  .note-content pre {
+    @apply overflow-x-auto rounded-lg bg-muted p-3 font-mono text-sm leading-6;
+  }
+  .note-content pre code {
+    @apply bg-transparent p-0 text-[inherit];
+  }
+  .note-content hr {
+    @apply my-6 border-t;
+  }
+  .note-content img {
+    @apply max-h-[32rem] max-w-full rounded-lg border;
+  }
+  .note-content img.ProseMirror-selectednode {
+    @apply ring-2 ring-ring;
+  }
+  .note-content .tableWrapper {
+    @apply overflow-x-auto;
+  }
+  .note-content table {
+    @apply w-full border-collapse text-sm;
+  }
+  .note-content th,
+  .note-content td {
+    @apply min-w-24 border px-2 py-1 text-left align-top;
+  }
+  .note-content th {
+    @apply bg-muted font-semibold;
+  }
+  .note-content .selectedCell {
+    @apply bg-accent;
+  }
+  .note-content p.is-editor-empty:first-child::before {
+    @apply pointer-events-none float-left h-0 text-muted-foreground content-[attr(data-placeholder)];
+  }
+  .note-wiki-link {
+    @apply rounded bg-data/10 px-0.5 text-data;
+  }
+  .note-wiki-link-missing {
+    @apply bg-transparent text-muted-foreground underline decoration-dashed;
+  }
+  .note-content .hljs-comment,
+  .note-content .hljs-quote {
+    @apply text-zinc-500 italic;
+  }
+  .note-content .hljs-keyword,
+  .note-content .hljs-selector-tag,
+  .note-content .hljs-built_in {
+    @apply text-purple-700 dark:text-purple-300;
+  }
+  .note-content .hljs-string,
+  .note-content .hljs-attr,
+  .note-content .hljs-regexp {
+    @apply text-green-700 dark:text-green-300;
+  }
+  .note-content .hljs-number,
+  .note-content .hljs-literal,
+  .note-content .hljs-variable {
+    @apply text-orange-700 dark:text-orange-300;
+  }
+  .note-content .hljs-title,
+  .note-content .hljs-section,
+  .note-content .hljs-function {
+    @apply text-blue-700 dark:text-blue-300;
+  }
+  .note-content .hljs-type,
+  .note-content .hljs-meta {
+    @apply text-teal-700 dark:text-teal-300;
+  }
+}

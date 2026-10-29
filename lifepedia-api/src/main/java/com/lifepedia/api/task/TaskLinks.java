@@ -16,7 +16,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-/** O que outros módulos (ex.: frequência) leem de tarefas pessoais ligadas a eles. */
+/** O que outros módulos (ex.: frequência, notas) leem das tarefas ligadas a eles. */
 @Service
 public class TaskLinks {
 
@@ -54,6 +54,30 @@ public class TaskLinks {
                 .toList();
     }
 
+    /** Tarefa do dono (pessoal da pessoa, ou do grupo quando {@code groupId} vem), para ligar a uma nota. */
+    @Transactional(readOnly = true)
+    public Optional<LinkedTask> owned(UUID userId, UUID groupId, UUID taskId) {
+        return tasks.findById(taskId).filter(t -> ownedBy(t, userId, groupId)).map(TaskLinks::linked);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, LinkedTask> owned(UUID userId, UUID groupId, Collection<UUID> taskIds) {
+        return tasks.findAllById(taskIds).stream().filter(t -> ownedBy(t, userId, groupId))
+                .collect(Collectors.toMap(Task::getId, TaskLinks::linked));
+    }
+
+    /** Em aberto do dono (com ou sem data), por título. */
+    @Transactional(readOnly = true)
+    public List<LinkedTask> openOwned(UUID userId, UUID groupId) {
+        List<Task> list = groupId != null ? tasks.findByGroupIdAndCompletedAtIsNull(groupId)
+                : tasks.findByUserIdOrderByPositionAscCreatedAtAsc(userId);
+        return list.stream()
+                .filter(t -> t.getCompletedAt() == null)
+                .map(TaskLinks::linked)
+                .sorted(Comparator.comparing(LinkedTask::title, String.CASE_INSENSITIVE_ORDER))
+                .toList();
+    }
+
     /** Dias (pela regra) em que cada tarefa pessoal da pessoa foi concluída, de {@code from} a {@code to}. */
     @Transactional(readOnly = true)
     public Map<UUID, Set<LocalDate>> doneDates(UUID userId, Collection<UUID> taskIds, LocalDate from, LocalDate to) {
@@ -65,6 +89,10 @@ public class TaskLinks {
                 .filter(o -> o.getStatus() == Status.DONE)
                 .collect(Collectors.groupingBy(TaskOccurrence::getTaskId,
                         Collectors.mapping(TaskOccurrence::getDate, Collectors.toSet())));
+    }
+
+    private static boolean ownedBy(Task task, UUID userId, UUID groupId) {
+        return groupId != null ? groupId.equals(task.getGroupId()) : userId.equals(task.getUserId());
     }
 
     private static LinkedTask linked(Task task) {

@@ -32,6 +32,8 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
 
     List<Task> findByUserIdOrderByPositionAscCreatedAtAsc(UUID userId);
 
+    List<Task> findByGroupIdAndCompletedAtIsNull(UUID groupId);
+
     long countByUserId(UUID userId);
 
     /** Apaga as tarefas pessoais (o banco apaga ocorrências, subtarefas e etiquetas ligadas). */

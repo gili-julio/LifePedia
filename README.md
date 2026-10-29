@@ -21,6 +21,7 @@ compartilham usuário, autenticação, design e padrões.
 | **Amigos** | ✅ v1.0 | Pedidos de amizade por nome ou @username (aceitar/recusar/cancelar), perfil do amigo e **conquistas** com níveis (tarefas, hábitos, amigos, grupos, lançamentos) |
 | **Financeiro** | ✅ v1.3 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **investimentos** (fora das despesas, somam na reserva do grupo), **adiantar/adiar parcelas**, **importação de extrato/fatura via agente de IA** e **finanças em grupo** |
 | **Tarefas** | ✅ v1.1 | Tarefas pessoais e **em grupo** para hoje, outros dias ou sem data, **atrasadas**, **repetição** (a cada N dias/semanas/meses/anos, dias da semana, dia do mês, a partir da conclusão), prioridade, horário e duração, **subtarefas**, **listas** e **etiquetas**; **agenda** em grade de horários (dia/semana, pessoal e no grupo); no grupo, **vários responsáveis** ou **todos**, "basta um" ou "cada um conclui a sua", **rodízio**, **comentários** e avisos; **levar tarefa pessoal para um grupo**; **semana** (arrastar muda o dia), **hábitos** (sequência e % do mês), **lembretes** e **ligação com fixos do financeiro** |
+| **Notas** | ✅ v1.0 | Anotações em **markdown** com editor visual (barra, menu "/", checklist, tabela, código com cores, fotos), modo **markdown** e **lado a lado**, salvar automático, **pastas**, **etiquetas**, cor/ícone, **fixar**, **arquivar**, **lixeira** (30 dias), **modelos**, links `[[Nome]]` entre notas, ligação com **tarefa** ou **compromisso**, **notas do grupo** com atividade, baixar `.md` e card no **Início** |
 | **Frequência** | ✅ v1.0 | Compromissos fixos (ex.: matérias) com dias da semana, horário, período e **limite de faltas**; marcar presença, falta ou sem aula em cada dia; **tarefa ligada** concluída conta presença; aparece na **agenda** e no **Início**; **importar do SIGAA** (UFRN) colando a página de frequência |
 | Metas | 💡 ideia | Objetivos pessoais e financeiros com acompanhamento |
 | Saúde | 💡 ideia | Consultas, exames, medicamentos, hábitos |
@@ -99,10 +100,10 @@ compartilham usuário, autenticação, design e padrões.
   novidades mais recentes (título, áreas afetadas em badges, "Novo" por 7 dias; tocar abre o detalhe em linguagem
   simples) e *Ver todas* (`/novidades`).
 - **Meus dados** (em *Meu perfil*):
-  - **Exportar (.json)**: arquivo `lifepedia/account@3` com perfil, categorias, fixos (com os valores de cada mês),
+  - **Exportar (.json)**: arquivo `lifepedia/account@4` com perfil, categorias, fixos (com os valores de cada mês),
     lançamentos e **tarefas pessoais** (com listas, etiquetas e o que foi feito em cada ocorrência) — é o que dá para
-    importar; arquivos `@1` e `@2` antigos continuam aceitos e o `@1` não mexe nas tarefas — e, só como registro, os seus itens em cada grupo (lançamentos, fixos,
-    planejamento) e a **frequência** (compromissos com as marcações). **Planilha (.xlsx)**: as mesmas informações em abas, para ver no Excel/Google Planilhas.
+    importar; arquivos `@1`, `@2` e `@3` antigos continuam aceitos e o `@1` não mexe nas tarefas — e, só como registro, os seus itens em cada grupo (lançamentos, fixos,
+    planejamento), a **frequência** (compromissos com as marcações) e as **notas** pessoais (com pasta e etiquetas). **Planilha (.xlsx)**: as mesmas informações em abas, para ver no Excel/Google Planilhas.
   - **Importar** (nesta ou em outra conta): mostra antes o que vai acontecer. *Somar* junta ao que já existe
     (categoria com mesmo tipo e nome é reaproveitada; lançamento/fixo igual não duplica). *Substituir* apaga os
     lançamentos e fixos pessoais antes (e as tarefas pessoais, se o arquivo tiver tarefas; pede confirmação); categorias sem uso saem, e itens **sincronizados** em grupos
@@ -263,6 +264,32 @@ compartilham usuário, autenticação, design e padrões.
   nas notícias ("Não haverá aula...") e nos dias de aula que não aparecem no Mapa (feriados); "Não Registrada" fica
   pendente. Tudo aparece para conferir antes de salvar. Importar de novo na mesma matéria só atualiza as marcações.
 
+### Notas - conceitos
+
+- **Nota** (menu *Organização → Notas*, ou aba *Notas* do grupo): título e texto em **markdown** (até 200 mil
+  caracteres). O editor **Visual** mostra a estrutura pronta e grava markdown: barra de botões (títulos, negrito,
+  itálico, riscado, código, link, listas, checklist, citação, bloco de código com cores, divisória, tabela e imagem),
+  atalhos (`Ctrl+B`, `Ctrl+I`) e markdown digitado vira estrutura (`## `, `- `, `[ ] `, `**texto**`). Digitar `/` abre
+  a lista de blocos. **Markdown** mostra o código para editar à mão; **Lado a lado** (computador) mostra o código e a
+  nota pronta, e a checklist pode ser marcada na prévia. O modo fica lembrado no aparelho.
+- **Salvar automático**: 1 s depois de parar de digitar. Cada gravação leva a versão que a pessoa tinha; se outra aba
+  ou pessoa salvou antes, aparece o aviso com *Ver a versão nova* ou *Manter a minha* (nada se perde sem perguntar).
+- **Organização**: pastas, etiquetas com cor, ícone (emoji) e cor da nota; **fixar** (aparece primeiro),
+  **arquivar** (sai da lista sem excluir) e **lixeira** (some de vez depois de 30 dias; só quem criou ou o admin do
+  grupo manda para a lixeira, restaura ou apaga de vez). Busca no título e no texto, filtro por pasta e etiqueta.
+- **Modelos**: prontos (reunião, aula, diário, lista de compras) e os seus (nota marcada como modelo, só pessoal; fica
+  na aba *Modelos* e aparece em *Nova nota*, também no grupo).
+- **Links entre notas**: `[[Nome da nota]]` (digitar `[[` sugere as notas). `Ctrl + clique` abre; o rodapé lista os
+  links (o que não existe é criado ao tocar) e onde a nota é **citada**.
+- **Ligações**: nota pessoal com uma tarefa pessoal ou um compromisso da *Frequência*; nota do grupo com uma tarefa do
+  grupo. O menu do compromisso e da tarefa pessoal tem *Notas*, que abre a lista filtrada.
+- **Fotos**: enviadas do aparelho (reduzidas para até 1600 px), guardadas pela API e mostradas só para quem pode ver
+  a nota. Foto tirada do texto é apagada depois de 1 hora; nota apagada leva as fotos junto.
+- **Grupo**: todos os membros leem e editam; **Atividade** mostra quem criou, editou (edições seguidas viram uma
+  linha), arquivou, mandou para a lixeira ou restaurou.
+- **Extras**: palavras e tempo de leitura no rodapé, **Baixar .md** no menu da nota e card no **Início** (fixadas e
+  editadas por último). As notas pessoais vão no arquivo da conta (só registro).
+
 ## Arquitetura
 
 ```
@@ -417,7 +444,7 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | CSRF | SameSite=Strict + cabeçalho `X-Requested-With` obrigatório em requisições que alteram dados |
 | Força bruta | Limite de login/cadastro por IP (20 / 10 min; IP real do cliente atrás de proxy, sem dar para forjar) e bloqueio de 15 min por e-mail após 5 senhas erradas. Confirmação de senha (excluir conta): mesmo bloqueio, por usuário |
 | LGPD | Política de privacidade e Termos de uso publicados (`/privacidade`, `/termos`), com controlador, encarregado e canal do titular. Aceite obrigatório no cadastro e a cada versão nova, gravado com versão e data (`users.terms_version`/`terms_accepted_at`). Direitos do titular no próprio app: acessar e levar os dados (exportar), corrigir (perfil), apagar (excluir conta), revogar consentimento (desvincular Google, desativar push). Sem cookies de rastreio ou publicidade |
-| Conta | Excluir pede a senha atual (ou o Google, em conta sem senha) + "EXCLUIR"; apaga tudo do usuário (FKs em cascata, foto de perfil e fotos dos itens no disco) e o cookie. Token de conta que não existe mais é recusado (**401**) em toda requisição |
+| Conta | Excluir pede a senha atual (ou o Google, em conta sem senha) + "EXCLUIR"; apaga tudo do usuário (FKs em cascata, foto de perfil, fotos dos itens e das notas no disco) e o cookie. Token de conta que não existe mais é recusado (**401**) em toda requisição |
 | Exportar/importar | Só os próprios dados, logado. Exportar: 20/h; importar: 10/h (prévia 60/h); arquivo até 25 MB (nginx), validado inteiro (versão, categorias, valores, datas) antes de gravar — tudo ou nada |
 | Enumeração de contas | Login responde igual e no mesmo tempo para e-mail inexistente e senha errada |
 | Isolamento | Todo dado tem dono; buscas sempre filtram pelo usuário do token (outro usuário recebe 404) |
@@ -426,6 +453,7 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Link de convite | Token aleatório de 256 bits, válido por 7 dias, um por grupo, revogável; entrar exige estar logado |
 | Uploads | Só JPEG/PNG até 1 MB (o front já envia recortado em 512 px); a API confere o tipo pelos bytes e as dimensões antes de decodificar e **regrava** um JPEG novo (sem metadados do arquivo). Servido só a membros/convidados |
 | Prévia de links | A API busca a página do link (proteção contra **SSRF**): só http(s) nas portas 80/443, só **IPs públicos** (checado na conexão, sem brecha de DNS rebinding), sem proxy/cookies, redirecionamentos revalidados, 12 s e 3 MB no máximo, 20 buscas por usuário a cada 10 min (inclui a busca de produto parecido no Buscapé). A foto é baixada, validada e **regravada** pela API (o navegador nunca carrega imagem de fora). Links só abrem em http(s), em outra aba, sem `Referer` |
+| Notas | Nota pessoal só do dono e nota de grupo só dos membros (**404** para os outros); lixeira só de quem criou ou do admin (**403**). O conteúdo é markdown puro: o editor não aceita HTML solto, links só `http(s)`/`mailto` (outra aba, sem `Referer`) e imagem só se for foto enviada pela API para aquela nota (endereço de fora não carrega). Fotos validadas e regravadas em JPEG pela API e servidas só a quem pode ver a nota |
 | Busca de usuários | Convite de grupo (só admins) e adicionar amigo: mín. 2 caracteres, até 10 resultados, devolve apenas nome, @username e foto (nunca e-mail) |
 | Chat do grupo | Só membros leem, escrevem e recebem o stream (não membro → **404**); editar/apagar só a própria mensagem (403). O stream SSE é por usuário logado e só recebe mensagens de grupos de que ele é membro no envio. Texto puro (sem HTML), até 2.000 caracteres, 30 mensagens/min por pessoa |
 | Amigos | Perfil e conquistas de alguém só para quem é amigo (senão **404**); conquistas financeiras nunca aparecem para amigos (só contagem, nunca valores). Pedidos: 30/h por usuário, até 50 sem resposta; aceitar só quem recebeu |

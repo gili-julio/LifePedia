@@ -1,5 +1,6 @@
-import { CalendarCheck2Icon, ClipboardPasteIcon, EllipsisVerticalIcon, LinkIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
+import { CalendarCheck2Icon, ClipboardPasteIcon, EllipsisVerticalIcon, LinkIcon, NotebookPenIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
+import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
@@ -26,6 +27,7 @@ export function AttendancePage() {
   const [menu, setMenu] = useState<{ open: boolean; item?: Commitment }>({ open: false })
   const [deleting, setDeleting] = useState<{ open: boolean; item?: Commitment }>({ open: false })
   const [importing, setImporting] = useState(false)
+  const navigate = useNavigate()
 
   async function onDelete(item: Commitment) {
     try {
@@ -80,6 +82,7 @@ export function AttendancePage() {
       <ActionSheet open={menu.open} onOpenChange={(open) => setMenu((s) => ({ ...s, open }))} title={menu.item?.name ?? ''}
         actions={[
           { label: 'Editar', icon: PencilIcon, onSelect: () => setEditing({ open: true, item: menu.item }) },
+          { label: 'Notas', icon: NotebookPenIcon, onSelect: () => menu.item && navigate(`/notas?compromisso=${menu.item.id}`) },
           { label: 'Excluir', icon: Trash2Icon, destructive: true, onSelect: () => setDeleting({ open: true, item: menu.item }) },
         ]} />
       <ConfirmDelete open={deleting.open} onOpenChange={(open) => setDeleting((s) => ({ ...s, open }))}

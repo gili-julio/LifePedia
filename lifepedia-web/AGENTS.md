@@ -8,7 +8,7 @@ atualizada**). Aqui ficam só as regras do front. Mudou tela, rota, estrutura ou
 
 React 19 · TypeScript 6 · Vite 8 · Tailwind CSS v4 (sem `tailwind.config`, tema em `src/index.css`) ·
 shadcn/ui (estilo `radix-maia`: cantos bem arredondados, botões em pílula) · fonte Manrope (`@fontsource-variable/manrope`) · React Router 8 (data router) · TanStack Query 5 · React Hook Form + Zod 4 ·
-Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · next-themes · sonner · lucide-react. Lint com oxlint.
+Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · Tiptap 3 + lowlight (editor das notas) · next-themes · sonner · lucide-react. Lint com oxlint.
 
 ## Convenções
 
@@ -121,13 +121,28 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   hoje); o texto nunca vai para a API, só `POST /api/attendance/import`. Horário da UFRN em `SLOT_STARTS` (aulas de
   50 min). Página do SIGAA mudou? Ajuste o parser e confira com um texto real; sempre mostre o que foi lido antes de salvar.
   O formulário da importação é o `CommitmentForm` (com `defaults` e `onSubmit`).
+- **Notas** (`features/notes`): chaves `['notes', 'me' | groupId, ...]`; mutações invalidam o módulo, menos salvar,
+  que atualiza a nota aberta no cache (`setQueryData`) e não recarrega a tela (o rascunho local manda). Rotas por
+  `notesBase(groupId)`, telas por `noteUrl`/`notesListUrl`. Lista, busca, ordem, resumo (`excerpt`) e "citada em" sempre
+  da API. Salvar: `useAutosave` (1 s depois da última mudança, com a `version` que a pessoa tinha; 409 → aviso com
+  *Ver a versão nova* / *Manter a minha*; sai da tela → salva na hora; fechar a aba pendente → confirmação).
+  **Editor** (`editor/`, Tiptap fixado na versão exata): conteúdo entra e sai em markdown (`contentType: 'markdown'`,
+  `getMarkdown`); sem sublinhado (não existe em markdown). O editor escapa colchetes: passe sempre a saída por
+  `unescapeWikiLinks`. `setContent`/`setEditable` sem emitir update (senão abrir a nota já regrava). Link só `http(s)`/
+  `mailto`, nova aba, `noopener noreferrer`; imagem só `isNoteImage` (foto da API daquela nota). Checklist da prévia
+  (lado a lado) escuta o `change` nativo (o checkbox é criado pelo editor, fora do React) e inverte no texto
+  (`toggleTask`). Menus "/" e `[[` em `suggestions.ts` (`SuggestionMenu` posicionado no cursor); `[[Nome]]` só é
+  destacado (`WikiLinks`, decoração), o texto não muda. Modo (visual/markdown/lado a lado) no `localStorage` (só
+  preferência de tela). Foto: `shrinkImage` (1600 px, JPEG até 1 MB) e `uploadNoteImage`. Estilo do conteúdo em
+  `.note-content` (`index.css`). Modelos prontos em `templates.ts` (item de lista com texto: markdown não guarda item
+  vazio). Outras telas só levam para a lista por URL (`/notas?tarefa=` / `?compromisso=`), sem importar o módulo.
 - **Amigos** (`features/friends`): chaves `['friends', ...]`; mutações invalidam o módulo e as notificações.
   Conquistas: nível (nunca cai), meta, valor e `unlockedAt` sempre da API; o front só tem texto/ícone por código (`achievements.ts`, espelha
   `Achievement`). Perfil de não amigo → 404 (tela com volta para Amigos).
 - **Instante x dia**: `yyyy-MM-dd` → `formatDate` (texto, sem fuso); instante ISO (`createdAt`, `since`) →
   `formatInstantDate`/`formatRelative` (fuso do navegador). Nunca `slice(0, 10)` num instante (vira o dia em UTC).
 - **Início** (`features/home`, rota índice `/`): só lê hooks de outros módulos (`useAgenda`, `useHabits`, `useSummary`,
-  `useCommitments` + os textos/tom de `attendance/absences.ts`);
+  `useCommitments` + os textos/tom de `attendance/absences.ts`, `useNotes`);
   não some valores nem calcule sequência no front. **Mudanças do sistema**: lista em `home/changelog.ts` (mais nova
   primeiro; `modules` só com os valores de `ChangeModule`); toda entrega que o usuário percebe adiciona uma entrada,
   escrita para quem usa (sem nomes de tela internos, rota, API ou termos técnicos), sem travessão. "Novo" = até 7
@@ -135,7 +150,7 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos e frequência do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@3`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência e notas do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@4`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.
