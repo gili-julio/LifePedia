@@ -19,7 +19,7 @@ LifePedia/                 ← monorepo (único repo git)
 ├── .env / .env.example    ← segredos locais (.env nunca vai para git)
 ├── lifepedia-api/         ← Spring Boot 4 + Java 21 + PostgreSQL
 ├── lifepedia-web/         ← React 19 + TS + Vite + Tailwind v4 + shadcn/ui
-└── lifepedia-mobile/      ← ainda vazio (stack a definir)
+└── lifepedia-mobile/      ← ainda vazio (stack a definir); no celular hoje vale o PWA do web
 ```
 
 ## ⚠️ Documentação sempre atualizada (obrigatório)
@@ -31,6 +31,9 @@ atualize o que for afetado:
 - `AGENTS.md` da raiz — regras, contratos API ↔ Web, checklists.
 - `README.md` e `AGENTS.md` de cada projeto tocado — endpoints, telas, estrutura de pastas, convenções, comandos.
 - `.env.example` — toda variável de ambiente nova ou removida.
+- `lifepedia-web/src/features/home/changelog.ts` — toda mudança que o usuário percebe ganha uma entrada no topo
+  (data, título-resumo, áreas afetadas e pontos curtos **sem termos técnicos**: o que a pessoa vê ou passa a poder
+  fazer). Aparece em *Mudanças recentes no sistema* no Início.
 
 Se nada precisou mudar na documentação, confirme isso explicitamente ao final da tarefa.
 
@@ -72,13 +75,28 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 - **Infra**: portas só em `127.0.0.1`; containers sem root; segredos só no `.env`; nada de valor padrão para segredo.
   Mudou serviço, variável ou volume no `docker-compose.yml`? Repita no `docker-compose.prod.yml` (produção, sem
   portas publicadas, variáveis no painel do Coolify) e atualize a seção **Deploy** do `README.md`.
-- **Front**: respeitar a CSP (sem scripts inline, sem CDN/recursos externos, sem `dangerouslySetInnerHTML`).
+- **Front**: respeitar a CSP (sem scripts inline, sem CDN/recursos externos, sem `dangerouslySetInnerHTML`). Única
+  exceção: o script/iframe do botão do Google (`accounts.google.com/gsi`, liberado no `nginx.conf` e carregado só por
+  `features/auth/GoogleButton.tsx`).
+- **Push** (`notification/push`): só para hosts de `lifepedia.push.allowed-hosts` (`https`, 443, sem redirect);
+  payload sempre cifrado (`PushCrypto`); aparelho só recebe com sessão de login válida (`session_id`); sincronização
+  automática (`auto`) nunca cria nem toma o aparelho de outra pessoa.
+- **PWA** (`lifepedia-web/public/sw.js`): o service worker só guarda a página offline. Nunca coloque em cache
+  resposta de `/api` nem telas (dados sensíveis ficariam no aparelho depois de sair).
 - Mudou algo de segurança? Atualize a seção **Segurança** do `README.md` da raiz e o `SecurityIntegrationTest`.
 
 ## Contrato API ↔ Web
 
 - Base: `/api`. O front sempre chama caminhos relativos; o Vite (dev) e o nginx (container) fazem o proxy.
-- Auth: `POST /api/auth/register` | `login` | `logout`.
+- **Termos/Política**: `user/LegalTerms.VERSION` (API) ↔ `features/legal/legal.ts` `LEGAL_VERSION` (web), mesma data.
+  Cadastro exige `acceptTerms: true`; `UserResponse.termsAccepted` = aceitou a versão vigente; `PUT /api/users/me/terms
+  {version}` registra (versão diferente da vigente → 400). Texto mudou de forma relevante? Nova data nos dois lados
+  (todos aceitam de novo). Novo dado pessoal, serviço externo ou compartilhamento ⇒ atualizar a política na mesma tarefa.
+- Auth: `POST /api/auth/register` | `login` (`remember` opcional) | `google` (`{credential, remember}`) | `logout`;
+  `GET /api/auth/config` (público: `googleClientId` ou nulo). Cada login cria uma linha em `user_sessions` e o JWT leva
+  `sid`; o token só vale com a sessão viva (logout apaga). Sem `remember`: cookie sem `Max-Age` e `JWT_EXPIRATION` (8h);
+  com: cookie e sessão de 30 dias. Conta Google: `PUT/DELETE /api/users/me/google`; `UserResponse` traz `googleLinked`
+  e `hasPassword` (false = conta criada pelo Google: entra só por ele, sem @username até completar o perfil).
   - Navegador: resposta `{ expiresAt, user }` + cookie HttpOnly `lifepedia_session` (enviado sozinho pelo navegador).
   - Outros clientes (mobile): cabeçalho `X-Auth-Mode: token` → resposta inclui `token`; depois `Authorization: Bearer <token>`.
 - Erros: RFC 9457 (`ProblemDetail`). O front mostra `detail`; erros de validação vêm em `errors: { campo: mensagem }`.
@@ -90,10 +108,26 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - `GroupMember.Role` (`ADMIN`/`MEMBER`) ↔ `features/groups/types.ts`; `ShareMode` (`SYNC`/`COPY`) ↔ `features/finance/group/types.ts`
   - `PlanItem.Kind` (`PURCHASE`/`INVESTMENT`) e meses da média (0, 3, 6, 12) ↔ `features/planning/types.ts`
   - Regra do @username (`user/Usernames.java`) ↔ `features/auth/username.ts`
+  - Parcela no nome ("Loja (3/10)": `finance/Installments.java`) ↔ `features/finance/installments.ts`
+  - Nomes de categoria de investimento (`finance/category/InvestmentCategories.java`) ↔ textos que citam "Investir"/"Investimento" no front
+  - Versão dos termos (`user/LegalTerms.VERSION`) ↔ `features/legal/legal.ts` (`LEGAL_VERSION`)
   - Versão do arquivo da conta (`account/AccountDtos.FORMAT`) ↔ `features/account/types.ts` (`ACCOUNT_FORMAT`)
   - Tarefas: `Priority`, `Recurrence.Unit/MonthMode`, `TaskOccurrence.Status`, `TaskDtos.Sort/Scope` ↔ `features/tasks/types.ts`
   - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
   - DTOs da API ↔ `types.ts` de cada feature no front
+- **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
+  `InvestmentCategories`). `Totals.expense` e `MonthPoint.*Expense` vêm **sem** investimento; `invested` à parte;
+  `balance` desconta os dois; `expensesByCategory` não traz as categorias de investimento. No grupo, `reserve` (resumo)
+  e `totalReserve` (planejamento) = reserva informada + investimentos do grupo até o mês (`GroupSummaryService.reserve`);
+  a simulação parte de `totalReserve` e o saldo previsto não desconta investimento.
+- **Parcela**: `PUT /api/finance/transactions/{id}/month` e `/api/groups/{id}/finance/transactions/{id}/month`
+  (`{month, following}`) mudam o `month`; `following` leva as parcelas seguintes da mesma compra (mesmo nome sem a
+  parcela e mesmo total) com o mesmo deslocamento. Nunca antes do mês da `date` (400). No grupo, só cópias de quem levou.
+- **Chat do grupo** (`/api/groups/{id}/chat/...`): histórico por **cursor** (`before` = id da mais antiga carregada,
+  `size` até 100; resposta `{items (antiga → nova), hasMore}`), exceção à paginação por página (mensagens novas
+  deslocariam as páginas). `POST/PUT/DELETE messages`, `POST read`; `GET /api/groups/chat/unread` (`{groupId: n}`) e
+  `GET /api/groups/chat/stream` (SSE, evento `message` com a mensagem nova/editada/apagada; um por aba, no `AppLayout`).
+  Apagar = `deleted` com `body` nulo. Não lidas = dos outros, depois da última leitura (ou de quando entrou).
 - **Mês do ocasional** = campo `month` (padrão: mês da data; fatura do cartão: mês da fatura). Listagem e totais usam `month`, não `date`.
 - **Totais vêm da API** (`/summary`) e consideram todos os itens, não a página; o front não soma valores salvos.
 - **Listagens**: `GET /recurso` é paginado na API (`page` a partir de 0, `size` 1–100, padrão 10; `sort=campo,asc|desc`
@@ -104,7 +138,13 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 - **Usuário**: `username` obrigatório; `profileComplete=false` (conta antiga sem username) → o front bloqueia com
   aviso e leva a `/perfil` (`PUT /api/users/me`).
 - **Notificações**: `NotificationService.notify(userId, type, actorId, groupId, data)`; `data` são strings gravadas
-  no envio (nomes da época). O front monta o texto por `type`.
+  no envio (nomes da época). O front monta o texto por `type`; o push usa o texto de `notification/push/PushTexts`
+  (espelho de `notification-content.tsx`: **mudou um, mude o outro**).
+- **Push** (`/api/push`): `GET /config` (`publicKey` VAPID ou nulo), `PUT /subscription`
+  (`{endpoint, keys: {p256dh, auth}, auto}` → `{active}`; liga o aparelho à sessão do JWT; `auto` = religar ao abrir o
+  app, só se o aparelho já era da pessoa) e `DELETE /subscription` (`{endpoint}`, só do dono). Envio por
+  `PushService.send(userIds, PushMessage)` depois do commit; notificações e mensagens novas do chat já mandam. O
+  payload é `{title, body, url, tag, urgent}`; o `sw.js` mostra (tag `test` aparece mesmo com o app em foco).
 - **Itens de grupo** (`group_transactions`/`group_recurring_entries`) guardam os dados do item: **sincronizado**
   (`source_id`) é atualizado junto com o pessoal (`GroupFinanceSync`) e some com ele (FK em cascata); **cópia**
   (`source_id` nulo) é independente; item cadastrado direto no grupo é uma cópia sem `origin_id`. A categoria é a de quem levou; nas métricas do grupo as categorias somam pelo
@@ -145,10 +185,14 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   regra; sem data = `null`). "Hoje" vem da API (`Agenda.today`, fuso `TIME_ZONE`); atrasadas, ordem (`sort`) e
   agrupamento por dia também. `GET /agenda` (até 62 dias) e `GET /undated` devolvem a lista inteira (limitada pelo
   máximo de tarefas abertas); `GET /history` é paginado. Editar/excluir série: `?from=` (esta e as próximas) divide a
-  tarefa; "só esta" é `PUT /{id}/occurrence`/`/move`/`/status`/`/assignee`. Em grupo: responsável fixo (`assignee_id`)
-  ou rodízio (`task_rotation` + `rotation_start`); o responsável de cada ocorrência vem na agenda (`assigneeId`) e a
-  agenda pessoal inclui as de grupo em que a pessoa é a responsável (item com `groupId`; ações vão para a rota do
-  grupo). Excluir: criador ou admin (`canDelete` no item). Comentários só em grupo.
+  tarefa; "só esta" é `PUT /{id}/occurrence`/`/move`/`/status`/`/assignee`. Em grupo: responsáveis fixos
+  (`task_assignees`, vários), `allMembers` (todos, resolvido na leitura) ou rodízio (`task_rotation` +
+  `rotation_start`), nunca juntos; `completion` `ANY`/`EACH` (`EACH` só com mais de um; parte de cada um em
+  `task_occurrence_done`, item com `doneBy`; status `DONE` quando todos fizeram). Os responsáveis de cada ocorrência vêm
+  na agenda (`assignees`) e a agenda pessoal inclui as de grupo em que a pessoa é responsável (item com `groupId`;
+  ações vão para a rota do grupo). `PUT /api/tasks/{id}/group {groupId}` leva a pessoal para um grupo (lista, etiquetas
+  e fixo saem). `GET /conflicts` (choque de horário) e `GET/PUT /api/tasks/agenda-settings` (horas visíveis da agenda,
+  por pessoa). Excluir: criador ou admin (`canDelete` no item). Comentários só em grupo.
   **Hábito** (`habit`, só com regra de dias fixos): sequência/recorde/% do mês calculados na API (`HabitStats`;
   pulada é neutra, só dia passado pendente quebra) — `streak` no item da agenda e `GET /habits`. **Lembrete**
   (`reminderMinutes` 0–1440, exige `dueTime`) vira notificação `TASK_REMINDER` pelo `TaskReminderJob` (a cada minuto).

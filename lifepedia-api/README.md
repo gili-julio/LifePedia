@@ -28,30 +28,38 @@ Imagem Docker: `docker build -t lifepedia-api .` (o `docker-compose.yml` da raiz
 | `DB_USER` | `lifepedia` | Usuário do banco |
 | `DB_PASSWORD` | — (**obrigatória**) | Senha do banco |
 | `JWT_SECRET` | — (**obrigatória**) | Segredo HS256, mín. 32 caracteres. Trocar invalida todas as sessões |
-| `JWT_EXPIRATION` | `8h` | Validade do token/cookie |
+| `JWT_EXPIRATION` | `8h` | Validade da sessão sem "lembrar de mim" (com ele: `lifepedia.auth.remember-for`, 30 dias) |
 | `COOKIE_SECURE` | `true` | Cookie de sessão só em HTTPS (navegadores aceitam em `http://localhost`) |
 | `CORS_ORIGINS` | `http://localhost:5173` (no compose: localhost e 127.0.0.1, portas 3080 e 5173) | Origens liberadas (separadas por vírgula); origem fora da lista recebe 403 |
 | `PORT` | `8080` | Porta HTTP |
 | `TIME_ZONE` | `America/Sao_Paulo` | Fuso que define "hoje" nas tarefas (atrasadas, repetição); o container roda em UTC |
+| `GOOGLE_CLIENT_ID` | vazio (login com Google desligado) | OAuth Client ID (Aplicativo da Web) do Google Cloud; público, sem secret. Passo a passo no README da raiz |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | vazio (push desligado) | Par VAPID P-256 em base64url (comando no README da raiz). A API confere na subida que formam um par |
+| `VAPID_SUBJECT` | vazio | Contato para os serviços de push (`https://...` ou `mailto:`); obrigatório com as chaves |
 | `STORAGE_DIR` | `data/uploads` (no compose: `/data/uploads`, volume `lifepedia-uploads`) | Pasta das imagens (`users/`, `groups/`, `plan-items/`, cada uma com `<chave>.jpg`) |
 
 Limites de segurança ficam em `lifepedia.auth.*` no `application.yml` (tentativas por IP, bloqueio por e-mail).
 
 ## Autenticação
 
-- **Navegador**: login/cadastro devolvem `{expiresAt, user}` e o cookie `lifepedia_session`
-  (HttpOnly, Secure, SameSite=Strict, Path=/api). O token nunca aparece no corpo.
+- **Navegador**: login/cadastro devolvem `{expiresAt, remember, user}` e o cookie `lifepedia_session`
+  (HttpOnly, Secure, SameSite=Strict, Path=/api). O token nunca aparece no corpo. Sem `remember` o cookie não tem
+  `Max-Age` (some ao fechar o navegador).
+- **Sessões**: cada login grava uma linha em `user_sessions`; o JWT leva o `sid` e só vale enquanto ela existir e não
+  vencer. `logout` apaga a sessão (o token antigo dá `401` na hora). Vencidas são apagadas às 3h30.
+- **Google**: o front manda o ID token do botão oficial para `POST /api/auth/google`; a API confere assinatura (chaves
+  públicas do Google), emissor, audiência (`GOOGLE_CLIENT_ID`) e validade.
 - **Outros clientes** (mobile, scripts): envie `X-Auth-Mode: token` no login/cadastro para receber `token` no corpo
   e use `Authorization: Bearer <token>` depois.
 - **CSRF**: requisições `POST/PUT/PATCH/DELETE` sem `Authorization` precisam do cabeçalho `X-Requested-With`
   (qualquer valor), senão `403`.
 - **Limites**: 20 chamadas de login/cadastro por IP a cada 10 min (`429`); 5 senhas erradas para o mesmo e-mail
   bloqueiam esse e-mail por 15 min (`429`). Confirmação de senha (excluir conta) segue a mesma regra, por usuário.
-- **Conta excluída**: o `JwtDecoder` confere se o `sub` ainda existe; token de conta apagada → `401`.
+- **Conta excluída**: as sessões somem junto (cascata); token de conta apagada → `401`.
 
 ## Endpoints
 
-Todas as rotas, exceto `auth` e `health`, exigem sessão (cookie ou Bearer).
+Todas as rotas, exceto `auth` (inclui `GET /api/auth/config`) e `health`, exigem sessão (cookie ou Bearer).
 
 **Listagens paginadas** (`GET` de categorias, fixos e ocasionais, e dos itens de grupo): `page` (começa em 0), `size` (1 a 100, padrão 10)
 e `sort=campo,asc|desc` (campos da lista de cada rota; outro campo → `400`). Resposta:
@@ -61,11 +69,15 @@ e `sort=campo,asc|desc` (campos da lista de cada rota; outro campo → `400`). R
 
 | Método | Rota | Descrição |
 |---|---|---|
-| POST | `/api/auth/register` | `{name, username, email, password}` → `201` · `409` se e-mail ou username já existe · cria as categorias padrão |
-| POST | `/api/auth/login` | `{email, password}` → `200` · `401` se inválido · `429` se bloqueado |
-| POST | `/api/auth/logout` | Apaga o cookie de sessão → `204` |
-| GET | `/api/users/me` | Usuário logado (`username`, `profileComplete`: false = falta dado obrigatório) |
+| POST | `/api/auth/register` | `{name, username, email, password, acceptTerms: true}` → `201` (grava versão e data do aceite) · `400` sem o aceite · `409` se e-mail ou username já existe · cria as categorias padrão |
+| POST | `/api/auth/login` | `{email, password, remember?}` → `200` · `401` se inválido · `429` se bloqueado |
+| POST | `/api/auth/google` | `{credential, remember?}` (ID token do Google) → `200`. Conta vinculada entra; e-mail confirmado pelo Google de conta existente é vinculado; senão cria conta sem senha e sem @username (`profileComplete=false`). `409` se o e-mail não foi confirmado pelo Google ou a conta já tem outro Google · `401` token inválido · `404` sem `GOOGLE_CLIENT_ID` |
+| GET | `/api/auth/config` | Público: `{googleClientId}` (nulo = sem botão do Google) |
+| POST | `/api/auth/logout` | Encerra a sessão do token (cookie ou Bearer) e apaga o cookie → `204` |
+| GET | `/api/users/me` | Usuário logado (`username`, `profileComplete`: false = falta dado obrigatório, `googleLinked`, `hasPassword`) |
+| PUT / DELETE | `/api/users/me/google` | `{credential}` vincula a conta Google (`409` se já é de outro usuário ou se já há outra vinculada) · desvincula (`400` em conta sem senha) |
 | PUT | `/api/users/me` | `{name, username}` — completa/edita o perfil · `409` se o username é de outro |
+| PUT | `/api/users/me/terms` | `{version}` → `UserResponse` com `termsAccepted: true` (conta criada pelo Google ou termos novos) · `400` se não é a versão vigente (`LegalTerms.VERSION`) |
 | PUT / DELETE | `/api/users/me/image` | Foto de perfil: multipart `file` (JPEG/PNG até 1 MB, 64–4096 px), regravada como JPEG ≤ 512 px · remover. A anterior sai do disco |
 | GET | `/api/users/{id}/image?v=` | Foto de qualquer usuário (só logado); cache privado de 30 dias. `imageUrl` vem em `/me` e em todo `UserSummary` (membros, convites, autorias) |
 
@@ -101,6 +113,9 @@ usuário é apagado com a foto de perfil — FKs em cascata cuidam do resto (`us
 | GET | `/api/notifications?page=&size=` | Mais recentes primeiro (`size` até 50): `{id, type, data, groupId, imageUrl, read, createdAt}` |
 | GET | `/api/notifications/unread-count` | `{count}` |
 | POST | `/api/notifications/{id}/read` · `/api/notifications/read-all` | Marca como lida(s) |
+| GET | `/api/push/config` | `{publicKey}` (chave VAPID para o navegador; nula = push desligado) |
+| PUT | `/api/push/subscription` | `{endpoint, keys: {p256dh, auth}, auto?}` → `{active}`. Liga o aparelho à conta e à **sessão** atual (logout/sessão vencida param o envio). `auto: true` (ao abrir o app) só religa aparelho que já era da pessoa; nunca cria. Ativar de propósito manda um push de confirmação. `400` serviço de push fora da lista ou chaves inválidas · `503` push desligado |
+| DELETE | `/api/push/subscription` | `{endpoint}` → `204` (só o aparelho da própria conta) |
 
 Tipos: `GROUP_INVITE` (`data`: `actorName`, `actorUsername`, `groupName`, `inviteId`), `MEMBER_ACCOUNT_DELETED`
 (`data`: `actorName`, `actorUsername`, `groupName`, `promoted` = `"true"` para quem virou admin) e, das tarefas de
@@ -110,6 +125,11 @@ sua), `TASK_COMMENT` (+ `preview`, até 100 caracteres) e `TASK_OVERDUE` (aviso 
 `TASK_REMINDER` (lembrete; pessoal ou de grupo, sem ator): `taskId`, `taskTitle`, `date`, `time` (`HH:mm`), `minutes`
 e `groupName` (só grupo). Amizade: `FRIEND_REQUEST` (`actorName`, `actorUsername`, `requestId`) e `FRIEND_ACCEPTED`
 (`actorName`, `actorUsername`).
+
+**Push**: toda notificação vira também push (texto em `PushTexts`, link para a tela) e cada mensagem nova do chat vai
+para os outros membros (tag por grupo, a última substitui). O envio roda depois do commit, numa thread virtual, e
+nunca afeta a ação; resposta `404`/`410` do serviço de push apaga a inscrição. Até 10 aparelhos por pessoa (os mais
+antigos saem).
 
 ### Grupos
 
@@ -137,6 +157,20 @@ Não membro recebe `404`; ação de admin feita por membro comum, `403`.
 
 Toda escrita com sucesso em `/api/groups/{id}/...` (e entrar no grupo) atualiza a **última atividade** do grupo
 (`last_activity_at`), usada nos atalhos.
+
+### Chat do grupo (`/api/groups/{groupId}/chat`)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/messages?before=&size=` | Histórico por cursor: sem `before`, as mais recentes; `before` = id da mais antiga já carregada. `size` 1–100 (padrão 30). `{items (antiga → nova), hasMore}` |
+| POST | `/messages` | `{body (até 2000), replyToId?}` → `201`. 30/min por pessoa (`429`). Quem envia fica com o chat lido |
+| PUT / DELETE | `/messages/{id}` | `{body}` edita (`editedAt`) · apaga (`deleted`, `body` nulo). Só o autor (`403`); apagada não edita (`400`) |
+| POST | `/read` | Marca como lido até agora → `204` (não conta como atividade) |
+| GET | `/api/groups/chat/unread` | `{groupId: total}` dos meus grupos com não lidas (dos outros, depois da última leitura ou de quando entrei) |
+| GET | `/api/groups/chat/stream` | SSE (`text/event-stream`) de todos os meus grupos: evento `message` com a mensagem nova, editada ou apagada. "Ping" (comentário) a cada 25 s; até 5 conexões por usuário |
+
+Mensagem: `{id, groupId, author: UserSummary, body, replyTo: {id, author, body (até 140)} | null, createdAt, editedAt, deleted}`.
+Não membro → `404` em tudo. Excluir a conta apaga as mensagens da pessoa (respostas a elas ficam sem a citação).
 
 ### Amigos (`/api/friends`) e conquistas
 
@@ -166,7 +200,8 @@ grupo), `HABIT_STREAK` (maior sequência entre os hábitos pessoais em andamento
 | GET | `/recurring?type=&page=&size=&sort=` | Fixos do grupo. `sort`: `amount` (padrão, desc), `description`, `category`, `member`, `day`, `start` |
 | POST | `/transactions` · `/recurring` | Cadastra direto no grupo (mesmo corpo do pessoal; categoria de quem cadastra) → `201` com o item. Fica como cópia sem item pessoal |
 | PUT / DELETE | `/transactions/{id}` · `/recurring/{id}` | Editar cópia (só quem levou; sincronizado → `400`) · tirar do grupo (quem levou ou admin) |
-| GET | `/summary?month=` | Resumo no formato do pessoal + `members: [{member, income, expense, balance}]`; categorias somadas pelo nome (`categoryId` = `TIPO:nome`) |
+| PUT | `/transactions/{id}/month` | `{month, following?}` adianta/adia a parcela (cópia de quem levou) e, com `following`, as seguintes → `{moved}` |
+| GET | `/summary?month=` | Resumo no formato do pessoal + `members: [{member, income, expense, invested, balance}]` + `reserve: {manual, invested, total}` (reserva do planejamento + investimentos do grupo até o mês); categorias somadas pelo nome (`categoryId` = `TIPO:nome`) |
 | GET | `/summary/history?until=&months=` | Série mensal do grupo (1 a 24) |
 | GET | `/summary/category-items?category=&month=` | Itens da categoria (chave do resumo) agrupados pela descrição |
 
@@ -183,7 +218,7 @@ Ao **criar** fixo ou ocasional, `groupIds` (até 20) + `shareMode` (padrão `SYN
 | PUT | `/items/order` | `{itemIds}` — nova prioridade (os demais vão para o fim) |
 | POST / DELETE | `/items/{id}/acquire` | `{date, amount, launch, categoryId}` — marca como comprado/feito; `launch` lança despesa no grupo (em parcelas, se parcelado) · desfaz |
 | GET | `/items/{id}/image` | Foto do item (membros; cache privado com `?v=`) |
-| PUT | `/settings` | `{reserve, averageMonths: 0|3|6|12, manualBalance}` — base da simulação (qualquer membro) |
+| PUT | `/settings` | `{reserve, averageMonths: 0|3|6|12, manualBalance}` — base da simulação (qualquer membro). Resposta (e `settings` da simulação) traz também `invested` (investimentos do grupo até o mês atual) e `totalReserve` = `reserve + invested`, de onde a simulação parte |
 | GET / POST | `/scenarios` | Lista · cria `{name, itemIds}` (`itemIds` nulo = ativos agora; até 20 por grupo) |
 | PUT / DELETE | `/scenarios/{id}` | Edita nome/itens (qualquer membro) · exclui (quem criou ou admin) |
 | POST | `/scenarios/{id}/apply` | Deixa ativos só os itens do cenário |
@@ -207,17 +242,20 @@ vale para as duas bases.
 |---|---|---|
 | GET | `/api/tasks/agenda?from=&to=&overdue=&list=&tag=&assignee=&sort=` | `{today, overdue, days: [{date, items}]}` de `from` a `to` (até 62 dias). `overdue=true` traz as pendentes antes de `from` (repetidas: últimos 90 dias). `sort`: `MANUAL` (padrão), `PRIORITY`, `TIME`; pendentes antes das concluídas; puladas não aparecem. Pessoal sem `list`/`tag`: inclui as ocorrências de grupo em que a pessoa é a responsável (item com `groupId`, depois das pessoais na ordem manual). `assignee` (grupo): só as desse responsável |
 | GET | `/api/tasks/undated?list=&tag=&assignee=&sort=` | Pendentes sem data (mesma regra da agenda) |
-| GET | `/api/tasks/history?page=&size=&sort=` | Concluídas (paginado). `sort`: `completedAt` (padrão, desc) |
+| GET | `/api/tasks/conflicts?date=&time=&duration=&people=&task=` | Choque de horário: pendentes de `date` que se cruzam com `time` + `duration` (nula = 30 min; sem duração contam 30) → `[{taskId, date, title, dueTime, durationMinutes, groupId, people}]`. Pessoal: a agenda da pessoa (com as de grupo em que é responsável). Grupo: as do grupo com algum de `people` (ids separados por vírgula; `people` da resposta = quem tem o choque) ou sem responsável e, se quem consulta está em `people`, também a agenda pessoal dele. `task` sai da conta · `400` duração fora de 1 a 1440 ou mais de 50 pessoas |
+| GET / PUT | `/api/tasks/agenda-settings` | Horas visíveis na agenda `{dayStart, dayEnd}` (0–23 e 1–24, pelo menos 4 horas; padrão 6 e 23), da pessoa (vale nos grupos) |
+| GET | `/api/tasks/history?page=&size=&sort=` | Concluídas (paginado). `sort`: `completedAt` (padrão, desc). Cada item traz `completedDay` (dia da conclusão no fuso `TIME_ZONE`) e `dayCount` (concluídas nesse dia, contando todas as páginas) |
 | GET | `/api/tasks/habits` | Hábitos abertos: `{taskId, title, listId, groupId, repeat, start, streak, best, monthRate, monthDone, monthDue, days: [{date, state}]}` (7 últimos dias; `state` `DONE\|SKIPPED\|MISSED\|PENDING` ou nulo se o dia não é da regra) |
 | GET | `/api/tasks/{id}` | Tarefa completa (regra, subtarefas) para editar |
-| POST | `/api/tasks` | `{title, notes, priority, dueDate, dueTime, durationMinutes, listId, tagIds, habit, repeat, subtasks: [{id?, title}], reminderMinutes, recurringEntryId, assigneeId, rotation}` (os dois últimos só em grupo; `recurringEntryId` só pessoal) |
+| POST | `/api/tasks` | `{title, notes, priority, dueDate, dueTime, durationMinutes, listId, tagIds, habit, repeat, subtasks: [{id?, title}], reminderMinutes, recurringEntryId, assignees, allMembers, rotation, completion}` (os quatro últimos só em grupo; `recurringEntryId` só pessoal) |
 | PUT | `/api/tasks/{id}?from=` | Sem `from`: todas as ocorrências. Com `from`: esta e as próximas — a série acaba antes do dia e uma nova começa (resposta = a nova) |
 | PUT | `/api/tasks/{id}/occurrence` | Só esta: `{date, moveTo, title, notes, dueTime, priority}` |
 | PUT | `/api/tasks/{id}/move` | `{date, to}` — muda o dia só desta (`to` nulo = sem data, só sem repetição) |
 | PUT | `/api/tasks/{id}/status` | `{date, status: DONE\|SKIPPED\|PENDING}` (pular só em repetida) |
 | PUT | `/api/tasks/{id}/overdue` | `{status: DONE\|SKIPPED}` para todas as atrasadas da tarefa → `{updated}` |
 | PUT | `/api/tasks/{id}/subtasks/{subtaskId}/check` | `{date, done}` — checklist da ocorrência |
-| PUT | `/api/tasks/{id}/assignee` | Grupo: `{date, assigneeId}` — responsável só desta ocorrência (`null` volta ao da tarefa; sem repetição muda o da tarefa) |
+| PUT | `/api/tasks/{id}/assignee` | Grupo: `{date, assigneeId}` — uma pessoa só nesta ocorrência (`null` volta ao da tarefa; sem repetição vira a responsável da tarefa) |
+| PUT | `/api/tasks/{id}/group` | Pessoal: `{groupId}` leva a tarefa para o grupo (membro; senão `404`); quem levou vira a responsável; lista, etiquetas e fixo saem; ocorrências e subtarefas ficam → tarefa do grupo · `400` pela rota do grupo ou grupo no limite |
 | DELETE | `/api/tasks/{id}?scope=THIS\|FOLLOWING\|ALL&date=` | Só esta (= pular), esta e as próximas, ou a tarefa inteira (padrão). Grupo: só quem criou ou admin (403) |
 | GET | `/api/tasks/{id}/comments?page=&size=&sort=` | Grupo: comentários paginados (`sort`: `createdAt`, padrão desc) `{id, author, body, createdAt, canDelete}` |
 | POST / DELETE | `/api/tasks/{id}/comments[/{commentId}]` | Grupo: `{body}` (até 2000; 1000 por tarefa) · apagar: quem escreveu ou admin (403) |
@@ -242,9 +280,13 @@ exige repetição em dias fixos (não "a partir da conclusão").
 - **Fixo** (`recurringEntryId`): só em tarefa pessoal e só fixo do próprio usuário (`400` senão); excluir o fixo
   desliga (`SET NULL`). O valor é registrado pelo front em `PUT /api/finance/recurring/{id}/adjustments/{month}`.
 
-Em grupo: qualquer membro cria, edita, conclui e comenta; o item traz `groupId`, `assigneeId` (responsável da
-ocorrência), `rotating`, `createdBy`, `completedBy`, `commentCount` e `canDelete`. `assigneeId` e `rotation` (2 a 50
-membros, sem repetir; precisa de repetição) não vão juntos. Rodízio: a ocorrência de índice *i* é de
+Em grupo: qualquer membro cria, edita, conclui e comenta; o item traz `groupId`, `assignees` (responsáveis da
+ocorrência: trocado só nela, vez do rodízio, todos os membros com `allMembers` ou os fixos), `allMembers`, `rotating`,
+`completion`, `doneBy`, `createdBy`, `completedBy`, `commentCount` e `canDelete`. `assignees` (até 50), `allMembers` e
+`rotation` (2 a 50 membros, sem repetir; precisa de repetição) não vão juntos. `completion: EACH` (só com mais de um
+responsável ou `allMembers`; senão vira `ANY`): `status DONE` de um responsável grava só a parte dele (`doneBy`) e a
+ocorrência fecha quando todos fizeram; `PENDING` desfaz só a parte de quem pede; quem não é responsável conclui para
+todos. Lembrete e aviso de atrasada vão para os responsáveis que não fizeram a sua parte. Rodízio: a ocorrência de índice *i* é de
 `rotation[(rotation_start + i) mod n]`; "a partir da conclusão" avança `rotation_start` a cada ocorrência resolvida;
 "esta e as próximas" continua a vez de onde parou. Ao concluir/pular, o responsável fica gravado na ocorrência. Quem sai
 do grupo deixa de ser responsável, sai dos rodízios e leva os comentários (as tarefas ficam). Aviso diário das
@@ -271,11 +313,12 @@ atrasadas: `TaskOverdueJob` (8h no fuso `TIME_ZONE`). Agendamentos ligam com `li
 | GET | `/api/finance/transactions/all?month=` ou `?from=&to=&type=&description=` | Todos do período, sem paginação; `description` compara sem maiúsculas/espaços nas pontas |
 | GET | `/api/finance/transactions/descriptions` | Até 200 descrições dos últimos 12 meses, as mais usadas primeiro (padronização da importação) |
 | POST / PUT / DELETE | `/api/finance/transactions[/{id}]` | CRUD de ocasionais |
+| PUT | `/api/finance/transactions/{id}/month` | `{month, following?}` adianta/adia a parcela ("Loja (3/10)"); `following` move as seguintes da mesma compra com o mesmo deslocamento (sincronizadas nos grupos também) → `{moved}` · `400` antes do mês da compra ou `following` sem parcela no nome |
 | POST | `/api/finance/transactions/batch` | `{items: [...]}` (1 a 500) — lote de ocasionais, tudo ou nada; erro indica a linha |
 | POST | `/api/finance/import` | `{transactions: [...], fixedAdjustments: [{recurringEntryId, month, amount}]}` — importação de extrato/fatura, tudo ou nada |
-| GET | `/api/finance/summary?month=2026-09` | Comparativo do mês (fixos x ocasionais, % comprometido, categorias) |
+| GET | `/api/finance/summary?month=2026-09` | Comparativo do mês (fixos x ocasionais, % comprometido, `investedPercent`, categorias). `Totals` = `{income, expense, invested, balance}`: despesa em categoria "Investir"/"Investimento(s)" vai para `invested`, fica fora de `expense` e de `expensesByCategory` e desconta do `balance` |
 | GET | `/api/finance/summary/categories/{categoryId}?month=` | Itens da categoria no mês: fixos + ocasionais agrupados pela descrição (`{description, fixed, count, total}`) |
-| GET | `/api/finance/summary/history?until=2026-09&months=6` | Série mensal (1 a 24 meses) |
+| GET | `/api/finance/summary/history?until=2026-09&months=6` | Série mensal (1 a 24 meses), com `invested` por mês |
 
 Exemplo de fixo:
 
@@ -309,23 +352,28 @@ src/main/java/com/lifepedia/api/
 │                  (interceptors), propriedades
 ├── shared/        BaseEntity, exceções, handler global, CurrentUser, RateLimiter, Paging/PageResponse,
 │                  image/ (validação e gravação de imagens), net/SafeHttpClient (busca de URL do usuário, anti-SSRF)
-├── auth/          cadastro, login/logout, cookie de sessão (SessionCookies), emissão de token, bloqueio por
-│                  tentativas, confirmação de senha
+├── auth/          cadastro, login/logout, sessões no banco (UserSession, limpeza diária), cookie (SessionCookies),
+│                  emissão de token, login/vínculo com Google (GoogleTokenVerifier), bloqueio por tentativas,
+│                  confirmação de identidade
 ├── account/       exportar (JSON + XlsxWriter), importar (MERGE/REPLACE) e excluir a conta
-├── user/          entidade User (@username), /api/users/me (ver/editar perfil, foto em UserImageStore), UserRegisteredEvent
-├── notification/  notificações (tipo + dados JSON), contador de não lidas
+├── user/          entidade User (@username), /api/users/me (ver/editar perfil, foto em UserImageStore, aceite dos termos:
+│                 LegalTerms), UserRegisteredEvent
+├── notification/  notificações (tipo + dados JSON), contador de não lidas; push/ (Web Push: inscrições, PushCrypto
+│                 aes128gcm + VAPID, PushTexts, envio pelo PushGateway)
 ├── group/         grupos, membros, convites, link de convite, imagens (GroupImageStore), GroupAccess,
 │                  GroupMemberRemovedEvent, GroupDeletedEvent, atividade (GroupActivityInterceptor), atalhos/fixar
 ├── friend/        pedidos de amizade, amigos, perfil do amigo
+├── chat/          chat do grupo: mensagens (cursor), leitura/não lidas, stream SSE (ChatStreams, em memória)
 ├── achievement/   conquistas (Achievement: níveis; AchievementService: contagens + níveis gravados; AchievementProgress)
-├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda, listas/etiquetas, grupo
+├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda (e choque de horário),
+│                 horas visíveis da agenda (AgendaPreference), listas/etiquetas, grupo (responsáveis, Completion)
 │                 (responsável, rodízio, comentários, avisos, aviso diário de atrasadas), hábitos (HabitStats),
 │                 lembretes (TaskReminderJob), export/import (TaskTransferService)
 ├── planning/      planejamento do grupo: itens, cenários, base, simulação (PlanningSimulator), prévia de link,
 │                  preço de referência (PriceReferenceService + ProductMatcher)
 └── finance/
-    ├── EntryType, YearMonthConverter
-    ├── category/      categorias do usuário, padrões (DefaultCategories), exclusão com migração
+    ├── EntryType, YearMonthConverter, Installments (parcela no nome: adiantar/adiar)
+    ├── category/      categorias do usuário, padrões (DefaultCategories), exclusão com migração, InvestmentCategories
     ├── recurring/     lançamentos fixos e ajustes mensais (valor real)
     ├── importing/     importação de extrato/fatura (ocasionais + ajustes)
     ├── transaction/   lançamentos ocasionais
@@ -339,4 +387,6 @@ src/main/resources/
                     · V14 tarefas · V15 tarefas de grupo (responsável, rodízio, comentários)
                     · V16 lembrete e fixo do financeiro nas tarefas · V17 foto de perfil
                     · V18 atividade/fixar grupo e amizades · V19 níveis de conquista
+                    · V20 sessões, Google e observações de 10 mil · V21 chat do grupo
+                    · V22 vários responsáveis, "cada um conclui", horas da agenda
 ```

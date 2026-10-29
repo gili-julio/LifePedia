@@ -26,10 +26,15 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 - `server.forward-headers-strategy: native` — o IP do cliente vem do `X-Forwarded-For` que o nginx define (o nginx
   já resolve o IP real atrás do proxy do Coolify com `real_ip`; a API nunca é exposta direto).
 - Sem segredo padrão: `JWT_SECRET` e `DB_PASSWORD` são obrigatórios (perfil `dev` lê `../.env`).
-- `jwtDecoder` também valida que o usuário do `sub` existe (conta excluída → 401). Cookie de sessão só por
-  `SessionCookies` (login, logout, excluir conta).
-- Ação sensível de quem já está logado (ex.: excluir conta) confirma a senha com `AuthService.verifyPassword`
-  (limite de erros por usuário).
+- `jwtDecoder` também valida que a sessão do `sid` existe e não venceu (`user_sessions`; logout e conta excluída
+  apagam → 401). Sessão e token nascem juntos em `TokenService.issue(user, remember)`; logout chama `revoke`.
+  `SessionCleanupJob` apaga as vencidas (3h30).
+- Google: `GoogleTokenVerifier` (chaves públicas do Google, `iss`, `aud` = `GOOGLE_CLIENT_ID`, validade) → `GoogleIdentity`.
+  Em teste, `@MockitoBean GoogleTokenVerifier` (nada de rede). Conta sem senha (`password_hash` nulo) nunca entra por
+  senha (o hash "dummy" só mantém o tempo). Cookie de sessão só por `SessionCookies` (login, logout, excluir conta).
+- Ação sensível de quem já está logado (ex.: excluir conta) confirma com `AuthService.confirmIdentity` (senha via
+  `verifyPassword`, com limite de erros por usuário; conta sem senha: ID token do Google de até 10 min com o `sub`
+  vinculado).
 - Nova regra de segurança ⇒ novo caso em `SecurityIntegrationTest`.
 
 ## Convenções
@@ -77,13 +82,33 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   Produto parecido: `PriceReferenceService` (lê `__NEXT_DATA__` da busca do Buscapé) + `ProductMatcher` (números e
   modelos precisam bater; acessório/usado descartado; variante não pedida penalizada) — ajuste de regra ⇒ caso em
   `ProductMatcherTest`. Testes de integração usam `@MockitoBean PriceReferenceService` (nada de rede em teste).
+- **Termos (LGPD)**: aceite só por `User.acceptTerms(LegalTerms.VERSION)` (cadastro e `UserService.acceptTerms`);
+  `UserResponse.termsAccepted` compara com a versão vigente. Trocar `LegalTerms.VERSION` = todos aceitam de novo (mude
+  `LEGAL_VERSION` no web junto). Teste em `UserProfileIntegrationTest`. Cadastro em teste manda `"acceptTerms":true`.
 - **DTO de entrada com booleano opcional**: use `Boolean` (Jackson 3 recusa campo `boolean` ausente → 400).
 - **Notificações**: `NotificationService.notify(...)` na mesma transação da ação; tipo novo = valor em
-  `NotificationType` + texto no front.
+  `NotificationType` + texto no front + caso em `PushTexts` (o `switch` não compila sem ele).
+- **Push** (`notification/push`): `PushService.send(userIds, PushMessage)` agenda para depois do commit (thread
+  virtual; falha só loga). Cifra em `PushCrypto` (RFC 8291/8292, só JDK; testado em `PushCryptoTest` decifrando como o
+  navegador). HTTP só pelo `PushGateway` (cliente criado no 1º envio, sem redirect) e só para `allowed-hosts`. Inscrição
+  ligada a `user_sessions` (`ON DELETE SET NULL`); envio só com sessão válida (`findActive`). Teste em
+  `PushIntegrationTest` com `@MockitoBean PushGateway` e chaves geradas no teste (`@DynamicPropertySource`).
 - **Atividade de grupo**: rota nova de escrita sob `/api/groups/{groupId}/...` já conta como atividade
   (`GroupActivityInterceptor`, registrado em `config/WebConfig`); se não for atividade (preferência pessoal, consulta via
   POST), anote o método com `@NoGroupActivity`. Atalhos e fixar: `GroupService.shortcuts`/`pin` (teste em
   `GroupIntegrationTest`).
+- **Chat** (`chat/`): `ChatService` (membro por `GroupAccess`, `RateLimiter` 30/min, só o autor edita/apaga, apagar
+  limpa o texto); toda escrita publica `ChatEvent` (destinatários = membros no envio) e `ChatStreams` entrega por SSE
+  **depois do commit** (`@TransactionalEventListener`), com "ping" a cada 25 s e até 5 conexões por usuário. Em
+  memória: uma instância da API só. Histórico por cursor (data + id), não por página. Leitura em `group_chat_reads`
+  (upsert nativo, sem entidade). Teste em `ChatIntegrationTest` (`@MockitoSpyBean ChatStreams`; o stream no MockMvc
+  com `asyncExchange()`, senão o teste espera o SSE acabar).
+- **Investimentos**: categoria por `InvestmentCategories.isInvestment` (só despesa; nome normalizado). Resumos pessoal
+  e de grupo separam `invested` em `Totals`/`MonthPoint`; `GroupSummaryService.reserve` soma a reserva do planejamento
+  com os investimentos até o mês (fixos mês a mês, com ajustes). Teste em `InvestmentIntegrationTest`.
+- **Parcelas**: `finance/Installments` (parse do "(n/total)", `isFollowedBy`, `shift` que barra mês antes da compra;
+  puro, `InstallmentsTest`). Mover no pessoal chama `GroupFinanceSync` depois de mudar todos (a sync limpa o contexto
+  do JPA).
 - **Amigos** (`friend/`): `FriendService` (pedido com `RateLimiter` por usuário, limites `MAX_FRIENDS`/`MAX_PENDING_SENT`);
   amizade sempre buscada por `between(a, b)` (par em qualquer ordem; índice único `LEAST/GREATEST`). Perfil de amigo =
   `AchievementService.of(id, false)`. Teste em `FriendIntegrationTest`.
@@ -103,8 +128,12 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   concluída/série encerrada (filtra a agenda). Ordenação da agenda é em memória na API (a lista é gerada, não vem de
   consulta), nunca no front. Teste em `TaskIntegrationTest`.
   Grupo: o mesmo `TaskController` atende `/api/groups/{groupId}/tasks` (`TaskScope` = dono + quem age + admin, via
-  `GroupAccess.requireMember`). Responsável da ocorrência só por `TaskService.assignee(task, date, row)` (trocado na
-  ocorrência → vez do rodízio → fixo). Avisos só por `TaskNotifier` (não avisa quem agiu nem ex-membro). Rodízio é
+  `GroupAccess.requireMember`). Responsáveis da ocorrência só por `TaskService.assignees(task, date, row, everyone)` (trocado na
+  ocorrência → vez do rodízio → todos (`members(task)`, só com `allMembers`) → fixos); conclusão sempre por
+  `complete` (trata "cada um conclui a sua": `doneBy` na ocorrência até todos). Avisos só por `TaskNotifier` (não
+  avisa quem agiu nem ex-membro). Choque de horário em `TaskAgendaService.conflicts` (reaproveita `agenda`; nunca
+  mostra tarefa pessoal de outra pessoa). Teste em `TaskAgendaIntegrationTest` (também levar para grupo e
+  `agenda-settings`). Rodízio é
   `@OrderColumn` sem `UNIQUE (task_id, user_id)` (o Hibernate reescreve posições). Agendamentos: `@Scheduled` com
   `zone = "${lifepedia.time.zone}"` e lógica num método público testável (ex.: `TaskOverdueJob.notifyOverdue`,
   `TaskReminderJob.remind(from, to)`); `SchedulingConfig` só liga com `lifepedia.scheduling.enabled` (desligado em

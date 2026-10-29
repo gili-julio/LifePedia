@@ -34,6 +34,11 @@ O site instala como app no celular e no desktop (Chrome, Edge, Android; no iPhon
   `offline.html` ("Sem conexão", volta sozinha quando a internet volta). Nada da API nem das telas fica em cache.
 - **Instalar app** no menu do usuário: usa o convite do navegador (`beforeinstallprompt`); no iPhone/iPad abre o
   passo a passo (*Compartilhar → Adicionar à Tela de Início*). Some quando já está instalado.
+- **Notificações push**: *Meu perfil → Notificações no aparelho* (`PushCard`) pede a permissão, inscreve no
+  `pushManager` com a chave VAPID da API e manda a inscrição (`/api/push/subscription`). Ao abrir o app, a inscrição
+  existente é religada à sessão (`useDevicePush` no `AppLayout`). O `sw.js` mostra a notificação (só se o app não
+  está em foco; com ele em foco só avisa a tela, que atualiza notificações e não lidas) e, ao tocar, abre a tela sem
+  recarregar. iPhone/iPad: só no app instalado (iOS 16.4+). No `npm run dev` não há service worker.
 - Barra do sistema com a cor do tema escolhido (`ThemeColor`). Depois de um deploy, a tela aberta há tempo que
   tenta carregar um arquivo que não existe mais recarrega uma vez (`vite:preloadError`).
 - Precisa de HTTPS (em produção o Traefik do Coolify) ou `localhost`. No `npm run dev` o service worker não é
@@ -46,18 +51,21 @@ O site instala como app no celular e no desktop (Chrome, Edge, Android; no iPhon
 
 | Rota | Tela |
 |---|---|
-| `/login`, `/cadastro` | Autenticação (cadastro pede o @username) |
-| `/` | **Início** (logo no topo): tarefas de hoje e atrasadas (até 5, abrem a tarefa), hábitos com a sequência e o mês no financeiro (entradas, saídas, saldo) |
-| `/perfil` | Meu perfil: foto (envia ao confirmar o recorte), nome e @username (conta sem dado obrigatório é trazida para cá com um aviso); **Meus dados** (exportar .json/.xlsx, importar com prévia *Somar*/*Substituir*) e **Excluir conta** (prévia por grupo, baixar dados, senha + EXCLUIR) |
-| `/tarefas` | Tarefas: **Hoje** (atrasadas + hoje, campo rápido), **Semana** (quadro com os 7 dias, como "Seg - 26/10"; no desktop cada dia recolhe numa faixa para dar espaço aos outros, e a escolha fica salva no navegador; no celular, um dia embaixo do outro; título do cartão até 2 linhas com "..."; arrastar pela alça muda o dia, inclusive para um dia recolhido), **Próximos** (por dia, +7 dias por vez), **Sem data**, **Hábitos** (sequência, recorde, % do mês, últimos 7 dias clicáveis) e **Concluídas** (`?aba=`; `?tarefa=<id>` abre a tarefa). Lembrete, hábito e fixo do financeiro no formulário; concluir tarefa ligada a fixo abre *Registrar no financeiro?*. Filtro por lista/etiqueta, ordem (minha ordem arrastando, prioridade, horário). Concluir, subtarefas, mover para, pular, editar/excluir com "só esta / esta e as próximas / todas"; listas e etiquetas no ⋮. Mostra também as de grupo em que você é o responsável (com o nome do grupo) |
+| `/privacidade`, `/termos` | Política de privacidade e Termos de uso (LGPD), públicas, com ou sem sessão |
+| `/login`, `/cadastro` | Autenticação (cadastro pede o @username e o aceite dos termos, com links que abrem em outra aba). Login com **Lembrar de mim** (sessão de 30 dias) e, nos dois, **botão do Google** (só aparece com `GOOGLE_CLIENT_ID` na API; conta nova pelo Google vai direto ao perfil escolher o @) |
+| `/` | **Início** (logo no topo): tarefas de hoje e atrasadas (até 5, abrem a tarefa), hábitos com a sequência, o mês no financeiro (entradas, saídas, saldo) e **Mudanças recentes no sistema** (linha do tempo com as 3 últimas, badges das áreas, "Novo" por 7 dias, tocar expande o detalhe) |
+| `/novidades` | Todas as mudanças do sistema (mesma linha do tempo) |
+| `/perfil` | Meu perfil: foto (envia ao confirmar o recorte), nome e @username (conta sem dado obrigatório é trazida para cá com um aviso); **Conta Google** (vincular com o botão do Google ou desvincular; conta criada pelo Google não desvincula); **Notificações no aparelho** (ativar/desativar o push neste aparelho); **Meus dados** (exportar .json/.xlsx, importar com prévia *Somar*/*Substituir*) e **Excluir conta** (prévia por grupo, baixar dados, senha ou confirmação pelo Google + EXCLUIR) |
+| `/tarefas` | Tarefas: **Hoje** (atrasadas + hoje, campo rápido), **Semana** (quadro com os 7 dias, como "Seg - 26/10"; no desktop cada dia recolhe numa faixa para dar espaço aos outros, e a escolha fica salva no navegador; no celular, um dia embaixo do outro; título do cartão até 2 linhas com "..."; arrastar pela alça muda o dia, inclusive para um dia recolhido), **Próximos** (por dia, +7 dias por vez), **Sem data**, **Hábitos** (sequência, recorde, % do mês, últimos 7 dias clicáveis) e **Concluídas** (separadas por dia, "28 de out · Hoje", com o total do dia ao lado; `?aba=`; `?tarefa=<id>` abre a tarefa; `?nova=1` abre uma nova). Lembrete, hábito e fixo do financeiro no formulário; concluir tarefa ligada a fixo abre *Registrar no financeiro?*. Filtro por lista/etiqueta, ordem (minha ordem arrastando, prioridade, horário). Concluir, subtarefas, mover para, pular, editar/excluir com "só esta / esta e as próximas / todas"; listas e etiquetas no ⋮. Mostra também as de grupo em que você é o responsável (com o nome do grupo) |
 | `/grupos` | Meus grupos (alfinete fixa na sidebar, até 3) e **Solicitações (n)** (convites recebidos: aceitar/recusar); criar grupo com imagem |
 | `/amigos` | **Meus amigos** (abre o perfil), **Pedidos (n)** (recebidos: aceitar/recusar; enviados: cancelar) e **Conquistas** (as minhas, com nível, data em que foi conquistado e barra até a próxima meta) (`?aba=pedidos\|conquistas`); *Adicionar amigo* busca por nome/@username |
 | `/amigos/:id` | Perfil do amigo: foto, desde quando são amigos e as conquistas dele (sem as "só você vê"); *Desfazer amizade* no ⋮ |
-| `/grupos/:id` | Grupo: visão geral (totais, por membro, fixos x ocasionais, 6 meses, categorias), lançamentos, fixos, **planejamento**, **tarefas** (`?aba=tarefas&vista=`; responsável/rodízio, comentários, filtro por responsável; `&tarefa=<id>` abre a tarefa) e membros; levar meus itens, novo lançamento/fixo direto no grupo (mesmos formulários do pessoal), convidar (admin). No celular as abas rolam na própria faixa |
+| `/agenda` | **Agenda**: grade de horários por dia ou semana (`?vista=dia\|semana&dia=`; no celular abre em dia). Blocos no intervalo da duração (sem duração, 30 min), lado a lado quando se cruzam ("+N" na semana), cores por lista/grupo/prioridade, linha do "agora", "+N sem horário" no topo de cada dia (leva para *Tarefas*), arrastar muda dia/horário (repetida: só esta ou todas), clicar no vazio cria, horário visível nos ajustes, filtro pessoais/grupos |
+| `/grupos/:id` | Grupo: visão geral (totais, investido no mês, reserva total, por membro, fixos x ocasionais, 6 meses, investido em 12 meses, categorias), **chat** (`?aba=chat`, estilo WhatsApp: responder, editar/apagar a própria mensagem, tempo real; contador de não lidas na aba), lançamentos (adiantar/adiar parcela), fixos, **planejamento**, **tarefas** (`?aba=tarefas&vista=`; responsáveis/todos/rodízio, "cada um conclui a sua", comentários, filtro por responsável; `&tarefa=<id>` abre a tarefa), **agenda** (`?aba=agenda`, a mesma grade, cor por responsável com legenda e fotos) e membros; levar meus itens, novo lançamento/fixo direto no grupo (mesmos formulários do pessoal), convidar (admin). No celular as abas rolam na própria faixa |
 | `/grupos/convite/:token` | Entrar num grupo pelo link de convite (sem sessão: depois de entrar ou criar a conta, volta para o convite) |
-| `/financeiro` | Visão geral do mês: totais, % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, categorias (expandem os itens agrupados pelo nome) |
+| `/financeiro` | Visão geral do mês (`?novo=1` abre o novo lançamento): totais, **investido** (fora das despesas, com % dos ganhos), % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, investido nos últimos 12 meses (se houver), categorias (expandem os itens agrupados pelo nome) |
 | `/financeiro/fixos` | Ganhos e despesas fixas (mensais), paginados |
-| `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; ação **Tornar fixo** em cada item |
+| `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; ação **Tornar fixo** em cada item e **Adiantar ou adiar parcela** nos que têm "(n/total)" no nome (só esta ou esta e as seguintes) |
 | `/financeiro/importar` | Importar extratos e faturas com IA (juntos, um ou vários meses): copia o prompt (categorias + fixos + nomes já usados), cola a resposta do agente, revisa numa prévia editável e importa |
 | `/financeiro/categorias` | Categorias de despesa e ganho em cartões (lista completa): criar, editar (nome/cor), excluir movendo os lançamentos |
 
@@ -67,7 +75,7 @@ O mês selecionado fica na URL (`?mes=2026-09`); a aba do grupo também (`?aba=l
 abre a lista lateral com **Ver** em cada item. **Cadastros de fixo e ocasional** têm a seção expansível *Levar para
 grupos* (foto, nome e participantes de cada grupo, com caixinhas e o modo sincronizado/cópia).
 
-**Planejamento** (aba do grupo): cartões com saldo previsto por mês (ajustável), reserva, total planejado e situação
+**Planejamento** (aba do grupo): cartões com saldo previsto por mês (ajustável), reserva (informada + investimentos do grupo), total planejado e situação
 (tudo cabe / faltam R$ X); painel **E se...?** (renda/gasto extra só na tela); **linha do tempo** (saldo acumulado com
 e sem os planos + pagamentos do mês); **itens** em ordem de prioridade (arrastar pela alça ⋮⋮ — mouse, toque ou teclado — ou setas ↑↓), com foto, link da loja, chave
 liga/desliga e a situação de cada um; **cenários** lado a lado (ver, aplicar, excluir); **adquiridos** (desfazer).
@@ -76,10 +84,10 @@ que bloqueia: aviso "não deu para ler X" + preço/foto de produto parecido no B
 link, "Buscar preço e foto pelo nome". O item mostra "Preço/foto de referência: Buscapé" ao lado do link.
 
 **Navegação**: sidebar (shadcn `Sidebar`) com a logo no topo, seções (Finanças, Organização, Social) com itens que
-expandem, cada subitem com ícone (Financeiro → telas do módulo; Tarefas → abas; Grupos → 3 atalhos com a foto, fixados
-primeiro e depois os de atividade recente, alfinete ao passar o mouse, + *Ver todos*; Amigos → amigos, pedidos,
+expandem, cada subitem com ícone (Financeiro → telas do módulo; Tarefas → abas; Agenda (item próprio); Grupos → 3 atalhos com a foto, fixados
+primeiro e depois os de atividade recente, alfinete ao passar o mouse, bolinha com as mensagens não lidas do chat na foto, + *Ver todos*; Amigos → amigos, pedidos,
 conquistas) e o usuário no rodapé
-(notificações, perfil, tema, sair). A partir de 1024px fica fixa e recolhe para só ícones (botão no topo ou
+(notificações, perfil, instalar app, tema, sair). A partir de 1024px fica fixa e recolhe para só ícones (botão no topo ou
 `Ctrl+B`; subitens abrem num menu ao lado; a escolha fica no cookie `sidebar_state`). Abaixo disso vira gaveta
 lateral aberta pelo ☰ do topo, que fecha ao navegar. O topo mostra o caminho (ex.: Financeiro › Lançamentos).
 
@@ -144,7 +152,7 @@ src/
 │   ├── layout/
 │   │   ├── AppLayout.tsx     sidebar + topo fino (☰/recolher, caminho da página), notificações
 │   │   ├── AppSidebar.tsx    sidebar: logo, seções com itens que expandem, usuário no rodapé
-│   │   ├── UserMenu.tsx      usuário no rodapé: notificações, perfil, tema, sair
+│   │   ├── UserMenu.tsx      usuário no rodapé: notificações, perfil, instalar app, tema, sair
 │   │   ├── IosInstallDialog.tsx  passo a passo para instalar no iPhone/iPad
 │   │   ├── use-dynamic-links.ts subitens vindos da API (grupos)
 │   │   └── nav-items.ts      seções, itens e subitens da navegação + regra de item ativo
@@ -165,10 +173,18 @@ src/
 │   ├── data-table/           listagens: useListState, SortableHead, SortSelect (mobile), DataTablePagination
 │   └── Logo.tsx
 ├── features/
-│   ├── auth/                 AuthProvider, guards de rota, login e cadastro, ProfilePage + ProfilePhoto, ProfileGate (aviso de cadastro incompleto), username
+│   ├── auth/                 AuthProvider, guards de rota, login e cadastro, ProfilePage + ProfilePhoto, ProfileGate (aviso de cadastro incompleto), username,
+│   │                         GoogleButton (script do Google, carregado sob demanda) + GoogleSignIn (login/cadastro) +
+│   │                         GoogleAccount (vincular no perfil), auth-config (Client ID vindo da API)
+│   ├── chat/                 chat do grupo: api (histórico por cursor, upsert vindo do stream), use-chat-stream (SSE no
+│   │                         AppLayout), GroupChat (bolhas, responder/editar/apagar, campo de mensagem)
+│   ├── legal/                Termos e Política (LegalLayout, PrivacyPage, TermsPage), legal.ts (versão, controlador e
+│   │                         contato), LegalLinks (rodapés), LegalGate (aceite obrigatório, no AppLayout)
 │   ├── account/              exportar/importar (ImportDialog com prévia) e excluir conta (DeleteAccountDialog) — seções do perfil
-│   ├── home/                 página Início (resumo de tarefas, hábitos e financeiro)
-│   ├── notifications/        hooks, NotificationsSheet, texto por tipo (notification-content), use-reminder-toasts
+│   ├── home/                 página Início (resumo de tarefas, hábitos e financeiro), changelog.ts (mudanças do sistema),
+│   │                         RecentChanges (linha do tempo), ChangelogPage (/novidades)
+│   ├── notifications/        hooks, NotificationsSheet, texto por tipo (notification-content), push (useDevicePush) +
+│   │                         PushCard (ativar no aparelho), use-reminder-toasts
 │   │                         (lembrete que chega com o app aberto vira toast)
 │   ├── groups/               grupos: api, GroupAvatar, GroupFormDialog, InviteDialog + UserPicker, MembersList, páginas
 │   ├── friends/              amigos e conquistas: api, achievements (texto/ícone por código), AchievementGrid,
@@ -180,7 +196,11 @@ src/
 │   │                         task-form, ScopeDialog, MoveDialog, LabelsDialog, QuickAdd, TaskViews, task-actions, TasksPage,
 │   │                         board (contexto pessoal/grupo), TasksBoard (abas + filtros, na página e no grupo),
 │   │                         GroupTasksTab, AssignmentFields (responsável/rodízio), AssignDialog, TaskComments,
-│   │                         WeekView (semana com arrastar), HabitsView, FixedField + FixedPaymentDialog (fixo ligado)
+│   │                         WeekView (semana com arrastar; `?dia=` abre a semana do dia), HabitsView, FixedField +
+│   │                         FixedPaymentDialog (fixo ligado), ConflictWarning (choque de horário no formulário),
+│   │                         GroupMoveDialog (levar para um grupo), progress (concluída para quem vê, "1/3"),
+│   │                         agenda/ (AgendaBoard: grade dia/semana; layout.ts: colunas dos blocos que se cruzam;
+│   │                         colors.ts; AgendaSettingsButton), AgendaPage
 │   └── finance/
 │       ├── types.ts, api.ts          tipos e hooks React Query
 │       ├── categories.ts             ordenação/normalização de nomes
@@ -188,6 +208,8 @@ src/
 │       ├── import/prompt.ts          gera o prompt para o agente de IA (formato lifepedia/transactions@3)
 │       ├── import/parse.ts           lê a resposta do agente, casa categorias, detecta duplicados
 │       ├── fixed.ts                  vigência e valor do fixo no mês (valueIn)
+│       ├── installments.ts           parcela no nome ("(3/10)"), espelho de Installments.java
+│       ├── components/MoveInstallmentDialog.tsx  adiantar/adiar parcela (pessoal e grupo)
 │       ├── components/ReplacedOccasionals.tsx  "tornar fixo": ocasionais de mesmo nome a remover
 │       ├── import/FixedSelect.tsx    "Lançar como": ocasional ou fixo
 │       ├── import/ImportRowItem.tsx  linha da prévia no mobile
