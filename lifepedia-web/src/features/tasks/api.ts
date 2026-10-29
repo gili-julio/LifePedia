@@ -3,6 +3,7 @@ import type { Page } from '@/components/data-table/list-state'
 import { api } from '@/lib/api'
 import type {
   Agenda,
+  AgendaSettings,
   HabitSummary,
   HistoryItem,
   Label,
@@ -13,6 +14,7 @@ import type {
   Scope,
   Task,
   TaskComment,
+  TaskConflict,
   TaskFilters,
   TaskItem,
   TaskRequest,
@@ -69,6 +71,36 @@ export function useLabels(groupId: string | null) {
   return useQuery({ queryKey: ['tasks', scopeKey(groupId), 'labels'], queryFn: () => api<Labels>(`${tasksBase(groupId)}/labels`) })
 }
 
+/** Choque de horário (`people`: responsáveis pensados, só grupo; `task`: a própria tarefa sai da conta). */
+export function useConflicts(groupId: string | null, params: {
+  date: string
+  time: string
+  duration: number | null
+  people: string[]
+  task: string | null
+} | null) {
+  return useQuery({
+    queryKey: ['tasks', scopeKey(groupId), 'conflicts', params],
+    queryFn: () => api<TaskConflict[]>(`${tasksBase(groupId)}/conflicts`, {
+      query: { date: params!.date, time: params!.time, duration: params!.duration, people: params!.people.join(',') || null, task: params!.task },
+    }),
+    enabled: !!params,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useAgendaSettings() {
+  return useQuery({ queryKey: ['tasks', 'me', 'agenda-settings'], queryFn: () => api<AgendaSettings>('/api/tasks/agenda-settings') })
+}
+
+export function useSaveAgendaSettings() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: AgendaSettings) => api<AgendaSettings>('/api/tasks/agenda-settings', { method: 'PUT', body: data }),
+    onSuccess: (data) => queryClient.setQueryData(['tasks', 'me', 'agenda-settings'], data),
+  })
+}
+
 const COMMENTS_PAGE = 20
 
 /** Comentários (grupo), dos mais recentes para os mais antigos, em páginas. */
@@ -121,6 +153,13 @@ export function useMoveTask() {
 export function useAssignOccurrence() {
   return useTasksMutation(({ groupId, id, date, assigneeId }: Scoped & { id: string; date: string | null; assigneeId: string | null }) =>
     api<void>(`${tasksBase(groupId)}/${id}/assignee`, { method: 'PUT', body: { date, assigneeId } }),
+  )
+}
+
+/** Leva a tarefa pessoal para um grupo (quem levou vira a responsável). */
+export function useMoveToGroup() {
+  return useTasksMutation(({ id, groupId }: { id: string; groupId: string }) =>
+    api<Task>(`/api/tasks/${id}/group`, { method: 'PUT', body: { groupId } }),
   )
 }
 

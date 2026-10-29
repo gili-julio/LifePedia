@@ -8,6 +8,8 @@ export type OccurrenceStatus = 'PENDING' | 'DONE' | 'SKIPPED'
 /** Espelha `TaskDtos.Sort` / `TaskDtos.Scope`. */
 export type TaskSort = 'MANUAL' | 'PRIORITY' | 'TIME'
 export type Scope = 'THIS' | 'FOLLOWING' | 'ALL'
+/** Espelha `task/Completion.java`: com vários responsáveis, basta um concluir ou cada um conclui a sua. */
+export type Completion = 'ANY' | 'EACH'
 
 /** `weekdays`: 1 = segunda ... 7 = domingo. */
 export type RepeatRule = {
@@ -43,9 +45,13 @@ export type TaskItem = {
   edited: boolean
   /** Nulo = pessoal. Na visão pessoal vêm também as de grupo em que a pessoa é a responsável. */
   groupId: string | null
-  /** Responsável desta ocorrência (fixo, vez do rodízio ou trocado só nesta) */
-  assigneeId: string | null
+  /** Responsáveis desta ocorrência (trocado só nesta, vez do rodízio, todos do grupo ou os fixos) */
+  assignees: string[]
+  allMembers: boolean
   rotating: boolean
+  completion: Completion
+  /** "Cada um conclui a sua": quem já fez a sua parte */
+  doneBy: string[]
   createdBy: string | null
   completedBy: string | null
   commentCount: number
@@ -68,6 +74,10 @@ export type HistoryItem = {
   title: string
   listId: string | null
   completedAt: string
+  /** Dia da conclusão no fuso do app (agrupa a lista) */
+  completedDay: string
+  /** Concluídas nesse dia (todas, não só as da página) */
+  dayCount: number
   recurring: boolean
   completedBy: string | null
 }
@@ -88,9 +98,11 @@ export type Task = {
   completedAt: string | null
   groupId: string | null
   createdBy: string | null
-  assigneeId: string | null
+  assignees: string[]
+  allMembers: boolean
   /** Rodízio em ordem (vazio = sem rodízio) */
   rotation: string[]
+  completion: Completion
   canDelete: boolean
   reminderMinutes: number | null
   recurringEntryId: string | null
@@ -108,8 +120,10 @@ export type TaskRequest = {
   habit: boolean
   repeat: RepeatRule | null
   subtasks: { id: string | null; title: string }[]
-  assigneeId: string | null
+  assignees: string[]
+  allMembers: boolean
   rotation: string[]
+  completion: Completion
   reminderMinutes: number | null
   recurringEntryId: string | null
 }
@@ -122,6 +136,20 @@ export type OccurrenceRequest = {
   dueTime: string | null
   priority: Priority
 }
+
+/** Ocorrência no mesmo horário. `people` = de quem é o choque (vazio = do grupo, sem responsável); `groupId` nulo = pessoal. */
+export type TaskConflict = {
+  taskId: string
+  date: string
+  title: string
+  dueTime: string
+  durationMinutes: number | null
+  groupId: string | null
+  people: string[]
+}
+
+/** Horas visíveis na agenda (`dayEnd` exclusivo: 24 = até meia-noite). */
+export type AgendaSettings = { dayStart: number; dayEnd: number }
 
 /** Lista ou etiqueta; `openCount` = tarefas não concluídas com ela. */
 export type Label = { id: string; name: string; color: string; openCount: number }

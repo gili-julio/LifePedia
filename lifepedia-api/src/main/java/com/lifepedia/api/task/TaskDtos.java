@@ -48,14 +48,16 @@ public final class TaskDtos {
 
     /**
      * @param dueDate          nulo = sem data; com repetição é o início
-     * @param assigneeId       responsável fixo (só grupo)
-     * @param rotation         rodízio em ordem (só grupo, com repetição; no lugar do responsável fixo)
+     * @param assignees        responsáveis fixos (só grupo)
+     * @param allMembers       todos do grupo, inclusive quem entrar depois (no lugar dos responsáveis fixos)
+     * @param rotation         rodízio em ordem (só grupo, com repetição; no lugar dos responsáveis)
+     * @param completion       com mais de um responsável: basta um concluir (padrão) ou cada um conclui a sua
      * @param reminderMinutes  lembrete N minutos antes do horário (0 = na hora)
      * @param recurringEntryId fixo do financeiro ligado (só pessoal)
      */
     public record TaskRequest(
             @NotBlank(message = "Informe a tarefa.") @Size(max = 200, message = "Máximo de 200 caracteres.") String title,
-            @Size(max = 5000, message = "Máximo de 5000 caracteres.") String notes,
+            @Size(max = 10000, message = "Máximo de 10000 caracteres.") String notes,
             Priority priority,
             LocalDate dueDate,
             LocalTime dueTime,
@@ -66,8 +68,10 @@ public final class TaskDtos {
             Boolean habit,
             @Valid RepeatRule repeat,
             @Size(max = 50, message = "Máximo de 50 subtarefas.") List<@Valid @NotNull SubtaskInput> subtasks,
-            UUID assigneeId,
+            @Size(max = 50, message = "Máximo de 50 responsáveis.") List<@NotNull UUID> assignees,
+            Boolean allMembers,
             @Size(max = 50, message = "Máximo de 50 pessoas no rodízio.") List<@NotNull UUID> rotation,
+            Completion completion,
             @Min(value = 0, message = "Lembrete inválido.") @Max(value = 1440, message = "Lembrete de até 1 dia antes.")
             Integer reminderMinutes,
             UUID recurringEntryId) {
@@ -81,8 +85,8 @@ public final class TaskDtos {
             UUID id, String title, String notes, Priority priority, LocalDate dueDate,
             @JsonFormat(pattern = "HH:mm") LocalTime dueTime, Integer durationMinutes, UUID listId, Set<UUID> tagIds,
             boolean habit, RepeatRule repeat, List<Subtask> subtasks, OffsetDateTime completedAt,
-            UUID groupId, UUID createdBy, UUID assigneeId, List<UUID> rotation, boolean canDelete,
-            Integer reminderMinutes, UUID recurringEntryId) {
+            UUID groupId, UUID createdBy, List<UUID> assignees, boolean allMembers, List<UUID> rotation,
+            Completion completion, boolean canDelete, Integer reminderMinutes, UUID recurringEntryId) {
     }
 
     public record SubtaskState(UUID id, String title, boolean done) {
@@ -95,27 +99,55 @@ public final class TaskDtos {
      * @param scheduledDate dia em que aparece (diferente de {@code date} se adiada só esta)
      * @param edited        título/notas/horário/prioridade mudados só nesta
      * @param groupId       nulo = pessoal (na visão pessoal vêm também as de grupo em que a pessoa é responsável)
-     * @param assigneeId    responsável desta ocorrência (fixo, vez do rodízio ou trocado só nesta)
+     * @param assignees     responsáveis desta ocorrência (trocado só nesta, vez do rodízio, todos ou os fixos)
+     * @param doneBy        "cada um conclui a sua": quem já fez a sua parte
      * @param streak        sequência do hábito (nulo se não for hábito)
      */
     public record TaskItem(
             UUID taskId, LocalDate date, LocalDate scheduledDate, String title, String notes, Priority priority,
             @JsonFormat(pattern = "HH:mm") LocalTime dueTime, Integer durationMinutes, Status status, boolean overdue,
             OffsetDateTime completedAt, UUID listId, Set<UUID> tagIds, List<SubtaskState> subtasks,
-            RepeatRule repeat, boolean habit, boolean edited, UUID groupId, UUID assigneeId, boolean rotating,
-            UUID createdBy, UUID completedBy, long commentCount, boolean canDelete, Integer streak,
-            Integer reminderMinutes, UUID recurringEntryId) {
+            RepeatRule repeat, boolean habit, boolean edited, UUID groupId, List<UUID> assignees, boolean allMembers,
+            boolean rotating, Completion completion, List<UUID> doneBy, UUID createdBy, UUID completedBy,
+            long commentCount, boolean canDelete, Integer streak, Integer reminderMinutes, UUID recurringEntryId) {
     }
 
     public record Day(LocalDate date, List<TaskItem> items) {
+    }
+
+    /**
+     * Ocorrência que ocupa o mesmo horário (sem duração conta 30 min).
+     *
+     * @param people  de quem é o choque entre as pessoas consultadas (vazio = tarefa do grupo sem responsável)
+     * @param groupId nulo = tarefa pessoal de quem consultou
+     */
+    public record Conflict(UUID taskId, LocalDate date, String title, @JsonFormat(pattern = "HH:mm") LocalTime dueTime,
+                           Integer durationMinutes, UUID groupId, List<UUID> people) {
+    }
+
+    /** Horas visíveis na agenda ({@code dayEnd} exclusivo: 24 = até meia-noite). */
+    public record AgendaSettings(
+            @NotNull(message = "Informe o início.") @Min(value = 0, message = "Início inválido.")
+            @Max(value = 23, message = "Início inválido.") Integer dayStart,
+            @NotNull(message = "Informe o fim.") @Min(value = 1, message = "Fim inválido.")
+            @Max(value = 24, message = "Fim inválido.") Integer dayEnd) {
+    }
+
+    public record GroupMoveRequest(@NotNull(message = "Escolha o grupo.") UUID groupId) {
     }
 
     /** @param overdue pendentes antes de {@code from} (só com {@code overdue=true}) */
     public record Agenda(LocalDate today, List<TaskItem> overdue, List<Day> days) {
     }
 
+    /**
+     * Ocorrência concluída.
+     *
+     * @param completedDay dia da conclusão no fuso do app (agrupa a lista)
+     * @param dayCount     quantas foram concluídas nesse dia (todas, não só as desta página)
+     */
     public record HistoryItem(UUID taskId, LocalDate date, String title, UUID listId, OffsetDateTime completedAt,
-                              boolean recurring, UUID completedBy) {
+                              LocalDate completedDay, long dayCount, boolean recurring, UUID completedBy) {
     }
 
     /** Um dia na faixa do hábito ({@code state} nulo = não tinha ocorrência). */
@@ -163,7 +195,7 @@ public final class TaskDtos {
             @NotNull(message = "Informe a ocorrência.") LocalDate date,
             @NotNull(message = "Informe o dia.") LocalDate moveTo,
             @NotBlank(message = "Informe a tarefa.") @Size(max = 200, message = "Máximo de 200 caracteres.") String title,
-            @Size(max = 5000, message = "Máximo de 5000 caracteres.") String notes,
+            @Size(max = 10000, message = "Máximo de 10000 caracteres.") String notes,
             LocalTime dueTime,
             Priority priority) {
     }
@@ -207,7 +239,7 @@ public final class TaskDtos {
      */
     public record TaskData(
             @NotBlank(message = "Tarefa sem título.") @Size(max = 200) String title,
-            @Size(max = 5000) String notes,
+            @Size(max = 10000) String notes,
             Priority priority,
             LocalDate dueDate,
             LocalTime dueTime,
@@ -229,7 +261,7 @@ public final class TaskDtos {
             @NotNull Status status,
             LocalDate movedTo,
             @Size(max = 200) String title,
-            @Size(max = 5000) String notes,
+            @Size(max = 10000) String notes,
             LocalTime dueTime,
             Priority priority,
             OffsetDateTime completedAt,

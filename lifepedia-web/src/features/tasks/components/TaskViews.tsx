@@ -6,12 +6,12 @@ import { useClampPage, useListState } from '@/components/data-table/list-state'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api'
-import { formatDate } from '@/lib/format'
+import { formatDate, formatTime, todayIso } from '@/lib/format'
 import { useAgenda, useHistory, useSetStatus, useUndated } from '../api'
 import { useBoard } from '../board'
 import { addDays, dayLabel } from '../dates'
 import type { LabelLookup } from '../labels'
-import type { TaskFilters } from '../types'
+import type { HistoryItem, TaskFilters } from '../types'
 import { QuickAdd } from './QuickAdd'
 import type { TaskActions } from './task-actions'
 import type { TaskTarget } from './TaskDialog'
@@ -156,25 +156,29 @@ export function DoneView({ labels }: { labels: LabelLookup }) {
     }
   }
 
+  const today = todayIso()
   return (
-    <div className="space-y-3">
-      <div className="rounded-xl border bg-card px-4">
-        {data.items.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">Nenhuma tarefa concluída ainda.</p>
-        ) : (
-          <ul className="divide-y">
-            {data.items.map((item) => {
+    <div className="space-y-5">
+      {data.items.length === 0 ? (
+        <p className="rounded-xl border bg-card py-8 text-center text-sm text-muted-foreground">Nenhuma tarefa concluída ainda.</p>
+      ) : byDay(data.items).map((group) => (
+        <section key={group.day} className="space-y-1.5" aria-label={`${doneDayLabel(group.day, today)}: ${group.count} concluída${group.count === 1 ? '' : 's'}`}>
+          <h2 className="flex items-baseline gap-2 px-1 text-sm font-semibold" aria-hidden>
+            {doneDayLabel(group.day, today)}
+            <span className="font-normal text-muted-foreground tabular-nums">{group.count}</span>
+          </h2>
+          <ul className="divide-y rounded-xl border bg-card px-4">
+            {group.items.map((item) => {
               const listLabel = labels.list(item.listId)
               const doneBy = board.groupId ? board.personName(item.completedBy) : null
               return (
                 <li key={`${item.taskId}|${item.date}`} className="flex items-start gap-3 py-3">
-                  <CheckCircle2Icon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden />
+                  <CheckCircle2Icon className="mt-0.5 size-5 shrink-0 text-income" aria-hidden />
                   <div className="min-w-0 flex-1 space-y-1">
-                    <p className="leading-snug">{item.title}</p>
+                    <p className="leading-snug text-muted-foreground line-through">{item.title}</p>
                     <p className="flex flex-wrap items-center gap-x-2.5 text-xs text-muted-foreground">
                       <span>
-                        Concluída em {new Date(item.completedAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
-                        {doneBy && ` por ${doneBy === 'Você' ? 'você' : doneBy}`}
+                        {doneBy ? `${doneBy === 'Você' ? 'Você' : doneBy} concluiu` : 'Concluída'} às {formatTime(item.completedAt)}
                       </span>
                       {item.recurring && item.date && (
                         <span className="flex items-center gap-1"><RepeatIcon className="size-3.5" aria-hidden />de {formatDate(item.date)}</span>
@@ -194,9 +198,31 @@ export function DoneView({ labels }: { labels: LabelLookup }) {
               )
             })}
           </ul>
-        )}
-      </div>
+        </section>
+      ))}
       <DataTablePagination data={data} list={list} />
     </div>
   )
+}
+
+/** Junta as concluídas seguidas do mesmo dia (a ordem é a da API); o total do dia também vem da API. */
+function byDay(items: HistoryItem[]) {
+  const groups: { day: string; count: number; items: HistoryItem[] }[] = []
+  for (const item of items) {
+    const last = groups.at(-1)
+    if (last?.day === item.completedDay) last.items.push(item)
+    else groups.push({ day: item.completedDay, count: item.dayCount, items: [item] })
+  }
+  return groups
+}
+
+const dayMonth = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short' })
+const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'long' })
+
+/** "28 de out · Hoje", "24 de out · Sábado" (outro ano: "24 de out de 2025 · Sexta-feira"). */
+function doneDayLabel(iso: string, today: string) {
+  const date = new Date(`${iso}T12:00:00`)
+  const name = iso === today ? 'Hoje' : iso === addDays(today, -1) ? 'Ontem' : weekday.format(date)
+  const year = iso.slice(0, 4) === today.slice(0, 4) ? '' : ` de ${iso.slice(0, 4)}`
+  return `${dayMonth.format(date).replace('.', '')}${year} · ${name[0].toUpperCase()}${name.slice(1)}`
 }

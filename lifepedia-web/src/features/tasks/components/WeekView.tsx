@@ -28,6 +28,7 @@ import {
   WalletIcon,
 } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -38,6 +39,7 @@ import { useAgenda } from '../api'
 import { useBoard } from '../board'
 import { addDays, formatTime, isoWeekday, mondayOf, PRIORITY_COLOR, WEEKDAYS_SHORT } from '../dates'
 import { occurrenceKey } from '../labels'
+import { isDoneFor } from '../progress'
 import type { Agenda, TaskFilters, TaskItem } from '../types'
 import type { TaskActions } from './task-actions'
 import type { TaskTarget } from './TaskDialog'
@@ -96,7 +98,12 @@ const dayCoordinates: KeyboardCoordinateGetter = (event, { context: { active, ov
 /** Semana (seg–dom) em colunas; arrastar uma pendente para outro dia muda o dia só dela. */
 export function WeekView({ today, filters, actions, onEdit }: Props) {
   const { groupId } = useBoard()
-  const [start, setStart] = useState(() => mondayOf(today))
+  const [params] = useSearchParams()
+  // `?dia=` (vindo da agenda) abre a semana daquele dia.
+  const [start, setStart] = useState(() => {
+    const day = params.get('dia')
+    return mondayOf(day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : today)
+  })
   const { data, isLoading, isError } = useAgenda(groupId, start, addDays(start, 6), false, filters)
   // Mostra no dia novo até a agenda recarregar.
   const [moved, setMoved] = useState<{ basis: Agenda; key: string; to: string } | null>(null)
@@ -301,8 +308,8 @@ function CardBody({ item, overlay, busy, onToggle, onOpen, handle, menu }: Reado
   handle?: ReactNode
   menu?: ReactNode
 }>) {
-  const { groupId } = useBoard()
-  const done = item.status === 'DONE'
+  const { groupId, meId } = useBoard()
+  const done = isDoneFor(item, meId)
   const color = PRIORITY_COLOR[item.priority]
   const time = formatTime(item.dueTime, null)
   // Cartão estreito (muitos dias abertos): título na linha de baixo, com a largura toda.

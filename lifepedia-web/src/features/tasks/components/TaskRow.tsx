@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils'
 import { useBoard } from '../board'
 import { dayLabel, describeRepeat, formatTime, PRIORITY_COLOR, PRIORITY_LABEL, reminderLabel } from '../dates'
 import type { LabelLookup } from '../labels'
+import { eachProgress, isDoneFor } from '../progress'
 import type { TaskItem } from '../types'
 
 export type RowAction = { label: string; icon: LucideIcon; onSelect: () => void; destructive?: boolean }
@@ -57,7 +58,7 @@ export function TaskRow({ item, labels, today, sortId, dragDisabled, showDate, e
   const board = useBoard()
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: sortId, disabled: dragDisabled || busy })
-  const done = item.status === 'DONE'
+  const done = isDoneFor(item, board.meId)
   const color = PRIORITY_COLOR[item.priority]
   const list = labels.list(item.listId)
   const tags = item.tagIds.map(labels.tag).filter((t) => !!t)
@@ -65,8 +66,10 @@ export function TaskRow({ item, labels, today, sortId, dragDisabled, showDate, e
   const time = formatTime(item.dueTime, item.durationMinutes)
   // Visão pessoal: tarefa de grupo mostra o grupo; no grupo, o responsável (e quem concluiu, se foi outra pessoa).
   const foreign = item.groupId !== null && item.groupId !== board.groupId
-  const assignee = board.groupId ? board.personName(item.assigneeId) : null
-  const doneBy = done && item.completedBy !== item.assigneeId ? board.personName(item.completedBy) : null
+  const assignee = board.groupId ? board.assigneesLabel(item) : null
+  const progress = eachProgress(item)
+  const doneBy = item.status === 'DONE' && item.completion === 'ANY' && item.completedBy
+    && !(item.assignees.length === 1 && item.assignees[0] === item.completedBy) ? board.personName(item.completedBy) : null
 
   return (
     <li ref={setNodeRef} style={{ transform: CSS.Translate.toString(transform), transition }}
@@ -127,9 +130,15 @@ export function TaskRow({ item, labels, today, sortId, dragDisabled, showDate, e
             </span>
           )}
           {assignee && (
-            <span className="flex items-center gap-1" title={item.rotating ? 'Vez no rodízio' : 'Responsável'}>
-              <UserRoundIcon className="size-3.5" aria-hidden />
-              <span className="sr-only">{item.rotating ? 'Vez de' : 'Responsável:'}</span>{assignee}
+            <span className="flex min-w-0 items-center gap-1" title={item.rotating ? 'Vez no rodízio' : 'Responsáveis'}>
+              <UserRoundIcon className="size-3.5 shrink-0" aria-hidden />
+              <span className="sr-only">{item.rotating ? 'Vez de' : 'Responsáveis:'}</span>
+              <span className="truncate">{assignee}</span>
+            </span>
+          )}
+          {progress && (
+            <span className="tabular-nums" title="Cada um conclui a sua">
+              {progress.done}/{progress.total} fizeram
             </span>
           )}
           {doneBy && <span>feita por {doneBy === 'Você' ? 'você' : doneBy}</span>}

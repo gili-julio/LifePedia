@@ -1,8 +1,9 @@
-import { CalendarClockIcon, CheckCheckIcon, PencilIcon, SkipForwardIcon, Trash2Icon, UserRoundIcon } from 'lucide-react'
+import { CalendarClockIcon, CheckCheckIcon, PencilIcon, SkipForwardIcon, Trash2Icon, UserRoundIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
+import { useAuth } from '@/features/auth/auth-context'
 import { ApiError } from '@/lib/api'
 import { currentYearMonth } from '@/lib/format'
 import {
@@ -10,21 +11,24 @@ import {
   useCheckSubtask,
   useDeleteTask,
   useMoveTask,
+  useMoveToGroup,
   useReorderTasks,
   useResolveOverdue,
   useSetStatus,
 } from '../api'
 import { dayLabel } from '../dates'
 import { occurrenceKey } from '../labels'
+import { isDoneFor } from '../progress'
 import type { OccurrenceStatus, Scope, TaskItem } from '../types'
 import { AssignDialog } from './AssignDialog'
 import { type FixedPayment, FixedPaymentDialog } from './FixedPaymentDialog'
+import { GroupMoveDialog } from './GroupMoveDialog'
 import { MoveDialog } from './MoveDialog'
 import { ScopeDialog, type ScopeOption } from './ScopeDialog'
 import type { TaskTarget } from './TaskDialog'
 import type { RowAction } from './TaskRow'
 
-type Dialog = { kind: 'move' | 'assign' | 'delete' | 'sheet'; item: TaskItem; open: boolean; group?: number }
+type Dialog = { kind: 'move' | 'assign' | 'delete' | 'sheet' | 'group'; item: TaskItem; open: boolean; group?: number }
 
 function fail(error: unknown, fallback: string) {
   toast.error(error instanceof ApiError ? error.message : fallback)
@@ -47,6 +51,8 @@ export function useTaskActions({ today, groupId, onEdit }: {
   const overdue = useResolveOverdue()
   const reorder = useReorderTasks()
   const assign = useAssignOccurrence()
+  const toGroup = useMoveToGroup()
+  const meId = useAuth().user?.id ?? null
   const [dialog, setDialog] = useState<Dialog | null>(null)
   const [busyKey, setBusyKey] = useState<string | null>(null)
   const [payment, setPayment] = useState<{ value: FixedPayment; open: boolean } | null>(null)
@@ -69,10 +75,12 @@ export function useTaskActions({ today, groupId, onEdit }: {
   }
 
   async function toggle(item: TaskItem) {
-    const done = item.status === 'DONE'
+    const done = isDoneFor(item, meId)
     const ok = await withBusy(item, () => status(item, done ? 'PENDING' : 'DONE'), 'Não foi possível atualizar.')
     if (ok && !done) {
-      toast.success('Tarefa concluída.', {
+      const part = item.completion === 'EACH' && !!meId && item.assignees.includes(meId)
+        && item.assignees.some((id) => id !== meId && !item.doneBy.includes(id))
+      toast.success(part ? 'Sua parte foi marcada.' : 'Tarefa concluída.', {
         action: { label: 'Desfazer', onClick: () => void status(item, 'PENDING').catch((e) => fail(e, 'Não foi possível desfazer.')) },
       })
       // Ligada a um fixo: oferece registrar o valor do mês da ocorrência.
@@ -118,6 +126,11 @@ export function useTaskActions({ today, groupId, onEdit }: {
     if (ok) toast.success('Responsável alterado.')
   }
 
+  async function moveToGroup(item: TaskItem, groupId: string) {
+    const ok = await withBusy(item, () => toGroup.mutateAsync({ id: item.taskId, groupId }), 'Não foi possível levar para o grupo.')
+    if (ok) toast.success('Tarefa levada para o grupo. Você ficou como responsável.')
+  }
+
   /** Itens de menu da linha; `group` = quantas atrasadas da mesma tarefa estão juntas. */
   function rowActions(item: TaskItem, group = 1): RowAction[] {
     const pending = item.status === 'PENDING'
@@ -134,6 +147,9 @@ export function useTaskActions({ today, groupId, onEdit }: {
         { label: `Concluir as ${group} atrasadas`, icon: CheckCheckIcon, onSelect: () => void resolveOverdue(item, 'DONE') },
         { label: `Pular as ${group} atrasadas`, icon: SkipForwardIcon, onSelect: () => void resolveOverdue(item, 'SKIPPED') },
       )
+    }
+    if (!item.groupId && groupId === null) {
+      actions.push({ label: 'Levar para um grupo…', icon: UsersIcon, onSelect: () => setDialog({ kind: 'group', item, open: true }) })
     }
     if (item.canDelete) {
       actions.push({ label: 'Excluir', icon: Trash2Icon, destructive: true, onSelect: () => setDialog({ kind: 'delete', item, open: true }) })
@@ -172,6 +188,8 @@ export function useTaskActions({ today, groupId, onEdit }: {
           title="Excluir tarefa?" description={current ? `“${current.title}” será excluída.` : ''}
           onConfirm={() => current && void deleteWith(current, 'ALL')} />
       )}
+      <GroupMoveDialog item={dialog?.kind === 'group' ? current : null} open={dialog?.kind === 'group' && dialog.open}
+        onOpenChange={close} onChoose={(id) => current && void moveToGroup(current, id)} />
       <FixedPaymentDialog payment={payment?.value ?? null} open={!!payment?.open}
         onOpenChange={(open) => setPayment((p) => (p ? { ...p, open } : p))} />
       {current && (

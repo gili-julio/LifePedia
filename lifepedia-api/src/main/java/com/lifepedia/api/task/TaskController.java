@@ -10,6 +10,8 @@ import com.lifepedia.api.task.TaskDtos.AssignRequest;
 import com.lifepedia.api.task.TaskDtos.CheckRequest;
 import com.lifepedia.api.task.TaskDtos.CommentRequest;
 import com.lifepedia.api.task.TaskDtos.CommentResponse;
+import com.lifepedia.api.task.TaskDtos.Conflict;
+import com.lifepedia.api.task.TaskDtos.GroupMoveRequest;
 import com.lifepedia.api.task.TaskDtos.HabitSummary;
 import com.lifepedia.api.task.TaskDtos.HistoryItem;
 import com.lifepedia.api.task.TaskDtos.Label;
@@ -42,6 +44,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -79,6 +82,19 @@ public class TaskController {
                          @RequestParam(required = false) UUID list, @RequestParam(required = false) UUID tag,
                          @RequestParam(required = false) UUID assignee, @RequestParam(required = false) Sort sort) {
         return agenda.agenda(scope(jwt, groupId), from, to, overdue, new Filter(list, tag, assignee), sort);
+    }
+
+    /**
+     * Pendentes de {@code date} no mesmo horário ({@code duration} nula = 30 min). Grupo: {@code people} = responsáveis
+     * pensados (vazio = sem responsável). {@code task}: a própria tarefa sai da conta.
+     */
+    @GetMapping("/conflicts")
+    public List<Conflict> conflicts(@AuthenticationPrincipal Jwt jwt, @PathVariable(required = false) UUID groupId,
+                                    @RequestParam LocalDate date, @RequestParam LocalTime time,
+                                    @RequestParam(required = false) Integer duration,
+                                    @RequestParam(required = false) List<UUID> people,
+                                    @RequestParam(required = false) UUID task) {
+        return agenda.conflicts(scope(jwt, groupId), date, time, duration, people == null ? List.of() : people, task);
     }
 
     @GetMapping("/undated")
@@ -143,6 +159,13 @@ public class TaskController {
     public void assign(@AuthenticationPrincipal Jwt jwt, @PathVariable(required = false) UUID groupId,
                        @PathVariable UUID id, @Valid @RequestBody AssignRequest request) {
         service.assign(scope(jwt, groupId), id, request);
+    }
+
+    /** Tarefa pessoal vai para um grupo de que a pessoa é membro (ela vira a responsável). */
+    @PutMapping("/{id}/group")
+    public TaskResponse moveToGroup(@AuthenticationPrincipal Jwt jwt, @PathVariable(required = false) UUID groupId,
+                                    @PathVariable UUID id, @Valid @RequestBody GroupMoveRequest request) {
+        return service.moveToGroup(scope(jwt, groupId), id, request);
     }
 
     /** Em grupo: só quem criou ou um administrador. */

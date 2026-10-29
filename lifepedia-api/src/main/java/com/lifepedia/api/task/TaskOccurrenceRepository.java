@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -54,6 +55,14 @@ public interface TaskOccurrenceRepository extends JpaRepository<TaskOccurrence, 
             where (t.userId = :userId or t.groupId = :groupId) and o.status = :status
             """)
     Page<TaskOccurrence> history(UUID userId, UUID groupId, Status status, Pageable pageable);
+
+    /** Momentos das conclusões em [{@code from}, {@code to}) (para contar por dia). */
+    @Query("""
+            select o.completedAt from TaskOccurrence o join Task t on t.id = o.taskId
+            where (t.userId = :userId or t.groupId = :groupId) and o.status = :status
+              and o.completedAt >= :from and o.completedAt < :to
+            """)
+    List<OffsetDateTime> completedBetween(UUID userId, UUID groupId, Status status, OffsetDateTime from, OffsetDateTime to);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""

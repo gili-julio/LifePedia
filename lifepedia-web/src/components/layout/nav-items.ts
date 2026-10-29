@@ -1,6 +1,7 @@
 import {
   CalendarClockIcon,
   CalendarDaysIcon,
+  CalendarRangeIcon,
   CircleCheckIcon,
   FlameIcon,
   HeartHandshakeIcon,
@@ -30,7 +31,8 @@ export type NavLink = {
   end?: boolean
   icon?: LucideIcon
   /** Atalho de grupo (subitem vindo da API): foto no lugar do ícone e opção de fixar. */
-  group?: { id: string; name: string; imageUrl: string | null; pinned: boolean }
+  /** `unread` = mensagens do chat não lidas (bolinha na foto) */
+  group?: { id: string; name: string; imageUrl: string | null; pinned: boolean; unread: number }
 }
 
 export type NavItem = Omit<NavLink, 'icon'> & {
@@ -85,6 +87,7 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/tarefas?aba=concluidas', label: 'Concluídas', icon: CircleCheckIcon },
         ],
       },
+      { to: '/agenda', label: 'Agenda', icon: CalendarRangeIcon },
     ],
   },
   {

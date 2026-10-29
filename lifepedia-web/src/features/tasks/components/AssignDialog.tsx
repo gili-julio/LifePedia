@@ -17,7 +17,7 @@ type Props = {
   onChoose: (assigneeId: string | null) => void
 }
 
-/** Troca o responsável só desta ocorrência (tarefa sem repetição: o da tarefa). */
+/** Uma pessoa só nesta ocorrência (tarefa sem repetição: vira a responsável da tarefa). */
 export function AssignDialog({ item, today, open, onOpenChange, onChoose }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,10 +32,10 @@ export function AssignDialog({ item, today, open, onOpenChange, onChoose }: Prop
         </DialogHeader>
         <DialogBody>
           {item?.groupId && (
-            <People groupId={item.groupId} current={item.assigneeId} allowNone={!item.repeat}
+            <People groupId={item.groupId} current={item.assignees.length === 1 ? item.assignees[0] : null} allowNone={!item.repeat}
               onChoose={(id) => {
                 onOpenChange(false)
-                if (id !== item.assigneeId) onChoose(id)
+                if (item.assignees.length !== 1 || id !== item.assignees[0]) onChoose(id)
               }} />
           )}
         </DialogBody>

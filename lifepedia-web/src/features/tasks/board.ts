@@ -12,6 +12,8 @@ export type Board = {
   isAdmin: boolean
   /** Nome de um membro do grupo ("Você" para quem está logado); nulo se não for membro. */
   personName: (id: string | null) => string | null
+  /** "Você", "Ana e Bia", "Ana, Bia e +2" ou "Todos do grupo"; nulo sem responsável. */
+  assigneesLabel: (item: { assignees: string[]; allMembers: boolean }) => string | null
   groupName: (id: string | null) => string | null
 }
 
@@ -31,12 +33,19 @@ export function useBoardValue(group: GroupDetail | null): Board {
     const meId = user?.id ?? null
     const people = new Map((group?.members ?? []).map((m) => [m.user.id, m.user.name]))
     const groupNames = new Map((groups ?? []).map((g) => [g.id, g.name]))
+    const personName = (id: string | null) => (!id ? null : id === meId ? 'Você' : people.get(id) ?? null)
     return {
       groupId: group?.id ?? null,
       meId,
       members: group?.members ?? [],
       isAdmin: group?.role === 'ADMIN',
-      personName: (id) => (!id ? null : id === meId ? 'Você' : people.get(id) ?? null),
+      personName,
+      assigneesLabel: ({ assignees, allMembers }) => {
+        if (allMembers) return 'Todos do grupo'
+        const names = assignees.map((id) => personName(id) ?? 'Ex-membro')
+        if (names.length <= 2) return names.join(' e ') || null
+        return `${names.slice(0, 2).join(', ')} e +${names.length - 2}`
+      },
       groupName: (id) => (id ? groupNames.get(id) ?? null : null),
     }
   }, [group, groups, user])

@@ -113,7 +113,7 @@ class TaskExtrasIntegrationTest extends ApiTestSupport {
         create(alice, base, """
                 {"title":"Lixo","dueDate":"%s","dueTime":"11:00","reminderMinutes":0}""".formatted(day));
         create(alice, base, """
-                {"title":"Louça","dueDate":"%s","dueTime":"11:00","reminderMinutes":0,"assigneeId":"%s"}"""
+                {"title":"Louça","dueDate":"%s","dueTime":"11:00","reminderMinutes":0,"assignees":["%s"]}"""
                 .formatted(day, userId(bob)));
         reminders.remind(day.atTime(10, 59), day.atTime(11, 0));
         assertThat(reminderTitles(alice)).containsExactlyInAnyOrder("Ligar", "Lixo");

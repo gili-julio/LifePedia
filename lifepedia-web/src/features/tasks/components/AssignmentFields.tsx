@@ -1,12 +1,16 @@
-import { ArrowDownIcon, ArrowUpIcon, PlusIcon, XIcon } from 'lucide-react'
+import { ArrowDownIcon, ArrowUpIcon, CheckIcon, PlusIcon, XIcon } from 'lucide-react'
 import { type Control, Controller, type FieldErrors, useWatch } from 'react-hook-form'
+import { UserAvatar } from '@/components/UserAvatar'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/features/auth/auth-context'
 import { useGroup } from '@/features/groups/api'
 import type { GroupMember } from '@/features/groups/types'
+import { cn } from '@/lib/utils'
 import type { TaskFormInput } from './task-form'
 
 type Props = {
@@ -17,39 +21,66 @@ type Props = {
   fromCompletion: boolean
 }
 
-/** Responsável da tarefa de grupo: ninguém, uma pessoa fixa ou rodízio em ordem fixa. */
+/** Responsáveis da tarefa de grupo: ninguém, pessoas escolhidas, todos do grupo ou rodízio em ordem fixa. */
 export function AssignmentFields({ control, errors, groupId, repeatOn, fromCompletion }: Props) {
   const { data: group } = useGroup(groupId)
   const { user } = useAuth()
-  const mode = useWatch({ control, name: 'assignMode' })
+  const [mode, assignees] = useWatch({ control, name: ['assignMode', 'assignees'] })
   if (!group) return <Skeleton className="h-9 w-full" />
   const name = (id: string) => {
     const member = group.members.find((m) => m.user.id === id)
     if (!member) return 'Ex-membro'
     return member.user.id === user?.id ? `${member.user.name} (você)` : member.user.name
   }
+  const several = mode === 'ALL' || (mode === 'PEOPLE' && assignees.length > 1)
 
   return (
-    <Field data-invalid={!!errors.assigneeId || !!errors.rotation}>
-      <FieldLabel htmlFor="task-assign">Responsável</FieldLabel>
+    <Field data-invalid={!!errors.assignees || !!errors.rotation}>
+      <FieldLabel htmlFor="task-assign">Responsáveis</FieldLabel>
       <Controller control={control} name="assignMode" render={({ field }) => (
         <Select value={field.value} onValueChange={field.onChange}>
           <SelectTrigger id="task-assign" className="w-full"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="NONE">Ninguém (qualquer um faz)</SelectItem>
-            <SelectItem value="FIXED">Uma pessoa</SelectItem>
+            <SelectItem value="PEOPLE">Escolher pessoas</SelectItem>
+            <SelectItem value="ALL">Todos do grupo</SelectItem>
             <SelectItem value="ROTATION" disabled={!repeatOn}>Rodízio (revezar a cada vez)</SelectItem>
           </SelectContent>
         </Select>
       )} />
-      {mode === 'FIXED' && (
-        <Controller control={control} name="assigneeId" render={({ field }) => (
-          <Select value={field.value} onValueChange={field.onChange}>
-            <SelectTrigger className="w-full" aria-label="Pessoa responsável"><SelectValue placeholder="Escolha a pessoa" /></SelectTrigger>
-            <SelectContent>
-              {group.members.map((m) => <SelectItem key={m.user.id} value={m.user.id}>{name(m.user.id)}</SelectItem>)}
-            </SelectContent>
-          </Select>
+      {mode === 'PEOPLE' && (
+        <Controller control={control} name="assignees" render={({ field }) => (
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Pessoas responsáveis">
+            {group.members.map((m) => {
+              const on = field.value.includes(m.user.id)
+              return (
+                <button key={m.user.id} type="button" aria-pressed={on}
+                  onClick={() => field.onChange(on ? field.value.filter((id) => id !== m.user.id) : [...field.value, m.user.id])}
+                  className={cn('flex h-8 items-center gap-1.5 rounded-full border py-1 pr-3 pl-1 text-sm outline-none transition-colors motion-reduce:transition-none',
+                    'focus-visible:ring-[3px] focus-visible:ring-ring/50',
+                    on ? 'border-foreground bg-muted font-medium' : 'hover:bg-muted')}>
+                  <UserAvatar user={m.user} size="xs" />
+                  {name(m.user.id)}
+                  {on && <CheckIcon className="size-3.5" aria-hidden />}
+                </button>
+              )
+            })}
+          </div>
+        )} />
+      )}
+      {mode === 'ALL' && <FieldDescription>Vale para todo mundo do grupo, inclusive quem entrar depois.</FieldDescription>}
+      {several && (
+        <Controller control={control} name="completion" render={({ field }) => (
+          <RadioGroup value={field.value} onValueChange={field.onChange} className="gap-2 pt-1" aria-label="Como concluir">
+            <Label className="items-start gap-2 font-normal">
+              <RadioGroupItem value="ANY" className="mt-0.5" />
+              <span>Basta um concluir<span className="block text-xs text-muted-foreground">Ex.: lavar a louça.</span></span>
+            </Label>
+            <Label className="items-start gap-2 font-normal">
+              <RadioGroupItem value="EACH" className="mt-0.5" />
+              <span>Cada um conclui a sua<span className="block text-xs text-muted-foreground">Ex.: academia juntos. Fica feita quando todos marcarem.</span></span>
+            </Label>
+          </RadioGroup>
         )} />
       )}
       {mode === 'ROTATION' && (
@@ -65,7 +96,7 @@ export function AssignmentFields({ control, errors, groupId, repeatOn, fromCompl
         </FieldDescription>
       )}
       {mode === 'NONE' && !repeatOn && <FieldDescription>Para revezar, ligue a repetição.</FieldDescription>}
-      <FieldError errors={[errors.assigneeId, errors.rotation]} />
+      <FieldError errors={[errors.assignees, errors.rotation]} />
     </Field>
   )
 }

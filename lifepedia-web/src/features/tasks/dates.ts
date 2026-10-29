@@ -117,3 +117,19 @@ export function reminderLabel(minutes: number) {
 export function mondayOf(iso: string) {
   return addDays(iso, 1 - isoWeekday(iso))
 }
+
+/** "09:30" → minutos desde 0h. */
+export function toMinutes(time: string) {
+  const [h, m] = time.split(':').map(Number)
+  return h * 60 + m
+}
+
+/** Minutos desde 0h → "09:30" (24:00 vira "24:00"). */
+export function fromMinutes(minutes: number) {
+  return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`
+}
+
+/** Fim do bloco ("09:30" + 45 → "10:15"), sem passar da meia-noite. */
+export function endTime(time: string, minutes: number) {
+  return fromMinutes(Math.min(toMinutes(time) + minutes, 24 * 60))
+}

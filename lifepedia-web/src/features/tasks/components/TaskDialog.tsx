@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/features/auth/auth-context'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useSaveTask, useTask, useUpdateOccurrence } from '../api'
@@ -21,6 +22,7 @@ import { describeRepeat, isoWeekday, PRIORITY_COLOR, PRIORITY_LABEL, REMINDERS }
 import { useLabelLookup } from '../labels'
 import type { Priority, Scope, Task, TaskItem } from '../types'
 import { AssignmentFields } from './AssignmentFields'
+import { ConflictWarning } from './ConflictWarning'
 import { FixedField } from './FixedField'
 import { RepeatFields } from './RepeatFields'
 import { ScopeDialog, type ScopeOption } from './ScopeDialog'
@@ -29,7 +31,7 @@ import { changesSeries, taskSchema, toForm, toRequest, toRule, type TaskFormInpu
 
 /** Nova tarefa (com dia/lista sugeridos) ou edição a partir de uma ocorrência. `groupId` nulo = pessoal. */
 export type TaskTarget =
-  | { mode: 'new'; groupId: string | null; dueDate: string | null; listId: string | null }
+  | { mode: 'new'; groupId: string | null; dueDate: string | null; listId: string | null; dueTime?: string | null }
   | { mode: 'edit'; groupId: string | null; taskId: string; occurrence: TaskItem | null }
 
 const NONE = '__none'
@@ -71,9 +73,11 @@ function TaskForm({ target, task, onDone }: { target: TaskTarget; task?: Task; o
   const groupId = target.groupId
   const labels = useLabelLookup(groupId)
   const occurrence = target.mode === 'edit' ? target.occurrence : null
+  const meId = useAuth().user?.id ?? null
   const form = useForm<TaskFormInput, unknown, TaskFormValues>({
     resolver: zodResolver(taskSchema),
-    defaultValues: toForm(task, occurrence, target.mode === 'new' ? target : undefined),
+    defaultValues: toForm(task, occurrence,
+      target.mode === 'new' ? { ...target, assignees: groupId && meId ? [meId] : [] } : undefined),
   })
   const { errors, isSubmitting } = form.formState
   const subtasks = useFieldArray({ control: form.control, name: 'subtasks' })
@@ -188,6 +192,8 @@ function TaskForm({ target, task, onDone }: { target: TaskTarget; task?: Task; o
               </Field>
             </div>
 
+            <ConflictWarning control={form.control} groupId={groupId} taskId={task?.id ?? null} />
+
             {dueTime && (
               <Field>
                 <FieldLabel htmlFor="task-reminder">Lembrete</FieldLabel>
@@ -201,7 +207,7 @@ function TaskForm({ target, task, onDone }: { target: TaskTarget; task?: Task; o
                   </Select>
                 )} />
                 <FieldDescription>
-                  Aviso no sino{groupId ? ' para o responsável (sem responsável: para todos do grupo)' : ''}.
+                  Aviso no sino{groupId ? ' para os responsáveis (sem responsável: para todos do grupo)' : ''}.
                 </FieldDescription>
               </Field>
             )}

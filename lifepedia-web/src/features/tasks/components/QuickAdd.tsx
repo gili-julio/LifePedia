@@ -17,7 +17,7 @@ type Props = {
 /** Campo "digite e aperte Enter" para criar tarefa só com o título. */
 export function QuickAdd({ dueDate, listId, placeholder }: Props) {
   const save = useSaveTask()
-  const { groupId } = useBoard()
+  const { groupId, meId } = useBoard()
   const [title, setTitle] = useState('')
 
   async function submit() {
@@ -28,8 +28,8 @@ export function QuickAdd({ dueDate, listId, placeholder }: Props) {
         groupId,
         data: {
           title: value.slice(0, 200), notes: null, priority: 'NONE', dueDate, dueTime: null, durationMinutes: null,
-          listId, tagIds: [], habit: false, repeat: null, subtasks: [], assigneeId: null, rotation: [],
-          reminderMinutes: null, recurringEntryId: null,
+          listId, tagIds: [], habit: false, repeat: null, subtasks: [], assignees: groupId && meId ? [meId] : [],
+          allMembers: false, rotation: [], completion: 'ANY', reminderMinutes: null, recurringEntryId: null,
         },
       })
       setTitle('')

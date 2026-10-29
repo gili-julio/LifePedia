@@ -6,6 +6,7 @@ import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.PageResponse;
 import com.lifepedia.api.shared.Paging;
 import com.lifepedia.api.task.TaskDtos.Agenda;
+import com.lifepedia.api.task.TaskDtos.Conflict;
 import com.lifepedia.api.task.TaskDtos.Day;
 import com.lifepedia.api.task.TaskDtos.HabitDay;
 import com.lifepedia.api.task.TaskDtos.HabitSummary;
@@ -20,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,6 +45,8 @@ import java.util.stream.Collectors;
 public class TaskAgendaService {
 
     static final int MAX_RANGE_DAYS = 62;
+    /** Duração considerada para choque de horário quando a tarefa não tem duração. */
+    static final int DEFAULT_MINUTES = 30;
     private static final Map<String, String> HISTORY_SORT = Map.of("completedAt", "o.completedAt");
 
     private final TaskRepository tasks;
@@ -106,19 +111,18 @@ public class TaskAgendaService {
                 TaskOccurrence row = taskRows.get(date);
                 Status status = row == null ? Status.PENDING : row.getStatus();
                 if (status == Status.SKIPPED) continue;
-                UUID assignee = TaskService.assignee(task, date, row);
-                if (!context.shows(task, assignee, filter)) continue;
+                List<UUID> people = TaskService.assignees(task, date, row, context.members(task));
+                if (!context.shows(task, people, filter)) continue;
                 LocalDate shown = row != null && row.getMovedTo() != null ? row.getMovedTo() : date;
                 boolean late = status == Status.PENDING && shown.isBefore(today);
-                Entry entry = context.entry(task, date, row, assignee, late);
+                Entry entry = context.entry(task, date, row, people, late);
                 if (!shown.isBefore(from) && !shown.isAfter(to)) byDay.get(shown).add(entry);
                 else if (withOverdue && late && shown.isBefore(from)) overdue.add(entry);
             }
         }
         Comparator<Entry> order = order(sort);
         List<Day> days = byDay.entrySet().stream()
-                .map(e -> new Day(e.getKey(), items(e.getValue(),
-                        Comparator.comparing((Entry x) -> x.item.status() != Status.PENDING).thenComparing(order))))
+                .map(e -> new Day(e.getKey(), items(e.getValue(), Comparator.comparing(Entry::settled).thenComparing(order))))
                 .toList();
         return new Agenda(today, items(overdue, Comparator.comparing((Entry x) -> x.item.scheduledDate()).thenComparing(order)), days);
     }
@@ -135,8 +139,8 @@ public class TaskAgendaService {
         List<Entry> entries = new ArrayList<>();
         for (Task task : found) {
             TaskOccurrence row = rows.get(task.getId());
-            UUID assignee = TaskService.assignee(task, null, row);
-            if (context.shows(task, assignee, filter)) entries.add(context.entry(task, null, row, assignee, false));
+            List<UUID> people = TaskService.assignees(task, null, row, context.members(task));
+            if (context.shows(task, people, filter)) entries.add(context.entry(task, null, row, people, false));
         }
         return items(entries, order(sort));
     }
@@ -170,8 +174,12 @@ public class TaskAgendaService {
         return result;
     }
 
-    /** Ocorrência pendente mostrada entre {@code from} e {@code to}, com horário e responsável (para os avisos). */
-    public record Pending(Task task, LocalDate date, LocalDate shown, LocalTime time, String title, UUID assignee) {
+    /**
+     * Ocorrência pendente mostrada entre {@code from} e {@code to}, com horário e responsáveis (para os avisos).
+     *
+     * @param assignees só os que ainda não fizeram a sua parte; vazio = sem responsável
+     */
+    public record Pending(Task task, LocalDate date, LocalDate shown, LocalTime time, String title, List<UUID> assignees) {
     }
 
     @Transactional(readOnly = true)
@@ -186,29 +194,83 @@ public class TaskAgendaService {
                 if (row != null && row.getStatus() != Status.PENDING) continue;
                 LocalDate shown = row != null && row.getMovedTo() != null ? row.getMovedTo() : date;
                 if (shown.isBefore(from) || shown.isAfter(to)) continue;
+                List<UUID> people = task.getGroupId() == null ? List.of()
+                        : TaskService.assignees(task, date, row, service.members(task)).stream()
+                        .filter(p -> row == null || !row.getDoneBy().contains(p)).toList();
                 result.add(new Pending(task, date, shown,
                         row != null && row.getDueTime() != null ? row.getDueTime() : task.getDueTime(),
-                        row != null && row.getTitle() != null ? row.getTitle() : task.getTitle(),
-                        task.getGroupId() == null ? null : TaskService.assignee(task, date, row)));
+                        row != null && row.getTitle() != null ? row.getTitle() : task.getTitle(), people));
             }
         }
         return result;
     }
 
-    /** Ocorrências concluídas, da mais recente para a mais antiga. */
+    /**
+     * Ocorrências pendentes de {@code date} que ocupam o horário pedido (sem duração contam {@link #DEFAULT_MINUTES}).
+     * Grupo: as do grupo com algum dos {@code people} (ou sem responsável) e, se quem consulta está entre eles, também a
+     * agenda pessoal dele. Pessoal: a agenda da pessoa (com as de grupo em que ela é responsável).
+     */
+    @Transactional(readOnly = true)
+    public List<Conflict> conflicts(TaskScope scope, LocalDate date, LocalTime time, Integer duration, List<UUID> people,
+                                    UUID taskId) {
+        if ((duration != null && (duration < 1 || duration > 1440)) || people.size() > 50) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Consulta inválida.");
+        }
+        int start = time.toSecondOfDay() / 60;
+        int end = start + (duration == null ? DEFAULT_MINUTES : duration);
+        Map<String, Conflict> found = new LinkedHashMap<>();
+        List<UUID> asked = scope.isGroup() ? people : List.of(scope.userId());
+        List<TaskScope> scopes = new ArrayList<>(List.of(scope));
+        if (scope.isGroup() && people.contains(scope.userId())) scopes.add(TaskScope.personal(scope.userId()));
+        for (TaskScope s : scopes) {
+            for (TaskItem item : agenda(s, date, date, false, Filter.NONE, Sort.TIME).days().getFirst().items()) {
+                if (item.status() != Status.PENDING || item.dueTime() == null || item.taskId().equals(taskId)) continue;
+                int itemStart = item.dueTime().toSecondOfDay() / 60;
+                int itemEnd = itemStart + (item.durationMinutes() == null ? DEFAULT_MINUTES : item.durationMinutes());
+                if (itemStart >= end || start >= itemEnd) continue;
+                List<UUID> who = s.isGroup() ? item.assignees().stream().filter(asked::contains).toList() : List.of(s.userId());
+                if (s.isGroup() && who.isEmpty() && !item.assignees().isEmpty()) continue;
+                found.putIfAbsent(item.taskId() + "|" + item.date(), new Conflict(item.taskId(), item.date(), item.title(),
+                        item.dueTime(), item.durationMinutes(), item.groupId(), who));
+            }
+        }
+        return List.copyOf(found.values());
+    }
+
+    /** Ocorrências concluídas, da mais recente para a mais antiga, com o dia (fuso do app) e o total do dia. */
     @Transactional(readOnly = true)
     public PageResponse<HistoryItem> history(TaskScope scope, int page, int size, String sort) {
         TaskOwner owner = scope.owner();
+        ZoneId zone = service.zone();
         var pageable = Paging.pageable(page, size, sort, HISTORY_SORT, "completedAt,desc", "o.id");
         return PageResponse.of(occurrences.history(owner.userId(), owner.groupId(), Status.DONE, pageable), done -> {
             Map<UUID, Task> byId = tasks.findAllById(done.stream().map(TaskOccurrence::getTaskId).collect(Collectors.toSet()))
                     .stream().collect(Collectors.toMap(Task::getId, Function.identity()));
+            Map<LocalDate, Long> perDay = perDay(owner, done.stream().map(o -> day(o.getCompletedAt(), zone)).toList(), zone);
             return done.stream().map(o -> {
                 Task task = byId.get(o.getTaskId());
+                LocalDate day = day(o.getCompletedAt(), zone);
                 return new HistoryItem(task.getId(), o.getDate(), o.getTitle() != null ? o.getTitle() : task.getTitle(),
-                        task.getListId(), o.getCompletedAt(), task.getRepeatUnit() != null, o.getCompletedBy());
+                        task.getListId(), o.getCompletedAt(), day, perDay.getOrDefault(day, 0L), task.getRepeatUnit() != null,
+                        o.getCompletedBy());
             }).toList();
         });
+    }
+
+    /** Conclusões por dia (fuso do app) entre o primeiro e o último dia da página. */
+    private Map<LocalDate, Long> perDay(TaskOwner owner, List<LocalDate> days, ZoneId zone) {
+        if (days.isEmpty()) return Map.of();
+        LocalDate first = days.stream().min(Comparator.naturalOrder()).orElseThrow();
+        LocalDate last = days.stream().max(Comparator.naturalOrder()).orElseThrow();
+        Set<LocalDate> wanted = Set.copyOf(days);
+        return occurrences.completedBetween(owner.userId(), owner.groupId(), Status.DONE,
+                        first.atStartOfDay(zone).toOffsetDateTime(), last.plusDays(1).atStartOfDay(zone).toOffsetDateTime())
+                .stream().map(at -> day(at, zone)).filter(wanted::contains)
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+    }
+
+    private static LocalDate day(OffsetDateTime at, ZoneId zone) {
+        return at.atZoneSameInstant(zone).toLocalDate();
     }
 
     /** Dias do hábito de {@code lower} até hoje (hábito sempre tem regra em dias fixos). */
@@ -247,9 +309,10 @@ public class TaskAgendaService {
     /**
      * Ocorrência pronta para ordenar (posição e criação da tarefa desempatam).
      *
+     * @param settled concluída/pulada ou, em "cada um conclui a sua", já feita por quem vê (vai para o fim do dia)
      * @param foreign tarefa de grupo na visão pessoal (fica depois das pessoais na ordem manual)
      */
-    private record Entry(TaskItem item, boolean foreign, int position, long created) {
+    private record Entry(TaskItem item, boolean settled, boolean foreign, int position, long created) {
     }
 
     /** O que a montagem das linhas precisa além da tarefa: checklists, comentários e permissões. */
@@ -261,6 +324,7 @@ public class TaskAgendaService {
         /** Visão pessoal: grupos em que a pessoa é administradora. */
         private final Set<UUID> adminGroups;
         private final Map<UUID, Integer> streaks = new HashMap<>();
+        private final Map<UUID, List<UUID>> groupMembers = new HashMap<>();
 
         Context(TaskScope scope, List<Task> found) {
             this.scope = scope;
@@ -291,10 +355,17 @@ public class TaskAgendaService {
             return !scope.isGroup() && task.getGroupId() != null;
         }
 
+        /** Membros do grupo da tarefa de "todos" (uma consulta por grupo). */
+        List<UUID> members(Task task) {
+            if (!task.isAllMembers()) return List.of();
+            return groupMembers.computeIfAbsent(task.getGroupId(), id -> members.findByGroupIdOrderByCreatedAtAsc(id).stream()
+                    .map(GroupMember::getUserId).toList());
+        }
+
         /** Visão pessoal: de grupo só as ocorrências da pessoa. Grupo: filtro de responsável. */
-        boolean shows(Task task, UUID assignee, Filter filter) {
-            if (foreign(task)) return scope.userId().equals(assignee);
-            return filter.assigneeId() == null || filter.assigneeId().equals(assignee);
+        boolean shows(Task task, List<UUID> people, Filter filter) {
+            if (foreign(task)) return people.contains(scope.userId());
+            return filter.assigneeId() == null || people.contains(filter.assigneeId());
         }
 
         boolean canDelete(Task task) {
@@ -302,7 +373,7 @@ public class TaskAgendaService {
             return adminGroups.contains(task.getGroupId()) || scope.userId().equals(task.getCreatedBy());
         }
 
-        Entry entry(Task task, LocalDate date, TaskOccurrence row, UUID assignee, boolean late) {
+        Entry entry(Task task, LocalDate date, TaskOccurrence row, List<UUID> people, boolean late) {
             Set<UUID> checked = row == null ? Set.of() : row.getCheckedSubtasks();
             List<SubtaskState> states = checklists.getOrDefault(task.getId(), List.of()).stream()
                     .map(s -> new SubtaskState(s.getId(), s.getTitle(), checked.contains(s.getId()))).toList();
@@ -316,11 +387,13 @@ public class TaskAgendaService {
                     row != null && row.getDueTime() != null ? row.getDueTime() : task.getDueTime(),
                     task.getDurationMinutes(), row == null ? Status.PENDING : row.getStatus(), late,
                     row == null ? null : row.getCompletedAt(), task.getListId(), Set.copyOf(task.getTagIds()), states,
-                    TaskService.repeat(task.rule()), task.isHabit(), edited, task.getGroupId(), assignee,
-                    !task.getRotation().isEmpty(), task.getCreatedBy(), row == null ? null : row.getCompletedBy(),
-                    commentCounts.getOrDefault(task.getId(), 0L), canDelete(task), streaks.get(task.getId()),
-                    task.getReminderMinutes(), task.getRecurringEntryId());
-            return new Entry(item, foreign(task), task.getPosition(), task.getCreatedAt().toInstant().toEpochMilli());
+                    TaskService.repeat(task.rule()), task.isHabit(), edited, task.getGroupId(), people,
+                    task.isAllMembers(), !task.getRotation().isEmpty(), task.getCompletion(),
+                    row == null ? List.of() : row.getDoneBy().stream().sorted().toList(), task.getCreatedBy(),
+                    row == null ? null : row.getCompletedBy(), commentCounts.getOrDefault(task.getId(), 0L),
+                    canDelete(task), streaks.get(task.getId()), task.getReminderMinutes(), task.getRecurringEntryId());
+            boolean settled = item.status() != Status.PENDING || (row != null && row.getDoneBy().contains(scope.userId()));
+            return new Entry(item, settled, foreign(task), task.getPosition(), task.getCreatedAt().toInstant().toEpochMilli());
         }
     }
 

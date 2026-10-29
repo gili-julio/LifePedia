@@ -9,9 +9,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
-/** Todo dia às 8h (fuso do app): avisa o responsável (ou quem criou) das ocorrências de grupo que ficaram de ontem. */
+/**
+ * Todo dia às 8h (fuso do app): avisa os responsáveis que não fizeram a sua parte (ou, sem responsável, quem criou)
+ * das ocorrências de grupo que ficaram de ontem.
+ */
 @Component
 public class TaskOverdueJob {
 
@@ -41,7 +46,9 @@ public class TaskOverdueJob {
             for (TaskItem item : agenda.agenda(scope, day, day, false, Filter.NONE, Sort.MANUAL).days().getFirst().items()) {
                 if (item.status() != Status.PENDING) continue;
                 Task task = service.find(scope.owner(), item.taskId());
-                notifier.overdue(task, item.date(), item.title(), item.assigneeId() != null ? item.assigneeId() : item.createdBy());
+                List<UUID> to = item.assignees().isEmpty() ? Collections.singletonList(item.createdBy())
+                        : item.assignees().stream().filter(p -> !item.doneBy().contains(p)).toList();
+                for (UUID person : to) notifier.overdue(task, item.date(), item.title(), person);
                 sent++;
             }
         }

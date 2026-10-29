@@ -26,10 +26,10 @@ import java.util.UUID;
 @Table(name = "tasks")
 public class Task extends BaseEntity {
 
-    @Column(name = "user_id", updatable = false)
+    @Column(name = "user_id")
     private UUID userId;
 
-    @Column(name = "group_id", updatable = false)
+    @Column(name = "group_id")
     private UUID groupId;
 
     @Column(name = "created_by")
@@ -41,7 +41,7 @@ public class Task extends BaseEntity {
     @Column(nullable = false, length = 200)
     private String title;
 
-    @Column(length = 5000)
+    @Column(length = 10000)
     private String notes;
 
     @Enumerated(EnumType.STRING)
@@ -99,9 +99,19 @@ public class Task extends BaseEntity {
     @Column(name = "completed_at")
     private OffsetDateTime completedAt;
 
-    /** Responsável fixo (só em grupo; sem rodízio). */
-    @Column(name = "assignee_id")
-    private UUID assigneeId;
+    /** Responsáveis fixos (só em grupo; sem rodízio nem "todos"). */
+    @ElementCollection
+    @CollectionTable(name = "task_assignees", joinColumns = @JoinColumn(name = "task_id"))
+    @Column(name = "user_id")
+    private Set<UUID> assignees = new HashSet<>();
+
+    /** Todos os membros do grupo, inclusive quem entrar depois. */
+    @Column(name = "all_members", nullable = false)
+    private boolean allMembers;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 4)
+    private Completion completion = Completion.ANY;
 
     @Column(name = "rotation_start", nullable = false)
     private int rotationStart;
@@ -200,9 +210,14 @@ public class Task extends BaseEntity {
         this.repeatCount = count;
     }
 
-    /** Responsável fixo ou rodízio (lista vazia = sem rodízio). */
-    public void setAssignment(UUID assigneeId, List<UUID> rotation) {
-        this.assigneeId = assigneeId;
+    /** Responsáveis fixos, "todos" ou rodízio (lista vazia = sem rodízio); "cada um" só com mais de um. */
+    public void setAssignment(Set<UUID> assignees, boolean allMembers, List<UUID> rotation, Completion completion) {
+        if (!this.assignees.equals(assignees)) {
+            this.assignees.clear();
+            this.assignees.addAll(assignees);
+        }
+        this.allMembers = allMembers;
+        this.completion = (allMembers || assignees.size() > 1) && completion == Completion.EACH ? Completion.EACH : Completion.ANY;
         if (!getRotation().equals(rotation)) {
             this.rotation.clear();
             this.rotation.addAll(rotation);
@@ -216,10 +231,10 @@ public class Task extends BaseEntity {
         return rotation.stream().filter(Objects::nonNull).toList();
     }
 
-    /** Responsável da ocorrência de número {@code index} ("a partir da conclusão": sempre 0). */
-    public UUID assigneeAt(int index) {
+    /** Vez no rodízio da ocorrência de número {@code index} ("a partir da conclusão": sempre 0); nula sem rodízio. */
+    public UUID turnAt(int index) {
         List<UUID> order = getRotation();
-        if (order.isEmpty()) return assigneeId;
+        if (order.isEmpty()) return null;
         return order.get(Math.floorMod(rotationStart + index, order.size()));
     }
 
@@ -240,13 +255,13 @@ public class Task extends BaseEntity {
 
     /** Quem saiu do grupo deixa de ser responsável e sai do rodízio (rodízio de uma pessoa vira responsável fixo). */
     public void removeMember(UUID userId) {
-        if (userId.equals(assigneeId)) assigneeId = null;
+        if (assignees.remove(userId) && !allMembers && assignees.size() < 2) completion = Completion.ANY;
         List<UUID> order = new ArrayList<>(getRotation());
         int at = order.indexOf(userId);
         if (at < 0) return;
         order.remove(at);
         if (order.size() < 2) {
-            setAssignment(order.isEmpty() ? null : order.getFirst(), List.of());
+            setAssignment(order.isEmpty() ? Set.of() : Set.of(order.getFirst()), false, List.of(), Completion.ANY);
             return;
         }
         if (at < rotationStart) rotationStart--;
@@ -255,8 +270,27 @@ public class Task extends BaseEntity {
         setRotationStart(rotationStart);
     }
 
-    public UUID getAssigneeId() {
-        return assigneeId;
+    /** Tarefa pessoal vira do grupo: lista, etiquetas e fixo (pessoais) saem; quem levou fica responsável. */
+    public void moveToGroup(UUID groupId, int position, UUID bringer) {
+        this.userId = null;
+        this.groupId = groupId;
+        this.position = position;
+        this.listId = null;
+        this.recurringEntryId = null;
+        this.tagIds.clear();
+        setAssignment(Set.of(bringer), false, List.of(), Completion.ANY);
+    }
+
+    public Set<UUID> getAssignees() {
+        return assignees;
+    }
+
+    public boolean isAllMembers() {
+        return allMembers;
+    }
+
+    public Completion getCompletion() {
+        return completion;
     }
 
     public UUID getUserId() {

@@ -41,7 +41,7 @@ public class TaskOccurrence extends BaseEntity {
     @Column(length = 200)
     private String title;
 
-    @Column(length = 5000)
+    @Column(length = 10000)
     private String notes;
 
     @Column(name = "due_time")
@@ -65,6 +65,12 @@ public class TaskOccurrence extends BaseEntity {
     @CollectionTable(name = "task_subtask_checks", joinColumns = @JoinColumn(name = "occurrence_id"))
     @Column(name = "subtask_id")
     private Set<UUID> checkedSubtasks = new HashSet<>();
+
+    /** "Cada um conclui a sua": quem já fez a sua parte (a ocorrência fica concluída quando todos fizerem). */
+    @ElementCollection
+    @CollectionTable(name = "task_occurrence_done", joinColumns = @JoinColumn(name = "occurrence_id"))
+    @Column(name = "user_id")
+    private Set<UUID> doneBy = new HashSet<>();
 
     protected TaskOccurrence() {
     }
@@ -99,7 +105,7 @@ public class TaskOccurrence extends BaseEntity {
     /** Nada diferente da tarefa: a linha pode sair. */
     public boolean isPlain() {
         return status == Status.PENDING && movedTo == null && title == null && notes == null && dueTime == null
-                && priority == null && assigneeId == null && checkedSubtasks.isEmpty();
+                && priority == null && assigneeId == null && checkedSubtasks.isEmpty() && doneBy.isEmpty();
     }
 
     public UUID getTaskId() {
@@ -165,5 +171,9 @@ public class TaskOccurrence extends BaseEntity {
 
     public Set<UUID> getCheckedSubtasks() {
         return checkedSubtasks;
+    }
+
+    public Set<UUID> getDoneBy() {
+        return doneBy;
     }
 }

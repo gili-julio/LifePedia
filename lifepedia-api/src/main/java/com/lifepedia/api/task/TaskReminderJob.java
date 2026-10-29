@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * A cada minuto (fuso do app): avisa dos lembretes que venceram. Pessoal: o dono; grupo: o responsável ou, sem
- * responsável, todos os membros. Se a API ficou parada, recupera no máximo {@link #MAX_CATCH_UP_MINUTES}.
+ * A cada minuto (fuso do app): avisa dos lembretes que venceram. Pessoal: o dono; grupo: os responsáveis que ainda
+ * não fizeram a sua parte ou, sem responsável, todos os membros. Se a API ficou parada, recupera no máximo {@link #MAX_CATCH_UP_MINUTES}.
  */
 @Component
 public class TaskReminderJob {
@@ -69,7 +69,7 @@ public class TaskReminderJob {
     private List<UUID> recipients(Pending p) {
         Task task = p.task();
         if (task.getGroupId() == null) return List.of(task.getUserId());
-        if (p.assignee() != null) return List.of(p.assignee());
+        if (!p.assignees().isEmpty()) return p.assignees();
         return members.findByGroupIdOrderByCreatedAtAsc(task.getGroupId()).stream().map(GroupMember::getUserId).toList();
     }
 }

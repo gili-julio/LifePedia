@@ -65,7 +65,7 @@ public class TaskCommentService {
         // Participantes: quem criou, responsáveis e quem já comentou.
         Set<UUID> people = new LinkedHashSet<>();
         people.add(task.getCreatedBy());
-        people.add(task.getAssigneeId());
+        people.addAll(task.getAssignees());
         people.addAll(task.getRotation());
         people.addAll(comments.authors(task.getId()));
         people.remove(null);

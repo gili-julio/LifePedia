@@ -74,18 +74,18 @@ class GroupTaskIntegrationTest extends ApiTestSupport {
 
         // Validação do responsável.
         assertThat(send("POST", t.alice(), t.base(), """
-                {"title":"X","assigneeId":"%s"}""".formatted(userId(outsider)))).hasStatus(400);
+                {"title":"X","assignees":["%s"]}""".formatted(userId(outsider)))).hasStatus(400);
         assertThat(send("POST", t.alice(), t.base(), """
                 {"title":"X","rotation":["%s","%s"]}""".formatted(t.aliceId(), t.bobId()))).hasStatus(400);
         assertThat(send("POST", t.alice(), t.base(), """
                 {"title":"X","dueDate":"%s","repeat":{"unit":"DAY","interval":1},"rotation":["%s"]}"""
                 .formatted(today, t.aliceId()))).hasStatus(400);
         assertThat(send("POST", t.alice(), "/api/tasks", """
-                {"title":"X","assigneeId":"%s"}""".formatted(t.aliceId()))).hasStatus(400);
+                {"title":"X","assignees":["%s"]}""".formatted(t.aliceId()))).hasStatus(400);
 
         // Alice cria para o Bob: Bob é avisado e vê na visão pessoal; Carol não.
         String dishes = create(t.alice(), t.base(), """
-                {"title":"Lavar louça","dueDate":"%s","assigneeId":"%s"}""".formatted(today, t.bobId()));
+                {"title":"Lavar louça","dueDate":"%s","assignees":["%s"]}""".formatted(today, t.bobId()));
         assertThat(types(t.bob())).containsExactly("TASK_ASSIGNED");
         String mine = agenda(t.bob(), "/api/tasks", today, today, "&overdue=true");
         assertThat(JsonPath.<List<String>>read(mine, "$.days[0].items[*].title")).containsExactly("Lavar louça");
@@ -136,7 +136,7 @@ class GroupTaskIntegrationTest extends ApiTestSupport {
         // A primeira vez é da Alice (quem criou): ninguém é avisado.
         assertThat(types(t.bob())).isEmpty();
         String week = agenda(t.alice(), t.base(), today, today.plusDays(3), "");
-        assertThat(JsonPath.<List<String>>read(week, "$.days[*].items[0].assigneeId"))
+        assertThat(JsonPath.<List<String>>read(week, "$.days[*].items[0].assignees[0]"))
                 .containsExactly(t.aliceId(), t.bobId(), t.carolId(), t.aliceId());
         assertThat(JsonPath.<Boolean>read(week, "$.days[0].items[0].rotating")).isTrue();
         assertThat(JsonPath.<List<String>>read(agenda(t.alice(), t.base(), today, today.plusDays(3), "&assignee=" + t.bobId()),
@@ -157,7 +157,7 @@ class GroupTaskIntegrationTest extends ApiTestSupport {
         assertThat(send("PUT", t.bob(), t.base() + "/" + trash + "/assignee", """
                 {"date":"%s","assigneeId":"%s"}""".formatted(today.plusDays(2), userId(registerAndGetBearer())))).hasStatus(400);
         week = agenda(t.alice(), t.base(), today, today.plusDays(3), "");
-        assertThat(JsonPath.<List<String>>read(week, "$.days[*].items[0].assigneeId"))
+        assertThat(JsonPath.<List<String>>read(week, "$.days[*].items[0].assignees[0]"))
                 .containsExactly(t.aliceId(), t.bobId(), t.aliceId(), t.aliceId());
 
         // Comentários: avisa quem criou e quem está no rodízio (menos quem escreveu).
@@ -188,7 +188,7 @@ class GroupTaskIntegrationTest extends ApiTestSupport {
         assertThat(JsonPath.<List<String>>read(task, "$.rotation")).containsExactly(t.aliceId(), t.bobId());
         assertThat(JsonPath.<List<String>>read(body(send("GET", t.alice(), comments, null)), "$.items")).isEmpty();
         assertThat(JsonPath.<List<String>>read(agenda(t.alice(), t.base(), today.plusDays(1), today.plusDays(5), ""),
-                "$.days[*].items[0].assigneeId")).doesNotContain(t.carolId());
+                "$.days[*].items[0].assignees[0]")).doesNotContain(t.carolId());
     }
 
     @Test
@@ -200,17 +200,17 @@ class GroupTaskIntegrationTest extends ApiTestSupport {
         assertThat(send("PUT", t.alice(), t.base() + "/" + plants + "/status", """
                 {"date":"%s","status":"DONE"}""".formatted(today))).hasStatus(204);
         String next = agenda(t.alice(), t.base(), today.plusDays(2), today.plusDays(2), "");
-        assertThat(JsonPath.<String>read(next, "$.days[0].items[0].assigneeId")).isEqualTo(t.bobId());
+        assertThat(JsonPath.<String>read(next, "$.days[0].items[0].assignees[0]")).isEqualTo(t.bobId());
         assertThat(types(t.bob())).containsExactly("TASK_TURN");
         // Desfazer volta a vez para a Alice.
         assertThat(send("PUT", t.alice(), t.base() + "/" + plants + "/status", """
                 {"date":"%s","status":"PENDING"}""".formatted(today))).hasStatus(204);
-        assertThat(JsonPath.<String>read(agenda(t.alice(), t.base(), today, today, ""), "$.days[0].items[0].assigneeId"))
+        assertThat(JsonPath.<String>read(agenda(t.alice(), t.base(), today, today, ""), "$.days[0].items[0].assignees[0]"))
                 .isEqualTo(t.aliceId());
 
         // Aviso de atrasada: responsável (ou quem criou, se não houver).
         create(t.alice(), t.base(), """
-                {"title":"Pagar conta de luz","dueDate":"%s","assigneeId":"%s"}""".formatted(today.minusDays(1), t.bobId()));
+                {"title":"Pagar conta de luz","dueDate":"%s","assignees":["%s"]}""".formatted(today.minusDays(1), t.bobId()));
         create(t.carol(), t.base(), """
                 {"title":"Trocar lâmpada","dueDate":"%s"}""".formatted(today.minusDays(1)));
         overdueJob.notifyOverdue(today.minusDays(1));

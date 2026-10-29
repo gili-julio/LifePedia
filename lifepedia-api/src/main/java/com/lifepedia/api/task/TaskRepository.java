@@ -54,10 +54,10 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
             """)
     List<Object[]> openByTag(Collection<UUID> tagIds);
 
-    /** Tarefas de grupo com algo para {@code userId} (responsável fixo, rodízio ou só numa ocorrência) no período. */
+    /** Tarefas de grupo com algo para {@code userId} (responsável fixo, "todos", rodízio ou só numa ocorrência) no período. */
     @Query("""
             select t from Task t where t.groupId in (select m.groupId from GroupMember m where m.userId = :userId)
-              and (t.assigneeId = :userId or :userId member of t.rotation
+              and (:userId member of t.assignees or t.allMembers = true or :userId member of t.rotation
                    or exists (select 1 from TaskOccurrence o where o.taskId = t.id and o.assigneeId = :userId))
               and t.dueDate is not null
               and ((t.completedAt is null and t.dueDate <= :to and (t.repeatUntil is null or t.repeatUntil >= :lower))
@@ -68,11 +68,11 @@ public interface TaskRepository extends JpaRepository<Task, UUID> {
 
     @Query("""
             select t from Task t where t.groupId in (select m.groupId from GroupMember m where m.userId = :userId)
-              and t.assigneeId = :userId and t.dueDate is null and t.completedAt is null
+              and (:userId member of t.assignees or t.allMembers = true) and t.dueDate is null and t.completedAt is null
             """)
     List<Task> assignedUndated(UUID userId);
 
-    @Query("select t from Task t where t.groupId = :groupId and (t.assigneeId = :userId or :userId member of t.rotation)")
+    @Query("select t from Task t where t.groupId = :groupId and (:userId member of t.assignees or :userId member of t.rotation)")
     List<Task> involving(UUID groupId, UUID userId);
 
     /** Hábitos em andamento, na ordem manual. */

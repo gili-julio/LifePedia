@@ -6,7 +6,7 @@ const whole = (min: number, max: number) => (v: string) => /^\d+$/.test(v) && Nu
 
 export const taskSchema = z.object({
   title: z.string().trim().min(1, 'Informe a tarefa.').max(200, 'Máximo de 200 caracteres.'),
-  notes: z.string().max(5000, 'Máximo de 5000 caracteres.'),
+  notes: z.string().max(10000, 'Máximo de 10000 caracteres.'),
   /** '' = sem data */
   dueDate: z.string(),
   dueTime: z.string(),
@@ -25,10 +25,12 @@ export const taskSchema = z.object({
   count: z.string(),
   subtasks: z.array(z.object({ id: z.string().nullable(), title: z.string().max(200, 'Máximo de 200 caracteres.') }))
     .max(50, 'Máximo de 50 subtarefas.'),
-  /** Só em grupo: ninguém, uma pessoa fixa ou rodízio (precisa de repetição). */
-  assignMode: z.enum(['NONE', 'FIXED', 'ROTATION']),
-  assigneeId: z.string(),
+  /** Só em grupo: ninguém, pessoas escolhidas, todos do grupo ou rodízio (precisa de repetição). */
+  assignMode: z.enum(['NONE', 'PEOPLE', 'ALL', 'ROTATION']),
+  assignees: z.array(z.string()),
   rotation: z.array(z.string()),
+  /** Com mais de um responsável: basta um concluir ou cada um conclui a sua. */
+  completion: z.enum(['ANY', 'EACH']),
   /** Só com repetição em dias fixos. */
   habit: z.boolean(),
   /** Minutos antes do horário ('' = sem lembrete; '0' = na hora). */
@@ -38,7 +40,7 @@ export const taskSchema = z.object({
 }).superRefine((v, ctx) => {
   const issue = (path: string, message: string) => ctx.addIssue({ code: 'custom', path: [path], message })
   if (v.dueTime && !v.dueDate) issue('dueTime', 'Escolha o dia para definir o horário.')
-  if (v.assignMode === 'FIXED' && !v.assigneeId) issue('assigneeId', 'Escolha o responsável.')
+  if (v.assignMode === 'PEOPLE' && !v.assignees.length) issue('assignees', 'Escolha pelo menos uma pessoa.')
   if (v.assignMode === 'ROTATION') {
     if (!v.repeatOn) issue('rotation', 'Rodízio precisa de repetição.')
     else if (v.rotation.length < 2) issue('rotation', 'Escolha pelo menos 2 pessoas.')
@@ -53,15 +55,18 @@ export const taskSchema = z.object({
 export type TaskFormInput = z.input<typeof taskSchema>
 export type TaskFormValues = z.output<typeof taskSchema>
 
+/** Sugestões para tarefa nova (dia/horário de onde clicou, lista do filtro, responsável = quem cria). */
+export type TaskDefaults = { dueDate?: string | null; dueTime?: string | null; listId?: string | null; assignees?: string[] }
+
 /** Valores iniciais: tarefa nova, tarefa inteira ou a ocorrência clicada (título/horário/dia dela). */
-export function toForm(task?: Task, occurrence?: TaskItem | null, defaults?: { dueDate?: string | null; listId?: string | null }): TaskFormInput {
+export function toForm(task?: Task, occurrence?: TaskItem | null, defaults?: TaskDefaults): TaskFormInput {
   const rule = task?.repeat
   const dueDate = occurrence?.scheduledDate ?? task?.dueDate ?? defaults?.dueDate ?? ''
   return {
     title: occurrence?.title ?? task?.title ?? '',
     notes: occurrence?.notes ?? task?.notes ?? '',
     dueDate,
-    dueTime: occurrence?.dueTime ?? task?.dueTime ?? '',
+    dueTime: occurrence?.dueTime ?? task?.dueTime ?? defaults?.dueTime ?? '',
     duration: task?.durationMinutes ? String(task.durationMinutes) : '',
     priority: occurrence?.priority ?? task?.priority ?? 'NONE',
     listId: task ? task.listId ?? '' : defaults?.listId ?? '',
@@ -76,13 +81,21 @@ export function toForm(task?: Task, occurrence?: TaskItem | null, defaults?: { d
     until: rule?.until ?? '',
     count: rule?.count ? String(rule.count) : '10',
     subtasks: task?.subtasks.map((s) => ({ id: s.id, title: s.title })) ?? [],
-    assignMode: task?.rotation.length ? 'ROTATION' : task?.assigneeId ? 'FIXED' : 'NONE',
-    assigneeId: task?.assigneeId ?? '',
+    assignMode: assignMode(task, defaults),
+    assignees: task ? task.assignees : defaults?.assignees ?? [],
     rotation: task?.rotation ?? [],
+    completion: task?.completion ?? 'ANY',
     habit: task?.habit ?? false,
     reminder: task ? (task.reminderMinutes === null ? '' : String(task.reminderMinutes)) : '0',
     recurringEntryId: task?.recurringEntryId ?? '',
   }
+}
+
+function assignMode(task?: Task, defaults?: TaskDefaults): TaskFormValues['assignMode'] {
+  if (!task) return defaults?.assignees?.length ? 'PEOPLE' : 'NONE'
+  if (task.rotation.length) return 'ROTATION'
+  if (task.allMembers) return 'ALL'
+  return task.assignees.length ? 'PEOPLE' : 'NONE'
 }
 
 export function toRule(v: TaskFormValues): RepeatRule | null {
@@ -112,10 +125,23 @@ export function toRequest(v: TaskFormValues, dueDate = v.dueDate): TaskRequest {
     habit: v.habit && !!repeat && !repeat.fromCompletion,
     repeat,
     subtasks: v.subtasks.filter((s) => s.title.trim()).map((s) => ({ id: s.id, title: s.title.trim() })),
-    assigneeId: v.assignMode === 'FIXED' ? v.assigneeId || null : null,
+    assignees: v.assignMode === 'PEOPLE' ? v.assignees : [],
+    allMembers: v.assignMode === 'ALL',
     rotation: v.assignMode === 'ROTATION' && repeat ? v.rotation : [],
+    completion: v.assignMode === 'ALL' || (v.assignMode === 'PEOPLE' && v.assignees.length > 1) ? v.completion : 'ANY',
     reminderMinutes: v.dueTime && v.reminder !== '' ? Number(v.reminder) : null,
     recurringEntryId: v.recurringEntryId || null,
+  }
+}
+
+/** Requisição com os dados atuais da tarefa e o que mudar (ex.: horário da série, ao arrastar na agenda). */
+export function fromTask(task: Task, changes: Partial<TaskRequest>): TaskRequest {
+  return {
+    title: task.title, notes: task.notes, priority: task.priority, dueDate: task.dueDate, dueTime: task.dueTime,
+    durationMinutes: task.durationMinutes, listId: task.listId, tagIds: task.tagIds, habit: task.habit, repeat: task.repeat,
+    subtasks: task.subtasks, assignees: task.assignees, allMembers: task.allMembers, rotation: task.rotation,
+    completion: task.completion, reminderMinutes: task.reminderMinutes, recurringEntryId: task.recurringEntryId,
+    ...changes,
   }
 }
 
@@ -128,7 +154,9 @@ export function changesSeries(v: TaskFormValues, task: Task) {
     || !same([...request.tagIds].sort(), [...task.tagIds].sort())
     || request.durationMinutes !== task.durationMinutes
     || !same(request.subtasks, task.subtasks.map((s) => ({ id: s.id, title: s.title })))
-    || request.assigneeId !== task.assigneeId
+    || !same([...request.assignees].sort(), [...task.assignees].sort())
+    || request.allMembers !== task.allMembers
+    || request.completion !== task.completion
     || !same(request.rotation, task.rotation)
     || request.habit !== task.habit
     || request.reminderMinutes !== task.reminderMinutes

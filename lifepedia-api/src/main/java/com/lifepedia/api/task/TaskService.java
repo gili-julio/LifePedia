@@ -10,6 +10,7 @@ import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.task.TaskDtos.AssignRequest;
 import com.lifepedia.api.task.TaskDtos.CheckRequest;
+import com.lifepedia.api.task.TaskDtos.GroupMoveRequest;
 import com.lifepedia.api.task.TaskDtos.MoveRequest;
 import com.lifepedia.api.task.TaskDtos.OccurrenceRequest;
 import com.lifepedia.api.task.TaskDtos.RepeatRule;
@@ -30,7 +31,9 @@ import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -84,6 +87,11 @@ public class TaskService {
 
     public LocalDate today() {
         return LocalDate.now(clock);
+    }
+
+    /** Fuso do app ({@code TIME_ZONE}). */
+    public ZoneId zone() {
+        return clock.getZone();
     }
 
     @Transactional
@@ -156,24 +164,39 @@ public class TaskService {
         move(task, request.date(), request.to());
     }
 
-    /** Responsável só desta ocorrência (sem repetição: o da tarefa). */
+    /** Uma pessoa só nesta ocorrência (sem repetição: vira a responsável da tarefa; nulo = ninguém/volta ao padrão). */
     @Transactional
     public void assign(TaskScope scope, UUID id, AssignRequest request) {
         Task task = find(scope.owner(), id);
         if (!scope.isGroup()) throw new BusinessException(HttpStatus.BAD_REQUEST, "Responsável só em tarefas de grupo.");
         requireSlot(task, request.date());
         if (request.assigneeId() != null) requireMembers(task.getGroupId(), List.of(request.assigneeId()));
-        UUID previous = assignee(task, request.date(), occurrences.find(task.getId(), request.date()).orElse(null));
+        List<UUID> everyone = members(task);
+        List<UUID> previous = assignees(task, request.date(), occurrences.find(task.getId(), request.date()).orElse(null), everyone);
+        UUID now = request.assigneeId();
         if (task.getRepeatUnit() == null) {
-            task.setAssignment(request.assigneeId(), List.of());
+            task.setAssignment(now == null ? Set.of() : Set.of(now), false, List.of(), Completion.ANY);
         } else {
             TaskOccurrence row = row(task, request.date());
-            boolean standard = Objects.equals(request.assigneeId(), assignee(task, request.date(), null));
-            row.setAssigneeId(standard ? null : request.assigneeId());
+            boolean standard = now == null || List.of(now).equals(assignees(task, request.date(), null, everyone));
+            row.setAssigneeId(standard ? null : now);
             save(row);
         }
-        UUID now = request.assigneeId() != null ? request.assigneeId() : assignee(task, request.date(), null);
-        if (now != null && !now.equals(previous)) notifier.assigned(task, request.date(), now, scope.userId());
+        if (now != null && !previous.equals(List.of(now))) notifier.assigned(task, request.date(), now, scope.userId());
+    }
+
+    /** Leva a tarefa pessoal para um grupo de que a pessoa é membro; ela fica como responsável. */
+    @Transactional
+    public TaskResponse moveToGroup(TaskScope scope, UUID id, GroupMoveRequest request) {
+        if (scope.isGroup()) throw new BusinessException(HttpStatus.BAD_REQUEST, "A tarefa já é de um grupo.");
+        Task task = find(scope.owner(), id);
+        UUID groupId = request.groupId();
+        if (!members.existsByGroupIdAndUserId(groupId, scope.userId())) throw new NotFoundException("Grupo não encontrado.");
+        if (tasks.countOpen(null, groupId) >= MAX_OPEN) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "O grupo chegou ao limite de " + MAX_OPEN + " tarefas abertas.");
+        }
+        task.moveToGroup(groupId, tasks.maxPosition(null, groupId) + 1, scope.userId());
+        return response(task, new TaskScope(TaskOwner.group(groupId), scope.userId(), false));
     }
 
     @Transactional
@@ -190,7 +213,7 @@ public class TaskService {
         if (date == null) throw new BusinessException(HttpStatus.BAD_REQUEST, "Informe a ocorrência.");
         requireSlot(task, date);
         if (scope == Scope.THIS) {
-            resolve(task, date, Status.SKIPPED, null);
+            resolve(task, row(task, date), Status.SKIPPED, null);
         } else if (rule.fromCompletion() || !date.isAfter(task.getDueDate())) {
             tasks.delete(task);
         } else {
@@ -207,12 +230,14 @@ public class TaskService {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Só tarefas repetidas podem ser puladas.");
         }
         if (request.status() == Status.PENDING) {
-            reopen(task, request.date());
+            reopen(task, request.date(), scope.userId());
             return;
         }
         requireSlot(task, request.date());
-        Done done = resolve(task, request.date(), request.status(), scope.userId());
-        afterResolve(task, List.of(done), scope.userId());
+        Done done = request.status() == Status.DONE
+                ? complete(task, request.date(), scope.userId())
+                : resolve(task, row(task, request.date()), request.status(), scope.userId());
+        if (done != null) afterResolve(task, List.of(done), scope.userId());
     }
 
     /** Conclui ou pula todas as atrasadas da tarefa; devolve quantas mudaram. */
@@ -227,7 +252,9 @@ public class TaskService {
         LocalDate today = today();
         if (task.isSingleSlot()) {
             if (task.getDueDate() == null || task.getCompletedAt() != null || !task.getDueDate().isBefore(today)) return 0;
-            afterResolve(task, List.of(resolve(task, task.getDueDate(), status, userId)), userId);
+            Done done = status == Status.DONE ? complete(task, task.getDueDate(), userId)
+                    : resolve(task, row(task, task.getDueDate()), status, userId);
+            if (done != null) afterResolve(task, List.of(done), userId);
             return 1;
         }
         LocalDate lower = today.minusDays(OVERDUE_DAYS);
@@ -235,14 +262,19 @@ public class TaskService {
                 .filter(o -> o.getDate() != null)
                 .collect(Collectors.toMap(TaskOccurrence::getDate, Function.identity(), (a, b) -> a));
         List<Done> resolved = new ArrayList<>();
+        int changed = 0;
         for (Recurrence.Occurrence occurrence : task.rule().between(lower, today.minusDays(1))) {
             TaskOccurrence row = rows.get(occurrence.date());
             boolean pending = row == null || row.getStatus() == Status.PENDING;
             LocalDate shown = row != null && row.getMovedTo() != null ? row.getMovedTo() : occurrence.date();
-            if (pending && shown.isBefore(today)) resolved.add(resolve(task, occurrence.date(), status, userId));
+            if (!pending || !shown.isBefore(today)) continue;
+            Done done = status == Status.DONE ? complete(task, occurrence.date(), userId)
+                    : resolve(task, row(task, occurrence.date()), status, userId);
+            if (done != null) resolved.add(done);
+            changed++;
         }
         if (!resolved.isEmpty()) afterResolve(task, resolved, userId);
-        return resolved.size();
+        return changed;
     }
 
     /** Marca/desmarca uma subtarefa numa ocorrência. */
@@ -288,11 +320,20 @@ public class TaskService {
                 .orElseThrow(() -> new NotFoundException("Tarefa não encontrada."));
     }
 
-    /** Responsável da ocorrência: trocado só nela, vez do rodízio ou o fixo. */
-    static UUID assignee(Task task, LocalDate date, TaskOccurrence row) {
-        if (row != null && row.getAssigneeId() != null) return row.getAssigneeId();
-        if (task.getRotation().isEmpty() || task.isSingleSlot()) return task.assigneeAt(0);
-        return task.assigneeAt(Math.max(task.rule().indexOf(date), 0));
+    /** Responsáveis da ocorrência: trocado só nela, vez do rodízio, todos do grupo ({@code everyone}) ou os fixos. */
+    static List<UUID> assignees(Task task, LocalDate date, TaskOccurrence row, List<UUID> everyone) {
+        if (row != null && row.getAssigneeId() != null) return List.of(row.getAssigneeId());
+        if (!task.getRotation().isEmpty()) {
+            return List.of(task.turnAt(task.isSingleSlot() ? 0 : Math.max(task.rule().indexOf(date), 0)));
+        }
+        if (task.isAllMembers()) return everyone;
+        return task.getAssignees().stream().sorted().toList();
+    }
+
+    /** Membros do grupo, na ordem de entrada (só para tarefa de "todos"; nas outras, vazio). */
+    List<UUID> members(Task task) {
+        if (task.getGroupId() == null || !task.isAllMembers()) return List.of();
+        return members.findByGroupIdOrderByCreatedAtAsc(task.getGroupId()).stream().map(GroupMember::getUserId).toList();
     }
 
     private void apply(TaskOwner owner, Task task, TaskRequest request) {
@@ -340,15 +381,20 @@ public class TaskService {
 
     private void assignment(TaskOwner owner, Task task, TaskRequest request, Recurrence rule) {
         List<UUID> rotation = request.rotation() == null ? List.of() : request.rotation();
+        Set<UUID> fixed = request.assignees() == null ? Set.of() : new LinkedHashSet<>(request.assignees());
+        boolean all = Boolean.TRUE.equals(request.allMembers());
         if (owner.groupId() == null) {
-            if (request.assigneeId() != null || !rotation.isEmpty()) {
+            if (!fixed.isEmpty() || all || !rotation.isEmpty()) {
                 throw new BusinessException(HttpStatus.BAD_REQUEST, "Responsável só em tarefas de grupo.");
             }
             return;
         }
+        if (all && !fixed.isEmpty()) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Escolha \"todos do grupo\" ou as pessoas, não os dois.");
+        }
         if (!rotation.isEmpty()) {
-            if (request.assigneeId() != null) {
-                throw new BusinessException(HttpStatus.BAD_REQUEST, "Escolha um responsável fixo ou o rodízio, não os dois.");
+            if (!fixed.isEmpty() || all) {
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "Escolha os responsáveis ou o rodízio, não os dois.");
             }
             if (rule == null) throw new BusinessException(HttpStatus.BAD_REQUEST, "Rodízio precisa de repetição.");
             if (rotation.size() < 2 || new HashSet<>(rotation).size() != rotation.size()) {
@@ -356,9 +402,9 @@ public class TaskService {
             }
         }
         List<UUID> people = new ArrayList<>(rotation);
-        if (request.assigneeId() != null) people.add(request.assigneeId());
+        people.addAll(fixed);
         requireMembers(owner.groupId(), people);
-        task.setAssignment(request.assigneeId(), rotation);
+        task.setAssignment(fixed, all, rotation, request.completion());
     }
 
     private void requireMembers(UUID groupId, List<UUID> people) {
@@ -425,15 +471,31 @@ public class TaskService {
         if (!valid) throw new BusinessException(HttpStatus.BAD_REQUEST, "Ocorrência inválida.");
     }
 
-    /** Ocorrência resolvida: dia, título mostrado, status e quem responde por ela (responsável ou criador). */
-    private record Done(LocalDate date, String title, Status status, UUID responsible) {
+    /** Ocorrência resolvida: dia, título mostrado, status e a quem avisar (responsáveis que não agiram, ou o criador). */
+    private record Done(LocalDate date, String title, Status status, List<UUID> responsible) {
     }
 
-    private Done resolve(Task task, LocalDate date, Status status, UUID userId) {
+    /** "Cada um conclui a sua": o responsável marca a parte dele e a ocorrência fecha quando todos marcarem (nulo até lá). */
+    private Done complete(Task task, LocalDate date, UUID userId) {
         TaskOccurrence row = row(task, date);
-        UUID assignee = task.getGroupId() == null ? null : assignee(task, date, row);
-        // Guarda quem era o responsável (o rodízio pode mudar depois).
-        if (assignee != null) row.setAssigneeId(assignee);
+        if (task.getCompletion() != Completion.EACH || row.getStatus() == Status.DONE) {
+            return resolve(task, row, Status.DONE, userId);
+        }
+        List<UUID> people = assignees(task, date, row, members(task));
+        if (!people.contains(userId)) return resolve(task, row, Status.DONE, userId);
+        row.getDoneBy().add(userId);
+        if (row.getDoneBy().containsAll(people)) return resolve(task, row, Status.DONE, userId);
+        occurrences.save(row);
+        return null;
+    }
+
+    private Done resolve(Task task, TaskOccurrence row, Status status, UUID userId) {
+        LocalDate date = row.getDate();
+        List<UUID> people = task.getGroupId() == null ? List.of() : assignees(task, date, row, members(task));
+        // Guarda de quem era a vez (o rodízio pode mudar depois).
+        if (!task.getRotation().isEmpty() && !people.isEmpty()) row.setAssigneeId(people.getFirst());
+        List<UUID> responsible = people.isEmpty() ? Collections.singletonList(task.getCreatedBy())
+                : people.stream().filter(p -> !row.getDoneBy().contains(p)).toList();
         if (status == Status.DONE) {
             row.complete(OffsetDateTime.now(clock), userId);
             events.publishEvent(new AchievementProgress(userId, task.getGroupId() != null
@@ -449,8 +511,7 @@ public class TaskService {
         } else if (task.isSingleSlot()) {
             advance(task);
         }
-        return new Done(date, row.getTitle() != null ? row.getTitle() : task.getTitle(), status,
-                assignee != null ? assignee : task.getCreatedBy());
+        return new Done(date, row.getTitle() != null ? row.getTitle() : task.getTitle(), status, responsible);
     }
 
     /** Avisa o responsável quando outra pessoa concluiu e, no rodízio, de quem é a próxima vez. */
@@ -458,25 +519,26 @@ public class TaskService {
         if (task.getGroupId() == null) return;
         Set<UUID> told = new LinkedHashSet<>();
         for (Done d : done.reversed()) {
-            if (d.status() == Status.DONE && d.responsible() != null && told.add(d.responsible())) {
-                notifier.completed(task, d.date(), d.title(), d.responsible(), actorId);
+            if (d.status() != Status.DONE) continue;
+            for (UUID to : d.responsible()) {
+                if (to != null && told.add(to)) notifier.completed(task, d.date(), d.title(), to, actorId);
             }
         }
         if (task.getRotation().isEmpty()) return;
         Slot next = nextAfter(task, done.getLast().date());
-        if (next != null) notifier.turn(task, next.date(), next.assignee(), actorId);
+        if (next != null && !next.assignees().isEmpty()) notifier.turn(task, next.date(), next.assignees().getFirst(), actorId);
     }
 
-    /** Uma ocorrência e o responsável dela. */
-    private record Slot(LocalDate date, UUID assignee) {
+    /** Uma ocorrência e os responsáveis dela. */
+    private record Slot(LocalDate date, List<UUID> assignees) {
     }
 
     /** Próxima ocorrência pendente, de hoje em diante (sem repetição/sem data: a da tarefa); nula se não houver. */
     private Slot upcoming(Task task) {
         if (task.getGroupId() == null || task.getCompletedAt() != null) return null;
         if (task.isSingleSlot()) {
-            return new Slot(task.getDueDate(), assignee(task, task.getDueDate(),
-                    occurrences.find(task.getId(), task.getDueDate()).orElse(null)));
+            return new Slot(task.getDueDate(), assignees(task, task.getDueDate(),
+                    occurrences.find(task.getId(), task.getDueDate()).orElse(null), members(task)));
         }
         return nextAfter(task, today().minusDays(1));
     }
@@ -489,16 +551,19 @@ public class TaskService {
         List<Recurrence.Occurrence> next = task.rule().between(from, from.plusYears(1));
         if (next.isEmpty()) return null;
         LocalDate day = next.getFirst().date();
-        return new Slot(day, assignee(task, day, occurrences.find(task.getId(), day).orElse(null)));
+        return new Slot(day, assignees(task, day, occurrences.find(task.getId(), day).orElse(null), members(task)));
     }
 
-    /** Avisa quem passou a responder pela próxima ocorrência. */
+    /** Avisa quem passou a responder pela próxima ocorrência ("todos do grupo" não avisa ninguém). */
     private void notifyAssignment(Task task, Slot before, UUID actorId) {
         Slot now = upcoming(task);
-        if (now == null || now.assignee() == null) return;
-        if (before != null && now.assignee().equals(before.assignee())) return;
-        if (task.getRotation().isEmpty()) notifier.assigned(task, now.date(), now.assignee(), actorId);
-        else notifier.turn(task, now.date(), now.assignee(), actorId);
+        if (now == null || task.isAllMembers()) return;
+        Set<UUID> previous = before == null ? Set.of() : Set.copyOf(before.assignees());
+        for (UUID person : now.assignees()) {
+            if (previous.contains(person)) continue;
+            if (task.getRotation().isEmpty()) notifier.assigned(task, now.date(), person, actorId);
+            else notifier.turn(task, now.date(), person, actorId);
+        }
     }
 
     /** "A partir da conclusão": a próxima conta de hoje (ou do dia dela, se resolvida antes da hora). */
@@ -517,8 +582,16 @@ public class TaskService {
         task.turn(1);
     }
 
-    /** Volta para pendente. "A partir da conclusão": só a última resolvida, e a série volta para ela. */
-    private void reopen(Task task, LocalDate date) {
+    /**
+     * Volta para pendente. "A partir da conclusão": só a última resolvida, e a série volta para ela. "Cada um conclui a
+     * sua": desfaz só a parte de quem pediu.
+     */
+    private void reopen(Task task, LocalDate date, UUID userId) {
+        TaskOccurrence partial = occurrences.find(task.getId(), date).orElse(null);
+        if (partial != null && partial.getStatus() == Status.PENDING && partial.getDoneBy().remove(userId)) {
+            save(partial);
+            return;
+        }
         TaskOccurrence row = occurrences.find(task.getId(), date)
                 .filter(o -> o.getStatus() != Status.PENDING)
                 .orElseThrow(() -> new BusinessException(HttpStatus.BAD_REQUEST, "Ocorrência inválida."));
@@ -534,6 +607,7 @@ public class TaskService {
         }
         // Sem repetição o responsável fica na tarefa; o guardado ao concluir sai.
         if (task.getRepeatUnit() == null) row.setAssigneeId(null);
+        row.getDoneBy().remove(userId);
         row.setStatus(Status.PENDING);
         task.setCompletedAt(null);
         save(row);
@@ -621,8 +695,9 @@ public class TaskService {
         return new TaskResponse(task.getId(), task.getTitle(), task.getNotes(), task.getPriority(), task.getDueDate(),
                 task.getDueTime(), task.getDurationMinutes(), task.getListId(), Set.copyOf(task.getTagIds()),
                 task.isHabit(), repeat(task.rule()), items, task.getCompletedAt(), task.getGroupId(),
-                task.getCreatedBy(), task.getAssigneeId(), task.getRotation(), scope.canDelete(task),
-                task.getReminderMinutes(), task.getRecurringEntryId());
+                task.getCreatedBy(), task.getAssignees().stream().sorted().toList(), task.isAllMembers(),
+                task.getRotation(), task.getCompletion(), scope.canDelete(task), task.getReminderMinutes(),
+                task.getRecurringEntryId());
     }
 
     static RepeatRule repeat(Recurrence rule) {
