@@ -125,12 +125,19 @@ public final class TaskDtos {
                            Integer durationMinutes, UUID groupId, List<UUID> people) {
     }
 
-    /** Horas visíveis na agenda ({@code dayEnd} exclusivo: 24 = até meia-noite). */
+    /**
+     * Horas visíveis na agenda ({@code dayEnd} exclusivo: 24 = até meia-noite).
+     *
+     * @param sleepMinutes sono de segunda a domingo, em minutos; nulo ao salvar = mantém o atual
+     */
     public record AgendaSettings(
             @NotNull(message = "Informe o início.") @Min(value = 0, message = "Início inválido.")
             @Max(value = 23, message = "Início inválido.") Integer dayStart,
             @NotNull(message = "Informe o fim.") @Min(value = 1, message = "Fim inválido.")
-            @Max(value = 24, message = "Fim inválido.") Integer dayEnd) {
+            @Max(value = 24, message = "Fim inválido.") Integer dayEnd,
+            @Size(min = 7, max = 7, message = "Informe o sono dos 7 dias.")
+            List<@NotNull(message = "Informe o sono do dia.") @Min(value = 0, message = "Sono inválido.")
+                @Max(value = 960, message = "No máximo 16 horas de sono.") Integer> sleepMinutes) {
     }
 
     public record GroupMoveRequest(@NotNull(message = "Escolha o grupo.") UUID groupId) {

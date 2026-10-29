@@ -9,7 +9,7 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, Clock3Icon, PlusIcon, UsersIcon } from 'lucide-react'
+import { ChartColumnIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, Clock3Icon, PlusIcon, UsersIcon } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -34,6 +34,7 @@ import { TaskDialog, type TaskTarget } from '../components/TaskDialog'
 import { fromTask } from '../components/task-form'
 import type { Agenda, Task, TaskItem } from '../types'
 import { type ColorBy, COLOR_BY_LABEL, colorOf, personColor } from './colors'
+import { AgendaMetrics, METRICS_ID } from './AgendaMetrics'
 import { AgendaSettingsButton } from './AgendaSettingsButton'
 import { fit, MIN_BLOCK_MINUTES, place, type Span } from './layout'
 
@@ -297,6 +298,9 @@ export function AgendaBoard({ group, header }: Props) {
             ))}
           </SelectContent>
         </Select>
+        {!groupId && (
+          <Button variant="outline" size="sm" onClick={showMetrics}><ChartColumnIcon /> Indicadores</Button>
+        )}
         <AgendaSettingsButton />
         {!header && <Button size="sm" onClick={() => newTask()}><PlusIcon /> Nova tarefa</Button>}
       </div>
@@ -358,6 +362,8 @@ export function AgendaBoard({ group, header }: Props) {
           </DndContext>
         )}
 
+        {!groupId && <AgendaMetrics monday={mondayOf(day)} defaultMinutes={DEFAULT_MINUTES} />}
+
         {actions.dialogs}
         <TaskDialog target={chosen} onOpenChange={(open) => !open && setChosen(null)} />
         <ScopeDialog open={series !== null} onOpenChange={(open) => !open && setSeries(null)}
@@ -373,6 +379,15 @@ export function AgendaBoard({ group, header }: Props) {
       </div>
     </BoardContext>
   )
+}
+
+/** Leva aos indicadores (no celular ficam bem abaixo da grade) e põe o foco no título. */
+function showMetrics() {
+  const title = document.getElementById(METRICS_ID)
+  if (!title) return
+  const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  title.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' })
+  title.focus({ preventScroll: true })
 }
 
 const rangeFormat = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short' })

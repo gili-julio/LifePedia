@@ -96,6 +96,10 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   só esta (`/occurrence`) ou todas (`PUT` da tarefa com `fromTask`). Soltar não abre a tarefa (ref `dragged`). Cor
   escolhida no `localStorage` (só preferência de tela); horas visíveis na API (`useAgendaSettings`). Grade com rolagem
   própria (cabeçalho dos dias e coluna das horas fixos); semana com largura mínima e rolagem lateral só dentro dela.
+  Indicadores (`AgendaMetrics`, só na pessoal): busca a semana inteira com `useAgenda` (mesma chave da vista semana) e
+  calcula em `metrics.ts` (união dos horários do dia, sem duração = `DEFAULT_MINUTES`, puladas fora); sono vem de
+  `sleepMinutes` do `useAgendaSettings`. Quem salva as configurações manda o objeto inteiro (`...settings`). O botão
+  *Indicadores* da barra rola até o título (`METRICS_ID`) e põe o foco nele.
 - **Login**: "Lembrar de mim" vai no corpo do login (`remember`); o cookie é da API. Google: `GoogleButton` (botão
   oficial, `ux_mode: popup`, tema pelo `dark`), Client ID por `useAuthConfig` (`/api/auth/config`); sem ID, nada do
   Google aparece. Conta criada pelo Google (`hasPassword` false) confirma ações sensíveis pelo Google.

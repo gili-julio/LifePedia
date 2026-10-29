@@ -243,7 +243,7 @@ vale para as duas bases.
 | GET | `/api/tasks/agenda?from=&to=&overdue=&list=&tag=&assignee=&sort=` | `{today, overdue, days: [{date, items}]}` de `from` a `to` (até 62 dias). `overdue=true` traz as pendentes antes de `from` (repetidas: últimos 90 dias). `sort`: `MANUAL` (padrão), `PRIORITY`, `TIME`; pendentes antes das concluídas; puladas não aparecem. Pessoal sem `list`/`tag`: inclui as ocorrências de grupo em que a pessoa é a responsável (item com `groupId`, depois das pessoais na ordem manual). `assignee` (grupo): só as desse responsável |
 | GET | `/api/tasks/undated?list=&tag=&assignee=&sort=` | Pendentes sem data (mesma regra da agenda) |
 | GET | `/api/tasks/conflicts?date=&time=&duration=&people=&task=` | Choque de horário: pendentes de `date` que se cruzam com `time` + `duration` (nula = 30 min; sem duração contam 30) → `[{taskId, date, title, dueTime, durationMinutes, groupId, people}]`. Pessoal: a agenda da pessoa (com as de grupo em que é responsável). Grupo: as do grupo com algum de `people` (ids separados por vírgula; `people` da resposta = quem tem o choque) ou sem responsável e, se quem consulta está em `people`, também a agenda pessoal dele. `task` sai da conta · `400` duração fora de 1 a 1440 ou mais de 50 pessoas |
-| GET / PUT | `/api/tasks/agenda-settings` | Horas visíveis na agenda `{dayStart, dayEnd}` (0–23 e 1–24, pelo menos 4 horas; padrão 6 e 23), da pessoa (vale nos grupos) |
+| GET / PUT | `/api/tasks/agenda-settings` | Horas visíveis na agenda `{dayStart, dayEnd, sleepMinutes}` (0–23 e 1–24, pelo menos 4 horas; padrão 6 e 23), da pessoa (vale nos grupos). `sleepMinutes`: sono de segunda a domingo (7 valores, 0–960 min, padrão 480); nulo no PUT mantém o salvo |
 | GET | `/api/tasks/history?page=&size=&sort=` | Concluídas (paginado). `sort`: `completedAt` (padrão, desc). Cada item traz `completedDay` (dia da conclusão no fuso `TIME_ZONE`) e `dayCount` (concluídas nesse dia, contando todas as páginas) |
 | GET | `/api/tasks/habits` | Hábitos abertos: `{taskId, title, listId, groupId, repeat, start, streak, best, monthRate, monthDone, monthDue, days: [{date, state}]}` (7 últimos dias; `state` `DONE\|SKIPPED\|MISSED\|PENDING` ou nulo se o dia não é da regra) |
 | GET | `/api/tasks/{id}` | Tarefa completa (regra, subtarefas) para editar |
@@ -366,7 +366,7 @@ src/main/java/com/lifepedia/api/
 ├── chat/          chat do grupo: mensagens (cursor), leitura/não lidas, stream SSE (ChatStreams, em memória)
 ├── achievement/   conquistas (Achievement: níveis; AchievementService: contagens + níveis gravados; AchievementProgress)
 ├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda (e choque de horário),
-│                 horas visíveis da agenda (AgendaPreference), listas/etiquetas, grupo (responsáveis, Completion)
+│                 horas visíveis e sono da agenda (AgendaPreference), listas/etiquetas, grupo (responsáveis, Completion)
 │                 (responsável, rodízio, comentários, avisos, aviso diário de atrasadas), hábitos (HabitStats),
 │                 lembretes (TaskReminderJob), export/import (TaskTransferService)
 ├── planning/      planejamento do grupo: itens, cenários, base, simulação (PlanningSimulator), prévia de link,
@@ -389,4 +389,5 @@ src/main/resources/
                     · V18 atividade/fixar grupo e amizades · V19 níveis de conquista
                     · V20 sessões, Google e observações de 10 mil · V21 chat do grupo
                     · V22 vários responsáveis, "cada um conclui", horas da agenda
+                    · V23 push · V24 aceite dos termos · V25 sono por dia na agenda
 ```

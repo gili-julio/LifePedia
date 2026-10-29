@@ -191,8 +191,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   `task_occurrence_done`, item com `doneBy`; status `DONE` quando todos fizeram). Os responsáveis de cada ocorrência vêm
   na agenda (`assignees`) e a agenda pessoal inclui as de grupo em que a pessoa é responsável (item com `groupId`;
   ações vão para a rota do grupo). `PUT /api/tasks/{id}/group {groupId}` leva a pessoal para um grupo (lista, etiquetas
-  e fixo saem). `GET /conflicts` (choque de horário) e `GET/PUT /api/tasks/agenda-settings` (horas visíveis da agenda,
-  por pessoa). Excluir: criador ou admin (`canDelete` no item). Comentários só em grupo.
+  e fixo saem). `GET /conflicts` (choque de horário) e `GET/PUT /api/tasks/agenda-settings` (horas visíveis da agenda
+  e `sleepMinutes` = sono de seg a dom, por pessoa; `sleepMinutes` nulo no PUT mantém o salvo). Excluir: criador ou
+  admin (`canDelete` no item). Comentários só em grupo.
   **Hábito** (`habit`, só com regra de dias fixos): sequência/recorde/% do mês calculados na API (`HabitStats`;
   pulada é neutra, só dia passado pendente quebra) — `streak` no item da agenda e `GET /habits`. **Lembrete**
   (`reminderMinutes` 0–1440, exige `dueTime`) vira notificação `TASK_REMINDER` pelo `TaskReminderJob` (a cada minuto).

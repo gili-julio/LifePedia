@@ -25,6 +25,18 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'agenda-indicadores',
+    date: '2026-10-29',
+    title: 'Veja quanto da sua semana está ocupado e quanto sobra livre',
+    modules: ['Agenda'],
+    details: [
+      'No fim da Agenda aparecem as horas ocupadas na semana, de segunda a sexta e no fim de semana.',
+      'As horas livres já descontam o seu sono. Informe quanto você dorme em cada dia da semana.',
+      'Cada dia mostra uma barra com sono, ocupado e livre.',
+      'No celular, o botão Indicadores no topo da Agenda leva direto até eles.',
+    ],
+  },
+  {
     id: 'push',
     date: '2026-10-28',
     title: 'Receba avisos no celular mesmo com o app fechado',

@@ -146,6 +146,18 @@ class TaskAgendaIntegrationTest extends ApiTestSupport {
                 .isEqualTo(22);
         assertThat(JsonPath.<Integer>read(body(send("GET", t.bob(), "/api/tasks/agenda-settings", null)), "$.dayEnd"))
                 .isEqualTo(23);
+        assertThat(JsonPath.<List<Integer>>read(settings, "$.sleepMinutes")).containsOnly(480).hasSize(7);
+        assertThat(send("PUT", t.alice(), "/api/tasks/agenda-settings", """
+                {"dayStart":7,"dayEnd":22,"sleepMinutes":[420,420,420,420,450,540,600]}""")).hasStatusOk();
+        // Sem o sono no corpo (só as horas visíveis): mantém o salvo.
+        assertThat(send("PUT", t.alice(), "/api/tasks/agenda-settings", """
+                {"dayStart":7,"dayEnd":22}""")).hasStatusOk();
+        assertThat(JsonPath.<List<Integer>>read(body(send("GET", t.alice(), "/api/tasks/agenda-settings", null)),
+                "$.sleepMinutes")).containsExactly(420, 420, 420, 420, 450, 540, 600);
+        assertThat(send("PUT", t.alice(), "/api/tasks/agenda-settings", """
+                {"dayStart":7,"dayEnd":22,"sleepMinutes":[420,420]}""")).hasStatus(400);
+        assertThat(send("PUT", t.alice(), "/api/tasks/agenda-settings", """
+                {"dayStart":7,"dayEnd":22,"sleepMinutes":[420,420,420,420,420,420,1000]}""")).hasStatus(400);
         assertThat(send("PUT", t.alice(), "/api/tasks/agenda-settings", """
                 {"dayStart":10,"dayEnd":12}""")).hasStatus(400);
         assertThat(send("PUT", t.alice(), "/api/tasks/agenda-settings", """

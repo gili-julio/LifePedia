@@ -149,7 +149,8 @@ export type TaskConflict = {
 }
 
 /** Horas visíveis na agenda (`dayEnd` exclusivo: 24 = até meia-noite). */
-export type AgendaSettings = { dayStart: number; dayEnd: number }
+/** `sleepMinutes`: sono de segunda a domingo (minutos). */
+export type AgendaSettings = { dayStart: number; dayEnd: number; sleepMinutes: number[] }
 
 /** Lista ou etiqueta; `openCount` = tarefas não concluídas com ela. */
 export type Label = { id: string; name: string; color: string; openCount: number }

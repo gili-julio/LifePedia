@@ -52,7 +52,7 @@ function SettingsForm({ initial, onDone }: { initial: AgendaSettings; onDone: ()
         <div className="space-y-1">
           <Label htmlFor="agenda-start" className="text-xs">Começa</Label>
           <Select value={String(value.dayStart)}
-            onValueChange={(v) => setValue((s) => ({ dayStart: Number(v), dayEnd: Math.max(s.dayEnd, Number(v) + MIN_HOURS) }))}>
+            onValueChange={(v) => setValue((s) => ({ ...s, dayStart: Number(v), dayEnd: Math.max(s.dayEnd, Number(v) + MIN_HOURS) }))}>
             <SelectTrigger id="agenda-start" size="sm" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
               {Array.from({ length: 24 - MIN_HOURS + 1 }, (_, h) => <SelectItem key={h} value={String(h)}>{hour(h)}</SelectItem>)}
