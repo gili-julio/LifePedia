@@ -38,6 +38,7 @@ import { MembersList } from '../components/MembersList'
 
 const TABS = ['visao-geral', 'chat', 'lancamentos', 'fixos', 'planejamento', 'tarefas', 'agenda', 'membros'] as const
 type Tab = (typeof TABS)[number]
+const MONEY_TABS: Tab[] = ['visao-geral', 'lancamentos', 'fixos', 'planejamento']
 
 /** Página do grupo: métricas, itens levados pelos membros e participantes. */
 export function GroupPage() {
@@ -109,6 +110,7 @@ export function GroupPage() {
             description={`${group.members.length} participante${group.members.length === 1 ? '' : 's'}`}
             toolbar={tab === 'visao-geral' || tab === 'lancamentos' ? <MonthPicker value={month} onChange={setMonth} /> : undefined}
             actions={actions}
+            hideValues={MONEY_TABS.includes(tab)}
           />
         </div>
       </div>

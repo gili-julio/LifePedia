@@ -109,7 +109,7 @@ export function PrivacyPage() {
         <List>
           <li><strong>Cookie de sessão</strong> (essencial): mantém você conectado. É protegido (HttpOnly, Secure,
             SameSite) e não pode ser lido por scripts.</li>
-          <li><strong>Preferências de tela</strong> (tema, menu recolhido, dias recolhidos na semana, cores da agenda),
+          <li><strong>Preferências de tela</strong> (tema, menu recolhido, dias recolhidos na semana, cores da agenda, ocultar valores),
             guardadas só no seu navegador.</li>
         </List>
         <p>Não usamos cookies de publicidade, de análise ou de terceiros, por isso não pedimos consentimento para eles.</p>

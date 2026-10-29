@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { ApiError } from '@/lib/api'
-import { formatCurrency, formatMonth } from '@/lib/format'
+import { formatMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import { useApplyScenario, useDeleteScenario, useSaveScenario, useScenarioComparison, useScenarios } from '../api'
 import type { Scenario, ScenarioComparison, WhatIf } from '../types'
@@ -102,6 +103,7 @@ function ScenarioTile({ row, viewing, onView, onApply, onRemove, busy }: {
   onRemove?: () => void
   busy: boolean
 }) {
+  const { formatCurrency } = useMoney()
   const { outcome } = row
   const fits = outcome.shortfall === 0
   return (

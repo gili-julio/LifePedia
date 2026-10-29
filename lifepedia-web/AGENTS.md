@@ -151,6 +151,11 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   (`parseAmount` aceita `1.234,56`). Use `Field`/`FieldLabel`/`FieldError` do shadcn.
 - **Formatação**: sempre `lib/format.ts` (`formatCurrency`, `formatMonth`, `formatDate`...). Datas `yyyy-MM-dd`
   são tratadas como texto para evitar bug de fuso.
+- **Ocultar valores** (`lib/hide-values.ts`): dinheiro na tela sempre por `const { formatCurrency } = useMoney()`
+  (ou `Money`), que vira `R$ ••••` com o olhinho ligado; `formatCurrency` direto de `lib/format` só fora da tela (ex.:
+  prompt da IA; campo de formulário usa `amountToInput`). Preferência lembrada no `localStorage` (só ligado/desligado).
+  Botão: `HideValuesButton` no `TopBar` e `PageHeader hideValues` nas telas com dinheiro (financeiro, abas de dinheiro
+  do grupo). Tela nova com valores? Use `useMoney` e passe `hideValues`.
 - **Cores de significado**: `--income` (verde, ganho), `--expense` (vermelho, perda) e `--data` (azul, totais e
   indicadores: saldo, %, planejado), com contraste AA também como texto em claro e escuro. Verde e vermelho se
   confundem para quem tem daltonismo: nunca dependa só da cor — valor sempre com sinal `+`/`−` (`Money` com `type`),

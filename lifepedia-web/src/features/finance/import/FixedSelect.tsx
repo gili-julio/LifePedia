@@ -1,5 +1,5 @@
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { formatCurrency } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { isActiveIn } from '../fixed'
 import type { EntryType, RecurringEntry } from '../types'
 
@@ -19,6 +19,7 @@ type Props = {
 
 /** "Lançar como": ocasional novo ou um fixo existente. */
 export function FixedSelect({ id, type, month, value, onChange, fixedEntries, invalid, size }: Props) {
+  const { formatCurrency } = useMoney()
   const options = fixedEntries.filter((f) => f.type === type && (!month || isActiveIn(f, month)))
   return (
     <Select value={value || OCCASIONAL} onValueChange={(v) => onChange(v === OCCASIONAL ? '' : v)}>

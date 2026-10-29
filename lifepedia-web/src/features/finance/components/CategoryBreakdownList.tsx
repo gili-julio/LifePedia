@@ -2,7 +2,8 @@ import { ChevronRightIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
-import { formatCurrency, type YearMonth } from '@/lib/format'
+import { type YearMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import { useCategoryItems } from '../api'
 import type { CategoryBreakdown, CategoryItem } from '../types'
@@ -25,6 +26,7 @@ function CategoryItems({ month, categoryId }: { month: YearMonth; categoryId: st
 
 /** Lista de itens de uma categoria (fixo = badge; ocasionais repetidos = N×). */
 export function CategoryItemList({ items: data, loading }: { items?: CategoryItem[]; loading: boolean }) {
+  const { formatCurrency } = useMoney()
   if (loading) return <Skeleton className="h-16" />
   if (!data?.length) return <p className="text-xs text-muted-foreground">Nada nesta categoria.</p>
   return (
@@ -48,6 +50,7 @@ const percent = new Intl.NumberFormat('pt-BR', { style: 'percent', maximumFracti
 
 /** Composição do mês por categoria: fatias no total e fixo x ocasional por categoria. */
 export function CategoryBreakdownList({ items, month, total: grandTotal, renderItems }: Props) {
+  const { formatCurrency } = useMoney()
   const [expanded, setExpanded] = useState<string | null>(null)
   if (!items.length) {
     return <p className="py-6 text-center text-sm text-muted-foreground">Nada lançado neste mês.</p>

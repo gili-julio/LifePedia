@@ -41,6 +41,9 @@ compartilham usuário, autenticação, design e padrões.
 - **Comparativo**: para qualquer mês, mostra ganhos x despesas separando fixos e ocasionais, saldo,
   **% da renda fixa comprometida com despesas fixas**, histórico dos últimos 6 meses e composição por categoria
   (cada categoria abre os itens do mês agrupados pelo nome, ex.: "Lanche IMD 5×").
+- **Ocultar valores** (olhinho): no topo de todas as telas e no cabeçalho das telas com dinheiro (financeiro, grupo).
+  Troca todo valor em dinheiro do app por `R$ ••••` (totais, listas, gráficos, planejamento, Início, fixo da tarefa);
+  campos de formulário abertos para editar continuam com o valor. A escolha fica lembrada só neste aparelho.
 - **Investimentos**: despesa (fixa ou ocasional) numa categoria chamada **"Investir"**, **"Investimento"** ou
   **"Investimentos"** (de despesa; acento e maiúscula não importam) é dinheiro guardado: fica **fora das despesas** (e
   do gráfico por categoria), mas **desconta do saldo**. A visão geral mostra o card *Investido* (com % dos ganhos) e o

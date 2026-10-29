@@ -26,6 +26,17 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'ocultar-valores',
+    date: '2026-10-29',
+    title: 'Olhinho para ocultar os valores',
+    modules: ['Finanças', 'Grupos', 'Privacidade'],
+    details: [
+      'Um toque no olhinho, no topo da tela ou no cabeçalho das telas de finanças, esconde todos os valores em dinheiro.',
+      'Vale para totais, listas, gráficos, planejamento do grupo e o resumo do Início.',
+      'Bom para usar o app em público ou mostrando a tela. A escolha fica guardada neste aparelho.',
+    ],
+  },
+  {
     id: 'lembrete-dias',
     date: '2026-10-29',
     title: 'Lembretes com mais antecedência nas tarefas',

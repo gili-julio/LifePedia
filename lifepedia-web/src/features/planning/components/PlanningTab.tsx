@@ -24,7 +24,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { Money } from '@/features/finance/components/Money'
 import { ApiError } from '@/lib/api'
-import { currentYearMonth, formatCurrency, formatDate, formatMonth, parseAmount } from '@/lib/format'
+import { currentYearMonth, formatDate, formatMonth, parseAmount } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import { cn } from '@/lib/utils'
 import {
@@ -273,6 +274,7 @@ function averageSource({ averageMonths, averageBasis }: PlanBase) {
 
 /** Base, reserva, total planejado e situação geral. */
 function SummaryCards({ data, onAdjust, simulating }: { data: Simulation; onAdjust: () => void; simulating: boolean }) {
+  const { formatCurrency } = useMoney()
   const { base, outcome, settings } = data
   const source = base.manualBalance !== null ? 'Valor definido pelo grupo' : averageSource(base)
   const fits = outcome.shortfall === 0
@@ -378,6 +380,7 @@ function WhatIfPanel({ income, expense, onIncome, onExpense, active, onClear }: 
 
 /** Itens já comprados/feitos. */
 function AcquiredList({ items, onUndo, onDelete }: { items: PlanItem[]; onUndo: (item: PlanItem) => void; onDelete: (item: PlanItem) => void }) {
+  const { formatCurrency } = useMoney()
   return (
     <Collapsible className="rounded-xl border">
       <CollapsibleTrigger asChild>

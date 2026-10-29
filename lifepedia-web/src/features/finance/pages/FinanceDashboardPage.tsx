@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { currentYearMonth, defaultDateInMonth, formatCurrency, formatMonth } from '@/lib/format'
+import { currentYearMonth, defaultDateInMonth, formatMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import { useHistory, useSummary } from '../api'
 import { CategoryBreakdownList } from '../components/CategoryBreakdownList'
@@ -31,6 +32,7 @@ function isEmpty(summary: MonthlySummary) {
 }
 
 export function FinanceDashboardPage() {
+  const { formatCurrency } = useMoney()
   const [month, setMonth] = useMonthParam()
   const summary = useSummary(month)
   const history = useHistory(month, 6)
@@ -44,6 +46,7 @@ export function FinanceDashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        hideValues
         title="Financeiro"
         description={`Visão geral de ${formatMonth(month).toLowerCase()}`}
         toolbar={<MonthPicker value={month} onChange={setMonth} />}

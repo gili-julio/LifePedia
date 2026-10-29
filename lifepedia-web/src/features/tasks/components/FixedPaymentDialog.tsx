@@ -11,7 +11,8 @@ import { useCategories, useRecurringEntries, useRemoveAdjustment, useSaveAdjustm
 import { isActiveIn, valueIn } from '@/features/finance/fixed'
 import type { RecurringEntry } from '@/features/finance/types'
 import { ApiError } from '@/lib/api'
-import { amountToInput, formatCurrency, formatMonth, parseAmount, type YearMonth } from '@/lib/format'
+import { amountToInput, formatMonth, parseAmount, type YearMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 
 /** Fixo ligado a uma tarefa concluída e o mês da ocorrência. */
 export type FixedPayment = { entryId: string; month: YearMonth; title: string }
@@ -48,6 +49,7 @@ export function FixedPaymentDialog({ payment, open, onOpenChange }: Props) {
 }
 
 function PaymentForm({ entry, month, onDone }: { entry: RecurringEntry; month: YearMonth; onDone: () => void }) {
+  const { formatCurrency } = useMoney()
   const { data: categories } = useCategories()
   const save = useSaveAdjustment()
   const remove = useRemoveAdjustment()

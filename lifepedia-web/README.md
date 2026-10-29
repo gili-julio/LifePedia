@@ -157,7 +157,8 @@ src/
 │   │   ├── IosInstallDialog.tsx  passo a passo para instalar no iPhone/iPad
 │   │   ├── use-dynamic-links.ts subitens vindos da API (grupos)
 │   │   └── nav-items.ts      seções, itens e subitens da navegação + regra de item ativo
-│   ├── PageHeader.tsx        título + ações (botões no desktop, `secondary` no ⋮; `+` e ⋮ no mobile) + toolbar (mês; linha própria abaixo de xl)
+│   ├── PageHeader.tsx        título + ações (botões no desktop, `secondary` no ⋮; `+` e ⋮ no mobile) + toolbar (mês; linha própria abaixo de xl) + olhinho (`hideValues`)
+│   ├── HideValuesButton.tsx  olhinho: oculta/mostra os valores em dinheiro (topo e cabeçalhos das telas com dinheiro)
 │   ├── image/                ImagePicker (escolher → recortar), ImageCropDialog (zoom/girar, recorte redondo ou quadrado), crop-image
 │   ├── PhotoAvatar.tsx       foto redonda com iniciais/ícone de reserva (base de UserAvatar e GroupAvatar)
 │   ├── UserAvatar.tsx        foto de perfil de um usuário (sidebar, membros, convites, comentários, autorias)
@@ -223,6 +224,6 @@ src/
 │       ├── group/                    financeiro dentro dos grupos: visão geral, abas de itens, BringItemsDialog, GroupShareSection
 │       └── pages/                    Dashboard, Fixos, Lançamentos, Importar, Categorias
 ├── hooks/use-mobile.ts       gerado pelo shadcn (sidebar); celular = abaixo de 1024px
-├── lib/                      pwa (service worker, instalar, cor da barra), api (fetch com cookie + X-Requested-With), format (moeda/mês/data, formatInstantDate no fuso local), colors (paleta), utils (cn), skipAutoFocusOnTouch
+├── lib/                      pwa (service worker, instalar, cor da barra), api (fetch com cookie + X-Requested-With), format (moeda/mês/data, formatInstantDate no fuso local), hide-values (ocultar valores: `useMoney`, preferência no aparelho), colors (paleta), utils (cn), skipAutoFocusOnTouch
 └── index.css                 tema shadcn (maia) + Manrope + cores de significado (--income/--expense/--data)
 ```

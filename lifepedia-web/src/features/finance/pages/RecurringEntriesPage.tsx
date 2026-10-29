@@ -14,7 +14,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/lib/api'
-import { currentYearMonth, formatCurrency, formatMonth } from '@/lib/format'
+import { currentYearMonth, formatMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { useDeleteRecurringEntry, useRecurringPage, useSummary } from '../api'
 import { CategoryBadge } from '../components/CategoryBadge'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
@@ -67,6 +68,7 @@ type EntryListProps = {
 }
 
 function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore }: EntryListProps) {
+  const { formatCurrency } = useMoney()
   const entries = data?.items ?? []
   const noun = type === 'INCOME' ? 'ganho fixo' : 'despesa fixa'
   const totalLabel = total === undefined ? '—' : formatCurrency(total)
@@ -171,6 +173,7 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
 }
 
 export function RecurringEntriesPage() {
+  const { formatCurrency } = useMoney()
   const [tab, setTab] = useState<EntryType>('EXPENSE')
   const list = useListState({ field: 'amount', direction: 'desc' })
   const { data } = useRecurringPage(tab, list.params)
@@ -200,6 +203,7 @@ export function RecurringEntriesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        hideValues
         title="Ganhos e despesas fixas"
         description="O que entra e sai todo mês. É a base do seu orçamento."
         actions={[

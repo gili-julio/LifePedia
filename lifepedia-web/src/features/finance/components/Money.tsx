@@ -1,4 +1,4 @@
-import { formatCurrency } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import type { EntryType } from '../types'
 
@@ -13,6 +13,7 @@ type Props = {
 
 /** Valor com sinal e cor do tipo (ganho verde, despesa vermelha); saldo negativo em vermelho. */
 export function Money({ value, type, signed, className }: Props) {
+  const { formatCurrency } = useMoney()
   const prefix = type === 'INCOME' ? '+ ' : type === 'EXPENSE' ? '− ' : ''
   return (
     <span className={cn('tabular-nums whitespace-nowrap', type === 'INCOME' && 'text-income', type === 'EXPENSE' && 'text-expense',

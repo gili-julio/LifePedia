@@ -2,13 +2,14 @@ import { type Control, Controller, useWatch } from 'react-hook-form'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useRecurringEntries } from '@/features/finance/api'
-import { formatCurrency } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import type { TaskFormInput } from './task-form'
 
 const NONE = '__none'
 
 /** Fixo do financeiro ligado à tarefa pessoal (some se a pessoa não tem fixos). */
 export function FixedField({ control }: { control: Control<TaskFormInput> }) {
+  const { formatCurrency } = useMoney()
   const { data: entries, isLoading } = useRecurringEntries()
   const value = useWatch({ control, name: 'recurringEntryId' })
   const options = (entries ?? []).filter((e) => e.active || e.id === value)

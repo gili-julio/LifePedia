@@ -1,6 +1,7 @@
 import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
-import { formatCompactCurrency, formatCurrency, formatMonth } from '@/lib/format'
+import { formatMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import type { TimelinePoint } from '../types'
 
 const config = {
@@ -18,6 +19,7 @@ type Props = {
 }
 
 function TooltipRow({ label, value, color, negative }: { label: string; value: number; color?: string; negative?: boolean }) {
+  const { formatCurrency } = useMoney()
   return (
     <div className="flex items-center gap-2">
       {color ? <span className="size-2.5 shrink-0 rounded-[2px]" style={{ background: color }} /> : <span className="w-2.5" />}
@@ -31,6 +33,7 @@ function TooltipRow({ label, value, color, negative }: { label: string; value: n
 
 /** Saldo acumulado mês a mês com e sem os planos, e os pagamentos de cada mês. */
 export function PlanTimelineChart({ points, names }: Props) {
+  const { formatCompactCurrency } = useMoney()
   const data = points.map((p) => ({ ...p, label: formatMonth(p.month, 'short') }))
   return (
     <ChartContainer config={config} className="aspect-auto h-72 w-full">

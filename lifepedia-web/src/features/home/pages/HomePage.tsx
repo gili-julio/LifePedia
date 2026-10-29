@@ -11,7 +11,8 @@ import { useSummary } from '@/features/finance/api'
 import { useAgenda, useHabits } from '@/features/tasks/api'
 import { formatTime } from '@/features/tasks/dates'
 import type { TaskFilters, TaskItem } from '@/features/tasks/types'
-import { currentYearMonth, formatCurrency, formatDate, formatMonth, todayIso } from '@/lib/format'
+import { currentYearMonth, formatDate, formatMonth, todayIso } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import { RecentChanges } from '../components/RecentChanges'
 
@@ -212,6 +213,7 @@ function AttendanceCard() {
 }
 
 function FinanceCard() {
+  const { formatCurrency } = useMoney()
   const month = currentYearMonth()
   const { data, isLoading, isError } = useSummary(month)
   const rows = data && [

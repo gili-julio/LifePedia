@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
-import { formatCompactCurrency, formatCurrency, formatMonth } from '@/lib/format'
+import { formatMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import type { MonthlySummary, MonthPoint } from '../types'
 
 /** Ganhos (azul) x despesas (laranja): par validado para daltonismo. */
@@ -23,6 +24,7 @@ function TooltipBox({ title, children }: { title: ReactNode; children: ReactNode
 }
 
 function TooltipLine({ color, label, value, muted }: { color?: string; label: string; value: number; muted?: boolean }) {
+  const { formatCurrency } = useMoney()
   return (
     <div className="flex items-center gap-2">
       {color ? <span className="size-2.5 shrink-0 rounded-[2px]" style={{ background: color }} /> : <span className="w-2.5" />}
@@ -34,6 +36,7 @@ function TooltipLine({ color, label, value, muted }: { color?: string; label: st
 
 /** Fixos x ocasionais do mês. */
 export function FixedVsOccasionalChart({ summary }: { summary: MonthlySummary }) {
+  const { formatCompactCurrency } = useMoney()
   const data = [
     { group: 'Fixos', income: summary.fixed.income, expense: summary.fixed.expense, balance: summary.fixed.balance },
     { group: 'Ocasionais', income: summary.occasional.income, expense: summary.occasional.expense, balance: summary.occasional.balance },
@@ -80,6 +83,7 @@ const investedConfig = { invested: { label: 'Investido', color: 'var(--data)' } 
 
 /** Investido por mês (despesas em categoria de investimento), fora das despesas. */
 export function InvestedChart({ points }: { points: MonthPoint[] }) {
+  const { formatCompactCurrency } = useMoney()
   const data = points.map((p) => ({ ...p, label: formatMonth(p.month, 'short') }))
   return (
     <ChartContainer config={investedConfig} className="aspect-auto h-56 w-full">
@@ -107,6 +111,7 @@ export function InvestedChart({ points }: { points: MonthPoint[] }) {
 }
 
 export function HistoryChart({ points }: { points: MonthPoint[] }) {
+  const { formatCompactCurrency } = useMoney()
   const data = points.map((p) => ({
     ...p,
     label: formatMonth(p.month, 'short'),

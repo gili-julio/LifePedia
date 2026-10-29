@@ -13,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api'
-import { currentYearMonth, formatCurrency, parseAmount } from '@/lib/format'
+import { currentYearMonth, parseAmount } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import { fetchTransactions, useImport, useRecurringEntries, useTransactionDescriptions } from '../api'
 import { CategorySelect } from '../components/CategorySelect'
@@ -54,6 +55,7 @@ function Step({ n, title, description, children }: { n: number; title: string; d
 }
 
 export function ImportPage() {
+  const { formatCurrency } = useMoney()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { list: categories, byId, isLoading: loadingCategories } = useCategoryLookup()
@@ -128,6 +130,7 @@ export function ImportPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        hideValues
         title="Importar com IA"
         description="Use um agente de IA para separar extratos e faturas nas suas categorias e importe tudo de uma vez — um mês ou um período inteiro."
       />

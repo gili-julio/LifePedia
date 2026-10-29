@@ -1,10 +1,11 @@
 import { RepeatIcon } from 'lucide-react'
-import { formatCurrency } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import type { RecurringEntry } from '../types'
 import { fixedOutcome, type ImportRow } from './parse'
 
 /** Explica o efeito de um item ligado a fixo. */
 export function FixedOutcomeNote({ row, fixed }: { row: ImportRow; fixed: RecurringEntry }) {
+  const { formatCurrency } = useMoney()
   if (!row.date) return null
   const { current, amount, changes } = fixedOutcome(row, fixed)
   return (

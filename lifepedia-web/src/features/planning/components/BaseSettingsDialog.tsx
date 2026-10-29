@@ -9,7 +9,8 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ApiError } from '@/lib/api'
-import { amountToInput, formatCurrency, parseAmount } from '@/lib/format'
+import { amountToInput, parseAmount } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { skipAutoFocusOnTouch } from '@/lib/utils'
 import { useSaveSettings } from '../api'
 import type { AverageMonths, PlanBase, PlanSettings } from '../types'
@@ -53,6 +54,7 @@ export function BaseSettingsDialog({ open, onOpenChange, groupId, settings, base
 }
 
 function SettingsForm({ groupId, settings, base, onDone }: { groupId: string; settings: PlanSettings; base: PlanBase; onDone: () => void }) {
+  const { formatCurrency } = useMoney()
   const save = useSaveSettings()
   const [reserve, setReserve] = useState(amountToInput(settings.reserve))
   const [mode, setMode] = useState<'auto' | 'manual'>(settings.manualBalance === null ? 'auto' : 'manual')

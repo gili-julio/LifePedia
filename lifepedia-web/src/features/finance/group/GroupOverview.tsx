@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserAvatar } from '@/components/UserAvatar'
-import { formatCurrency, type YearMonth } from '@/lib/format'
+import { type YearMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { CategoryBreakdownList, CategoryItemList } from '../components/CategoryBreakdownList'
 import { FixedVsOccasionalChart, HistoryChart, InvestedChart } from '../components/charts'
 import { Money } from '../components/Money'
@@ -28,6 +29,7 @@ function GroupCategoryItems({ groupId, month, category }: { groupId: string; mon
 
 /** Quanto cada membro trouxe de despesas e ganhos no mês. */
 function MemberBreakdown({ members, totalExpense }: { members: MemberTotals[]; totalExpense: number }) {
+  const { formatCurrency } = useMoney()
   const max = Math.max(1, ...members.map((m) => Math.max(m.expense, m.income)))
   return (
     <ul className="space-y-4">
@@ -61,6 +63,7 @@ function MemberBreakdown({ members, totalExpense }: { members: MemberTotals[]; t
 
 /** Métricas do grupo no mês: totais, por membro, fixos x ocasionais, histórico e categorias. */
 export function GroupOverview({ groupId, month, onBring }: Props) {
+  const { formatCurrency } = useMoney()
   const summary = useGroupSummary(groupId, month)
   const history = useGroupHistory(groupId, month, 6)
   const invested = useGroupHistory(groupId, month, 12)

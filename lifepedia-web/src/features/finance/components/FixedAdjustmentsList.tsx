@@ -2,11 +2,13 @@ import { XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api'
-import { formatCurrency, formatMonth } from '@/lib/format'
+import { formatMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { useRecurringEntries, useRemoveAdjustment } from '../api'
 
 /** Valores reais do fixo por mês, com opção de voltar ao valor cadastrado. */
 export function FixedAdjustmentsList({ entryId }: { entryId: string }) {
+  const { formatCurrency } = useMoney()
   const { data } = useRecurringEntries()
   const remove = useRemoveAdjustment()
   const adjustments = data?.find((e) => e.id === entryId)?.adjustments ?? []

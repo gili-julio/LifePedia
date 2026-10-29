@@ -2,6 +2,7 @@ import { EllipsisVerticalIcon, type LucideIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ActionSheet } from '@/components/ActionSheet'
+import { HideValuesButton } from '@/components/HideValuesButton'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
@@ -23,10 +24,12 @@ type Props = {
   /** Controles sempre visíveis (ex.: seletor de mês). */
   toolbar?: ReactNode
   actions?: PageAction[]
+  /** Mostra o olhinho de ocultar valores (telas com dinheiro). */
+  hideValues?: boolean
 }
 
 /** Cabeçalho de página. No mobile: atalho da ação principal + ⋮ com todas as ações. */
-export function PageHeader({ title, description, toolbar, actions = [] }: Props) {
+export function PageHeader({ title, description, toolbar, actions = [], hideValues }: Props) {
   const navigate = useNavigate()
   const [sheetOpen, setSheetOpen] = useState(false)
   const primary = actions.find((a) => a.primary)
@@ -42,8 +45,9 @@ export function PageHeader({ title, description, toolbar, actions = [] }: Props)
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
 
-        {actions.length > 0 && (
+        {(actions.length > 0 || hideValues) && (
           <div className="flex shrink-0 items-center gap-1 sm:hidden">
+            {hideValues && <HideValuesButton size="icon" />}
             {primary && (
               <Button size="icon" aria-label={primary.label} onClick={() => run(primary)}>
                 <primary.icon />
@@ -59,6 +63,7 @@ export function PageHeader({ title, description, toolbar, actions = [] }: Props)
 
         <div className="hidden shrink-0 flex-wrap items-center justify-end gap-2 sm:flex">
           {toolbar && <div className="hidden xl:block">{toolbar}</div>}
+          {hideValues && <HideValuesButton size="icon" variant="outline" />}
           {buttons.map((action) =>
             action.to ? (
               <Button key={action.label} variant={action.primary ? 'default' : 'outline'} asChild>

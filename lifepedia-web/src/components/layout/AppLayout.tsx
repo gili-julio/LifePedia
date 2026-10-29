@@ -1,6 +1,7 @@
 import { ChevronRightIcon, MenuIcon, PanelLeftIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
+import { HideValuesButton } from '@/components/HideValuesButton'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar'
@@ -52,7 +53,7 @@ export function AppLayout() {
   )
 }
 
-/** Topo fino: botão do menu; no celular a logo, no desktop o caminho da página. */
+/** Topo fino: botão do menu; no celular a logo, no desktop o caminho da página; à direita o olhinho dos valores. */
 function TopBar({ unread }: { unread: number }) {
   const { pathname, search } = useLocation()
   const active = findActiveNav(pathname, search, useDynamicLinks())
@@ -79,6 +80,7 @@ function TopBar({ unread }: { unread: number }) {
           )}
         </p>
       )}
+      <span className="-mr-1 ml-auto"><HideValuesButton /></span>
     </header>
   )
 }

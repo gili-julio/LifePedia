@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
 import { UserAvatar } from '@/components/UserAvatar'
-import { formatCurrency, formatMonth } from '@/lib/format'
+import { formatMonth } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import type { ItemResult } from '../types'
 import { ItemThumb } from './ItemThumb'
@@ -37,6 +38,7 @@ type Props = {
 
 /** Situação do item no prazo: cabe, falta quanto e quando daria. */
 function Status({ result }: { result: ItemResult }) {
+  const { formatCurrency } = useMoney()
   const { item, considered, shortfall, earliestMonth, monthlySaving } = result
   const earlier = earliestMonth && earliestMonth < item.targetMonth ? ` · dá já em ${formatMonth(earliestMonth, 'short')}` : ''
   const later = earliestMonth ? `cabe a partir de ${formatMonth(earliestMonth, 'short')}` : 'sem previsão de caber'
@@ -68,6 +70,7 @@ function Status({ result }: { result: ItemResult }) {
 
 /** Item do planejamento: prioridade (arrastar pela alça ou setas), foto, valores, situação e ações. */
 export function PlanItemRow({ result, index, count, onToggle, onMove, actions, onMore, busy }: Props) {
+  const { formatCurrency } = useMoney()
   const { item, considered, installmentAmount, overdue } = result
   const kind = item.kind === 'INVESTMENT' ? 'Investimento' : 'Compra'
   const payment = item.installments > 1 && installmentAmount ? ` · ${item.installments}× de ${formatCurrency(installmentAmount)}` : ''

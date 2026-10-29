@@ -74,6 +74,7 @@ export function TransactionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
+        hideValues
         title="Lançamentos ocasionais"
         description="Ganhos e gastos que não se repetem todo mês."
         toolbar={<MonthPicker value={month} onChange={setMonth} />}

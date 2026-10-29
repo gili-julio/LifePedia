@@ -15,7 +15,8 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api'
-import { addMonths, amountToInput, currentYearMonth, formatCurrency, formatMonth, parseAmount } from '@/lib/format'
+import { addMonths, amountToInput, currentYearMonth, formatMonth, parseAmount } from '@/lib/format'
+import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
 import { useLinkPreview, usePriceReference, useSavePlanItem } from '../api'
 import type { PlanItem, PlanItemRequest, PlanKind } from '../types'
@@ -103,6 +104,7 @@ export function PlanItemDialog({ open, onOpenChange, groupId, item }: Props) {
 }
 
 function PlanItemForm({ groupId, item, onDone }: { groupId: string; item?: PlanItem; onDone: () => void }) {
+  const { formatCurrency } = useMoney()
   const save = useSavePlanItem()
   const preview = useLinkPreview()
   const lookup = usePriceReference()
