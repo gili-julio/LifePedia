@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsTrigger } from '@/components/ui/tabs'
+import { useChatUnread } from '@/features/chat/api'
+import { GroupChat } from '@/features/chat/components/GroupChat'
 import { BringItemsDialog } from '@/features/finance/group/BringItemsDialog'
 import { GroupOverview } from '@/features/finance/group/GroupOverview'
 import { GroupRecurringTab } from '@/features/finance/group/GroupRecurringTab'
@@ -25,6 +27,7 @@ import { GroupTransactionsTab } from '@/features/finance/group/GroupTransactions
 import { MonthPicker } from '@/features/finance/components/MonthPicker'
 import { useMonthParam } from '@/features/finance/use-month-param'
 import { PlanningTab } from '@/features/planning/components/PlanningTab'
+import { AgendaBoard } from '@/features/tasks/agenda/AgendaBoard'
 import { GroupTasksTab } from '@/features/tasks/components/GroupTasksTab'
 import { ApiError } from '@/lib/api'
 import { useDeleteGroup, useGroup, useLeaveGroup } from '../api'
@@ -33,7 +36,7 @@ import { GroupFormDialog } from '../components/GroupFormDialog'
 import { InviteDialog } from '../components/InviteDialog'
 import { MembersList } from '../components/MembersList'
 
-const TABS = ['visao-geral', 'lancamentos', 'fixos', 'planejamento', 'tarefas', 'membros'] as const
+const TABS = ['visao-geral', 'chat', 'lancamentos', 'fixos', 'planejamento', 'tarefas', 'agenda', 'membros'] as const
 type Tab = (typeof TABS)[number]
 
 /** Página do grupo: métricas, itens levados pelos membros e participantes. */
@@ -43,6 +46,7 @@ export function GroupPage() {
   const [params, setParams] = useSearchParams()
   const [month, setMonth] = useMonthParam()
   const { data: group, isLoading, error } = useGroup(groupId)
+  const unread = useChatUnread().data?.[groupId] ?? 0
   const leave = useLeaveGroup()
   const remove = useDeleteGroup()
   const [dialog, setDialog] = useState<'bring' | 'invite' | 'edit' | 'leave' | 'delete' | null>(null)
@@ -55,6 +59,7 @@ export function GroupPage() {
       // Filtros de outras abas (ex.: vista das tarefas) não passam adiante.
       updated.delete('vista')
       updated.delete('tarefa')
+      updated.delete('dia')
       if (next === 'visao-geral') updated.delete('aba')
       else updated.set('aba', next)
       return updated
@@ -111,14 +116,24 @@ export function GroupPage() {
       <Tabs value={tab} onValueChange={setTab}>
         <ScrollTabsList value={tab}>
           <TabsTrigger value="visao-geral">Visão geral</TabsTrigger>
+          <TabsTrigger value="chat">
+            Chat
+            {unread > 0 && tab !== 'chat' && (
+              <span className="ml-1 rounded-full bg-destructive px-1.5 text-[10px] font-semibold text-white">{unread > 99 ? '99+' : unread}</span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
           <TabsTrigger value="fixos">Fixos</TabsTrigger>
           <TabsTrigger value="planejamento">Planejamento</TabsTrigger>
           <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
+          <TabsTrigger value="agenda">Agenda</TabsTrigger>
           <TabsTrigger value="membros">Membros ({group.members.length})</TabsTrigger>
         </ScrollTabsList>
         <TabsContent value="visao-geral" className="pt-4">
           <GroupOverview groupId={group.id} month={month} onBring={bring} />
+        </TabsContent>
+        <TabsContent value="chat" className="pt-4">
+          {tab === 'chat' && <GroupChat groupId={group.id} />}
         </TabsContent>
         <TabsContent value="lancamentos" className="pt-4">
           <Card><CardContent><GroupTransactionsTab groupId={group.id} month={month} isAdmin={isAdmin} onBring={bring} /></CardContent></Card>
@@ -131,6 +146,9 @@ export function GroupPage() {
         </TabsContent>
         <TabsContent value="tarefas" className="pt-4">
           <GroupTasksTab group={group} />
+        </TabsContent>
+        <TabsContent value="agenda" className="pt-4">
+          <AgendaBoard group={group} />
         </TabsContent>
         <TabsContent value="membros" className="pt-4">
           <Card>

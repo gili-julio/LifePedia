@@ -35,7 +35,7 @@ export function useGroupShortcuts() {
 }
 
 export function useGroup(id: string) {
-  return useQuery({ queryKey: keys.detail(id), queryFn: () => api<GroupDetail>(`/api/groups/${id}`) })
+  return useQuery({ queryKey: keys.detail(id), queryFn: () => api<GroupDetail>(`/api/groups/${id}`), enabled: !!id })
 }
 
 export function useReceivedInvites() {

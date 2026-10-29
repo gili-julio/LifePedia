@@ -155,7 +155,20 @@ function NavEntry({ item, links }: { item: NavItem; links: NavLink[] }) {
 }
 
 function LinkIcon({ link }: { link: NavLink }) {
-  if (link.group) return <GroupAvatar name={link.group.name} imageUrl={link.group.imageUrl} size="xs" className="-ml-0.5" />
+  if (link.group) {
+    const { unread } = link.group
+    return (
+      <span className="relative -ml-0.5 shrink-0">
+        <GroupAvatar name={link.group.name} imageUrl={link.group.imageUrl} size="xs" />
+        {unread > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-4 rounded-full bg-destructive px-1 text-center text-[9px] leading-4 font-semibold text-white ring-2 ring-sidebar"
+            aria-label={`${unread} ${unread === 1 ? 'mensagem não lida' : 'mensagens não lidas'}`}>
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
+      </span>
+    )
+  }
   const Icon = link.icon
   return Icon ? <Icon /> : null
 }
