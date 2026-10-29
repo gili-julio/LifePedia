@@ -23,6 +23,22 @@ No container (`docker compose up -d --build` na raiz), um nginx **sem root** ser
 faz o proxy de `/api` para o serviço `api` e envia os cabeçalhos de segurança (CSP, `X-Frame-Options`, etc.).
 Atrás do proxy do Coolify, pega o IP real do cliente (`real_ip`, só de rede privada) e repassa o protocolo HTTPS.
 
+## App instalável (PWA)
+
+O site instala como app no celular e no desktop (Chrome, Edge, Android; no iPhone/iPad pelo Safari):
+
+- `public/manifest.webmanifest`: nome, cores, ícones (`icon-192/512.png`, `icon-maskable-512.png`,
+  `apple-touch-icon.png`, gerados do `favicon.svg`) e **atalhos** do ícone: *Nova tarefa* (`/tarefas?nova=1`),
+  *Novo lançamento* (`/financeiro?novo=1`) e *Agenda*.
+- `public/sw.js`: service worker registrado só no build (`lib/pwa.ts` → `setupPwa`). Guarda **apenas** a página
+  `offline.html` ("Sem conexão", volta sozinha quando a internet volta). Nada da API nem das telas fica em cache.
+- **Instalar app** no menu do usuário: usa o convite do navegador (`beforeinstallprompt`); no iPhone/iPad abre o
+  passo a passo (*Compartilhar → Adicionar à Tela de Início*). Some quando já está instalado.
+- Barra do sistema com a cor do tema escolhido (`ThemeColor`). Depois de um deploy, a tela aberta há tempo que
+  tenta carregar um arquivo que não existe mais recarrega uma vez (`vite:preloadError`).
+- Precisa de HTTPS (em produção o Traefik do Coolify) ou `localhost`. No `npm run dev` o service worker não é
+  registrado; teste com o container (http://localhost:3080).
+
 **Sessão**: o login é guardado pela API num cookie HttpOnly — o front não lê nem guarda token. Ao abrir o app,
 `AuthProvider` chama `/api/users/me` para saber se há sessão.
 
@@ -129,6 +145,7 @@ src/
 │   │   ├── AppLayout.tsx     sidebar + topo fino (☰/recolher, caminho da página), notificações
 │   │   ├── AppSidebar.tsx    sidebar: logo, seções com itens que expandem, usuário no rodapé
 │   │   ├── UserMenu.tsx      usuário no rodapé: notificações, perfil, tema, sair
+│   │   ├── IosInstallDialog.tsx  passo a passo para instalar no iPhone/iPad
 │   │   ├── use-dynamic-links.ts subitens vindos da API (grupos)
 │   │   └── nav-items.ts      seções, itens e subitens da navegação + regra de item ativo
 │   ├── PageHeader.tsx        título + ações (botões no desktop, `secondary` no ⋮; `+` e ⋮ no mobile) + toolbar (mês; linha própria abaixo de xl)
@@ -137,6 +154,7 @@ src/
 │   ├── UserAvatar.tsx        foto de perfil de um usuário (sidebar, membros, convites, comentários, autorias)
 │   ├── ActionSheet.tsx       folha de opções mobile (vaul/drawer)
 │   ├── DialogLayout.tsx      dialog com altura máxima: cabeçalho/rodapé fixos, miolo rola
+│   ├── ThemeColor.tsx        cor da barra do sistema igual ao tema do app
 │   ├── StatCard.tsx          total/indicador em card tingido (ganho verde, perda vermelha, dados azul)
 │   ├── ScrollTabsList.tsx    abas que rolam na faixa no celular, com a ativa sempre à vista
 │   ├── DatePicker.tsx        campo de data do sistema (calendário pt-BR)
@@ -178,6 +196,6 @@ src/
 │       ├── group/                    financeiro dentro dos grupos: visão geral, abas de itens, BringItemsDialog, GroupShareSection
 │       └── pages/                    Dashboard, Fixos, Lançamentos, Importar, Categorias
 ├── hooks/use-mobile.ts       gerado pelo shadcn (sidebar); celular = abaixo de 1024px
-├── lib/                      api (fetch com cookie + X-Requested-With), format (moeda/mês/data, formatInstantDate no fuso local), colors (paleta), utils (cn), skipAutoFocusOnTouch
+├── lib/                      pwa (service worker, instalar, cor da barra), api (fetch com cookie + X-Requested-With), format (moeda/mês/data, formatInstantDate no fuso local), colors (paleta), utils (cn), skipAutoFocusOnTouch
 └── index.css                 tema shadcn (maia) + Manrope + cores de significado (--income/--expense/--data)
 ```

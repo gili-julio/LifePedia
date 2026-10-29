@@ -121,6 +121,11 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   `hooks/use-mobile.ts` foi ajustado para 1024px) e gaveta abaixo disso. Com a sidebar aberta o conteúdo perde
   256px: grades de 4 colunas só em `xl`. Coisa que precisa existir com a gaveta fechada (notificações, toasts)
   fica no `AppLayout`, não dentro da sidebar.
+- **PWA**: manifest e ícones em `public/`; `public/sw.js` só guarda a página offline (`offline.html`/`offline.js`).
+  Nunca ponha em cache resposta de `/api` nem telas. Mudou algo que o service worker guarda? Troque o nome do
+  `CACHE` (o antigo é apagado ao ativar). Instalar app, cor da barra e recarga após deploy em `lib/pwa.ts`. Atalhos do
+  manifest abrem formulários por parâmetro (`/tarefas?nova=1`, `/financeiro?novo=1`): mantenha essas rotas.
+  O service worker só é registrado no build; teste no container.
 - **Mobile**: teste em 375px (e confira 320px). Sem scroll horizontal na página.
   - Campo editável com fonte de 16px no celular (`text-base md:text-sm`): menor que isso o iPhone dá zoom ao focar.
   - Alvo de toque pequeno (check, alça, chevron): amplie a área com `relative after:absolute after:-inset-2` sem mudar

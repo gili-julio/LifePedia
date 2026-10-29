@@ -43,7 +43,7 @@ type Props = {
 
 /**
  * Hoje (com atrasadas), semana, próximos dias, sem data, hábitos e concluídas, com filtros e dialogs. `?tarefa=<id>` abre a tarefa
- * (link das notificações).
+ * (link das notificações) e `?nova=1` abre uma nova (atalho do app instalado).
  */
 export function TasksBoard({ group, param, header }: Props) {
   const board = useBoardValue(group)
@@ -55,7 +55,10 @@ export function TasksBoard({ group, param, header }: Props) {
   const today = todayIso()
   const labels = useLabelLookup(board.groupId)
   const linked = params.get('tarefa')
-  const target = chosen ?? (linked ? { mode: 'edit' as const, groupId: board.groupId, taskId: linked, occurrence: null } : null)
+  const creating = params.has('nova')
+  const target = chosen
+    ?? (linked ? { mode: 'edit' as const, groupId: board.groupId, taskId: linked, occurrence: null } : null)
+    ?? (creating ? { mode: 'new' as const, groupId: board.groupId, dueDate: today, listId: null } : null)
   const actions = useTaskActions({ today, groupId: board.groupId, onEdit: setChosen })
   const view = { today, filters, labels, actions, onEdit: setChosen }
 
@@ -72,7 +75,7 @@ export function TasksBoard({ group, param, header }: Props) {
 
   function closeDialog() {
     setChosen(null)
-    if (linked) update({ tarefa: null })
+    if (linked || creating) update({ tarefa: null, nova: null })
   }
 
   return (

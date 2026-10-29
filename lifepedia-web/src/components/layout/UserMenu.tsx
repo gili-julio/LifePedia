@@ -1,4 +1,4 @@
-import { BellIcon, ChevronsUpDownIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon, UserRoundIcon } from 'lucide-react'
+import { BellIcon, ChevronsUpDownIcon, DownloadIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon, UserRoundIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useNavigate } from 'react-router'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -26,8 +26,12 @@ export function CountBadge({ count, className }: { count: number; className?: st
   )
 }
 
-/** Usuário no rodapé da sidebar: notificações, perfil, tema e sair. */
-export function UserMenu({ unread, onOpenNotifications }: { unread: number; onOpenNotifications: () => void }) {
+/** Usuário no rodapé da sidebar: notificações, perfil, instalar o app, tema e sair. */
+export function UserMenu({ unread, onOpenNotifications, onInstall }: {
+  unread: number
+  onOpenNotifications: () => void
+  onInstall?: () => void
+}) {
   const { user, logout } = useAuth()
   const { theme, setTheme } = useTheme()
   const { isMobile, setOpenMobile } = useSidebar()
@@ -37,6 +41,11 @@ export function UserMenu({ unread, onOpenNotifications }: { unread: number; onOp
   function openNotifications() {
     setOpenMobile(false)
     onOpenNotifications()
+  }
+
+  function install() {
+    setOpenMobile(false)
+    onInstall?.()
   }
 
   return (
@@ -70,6 +79,11 @@ export function UserMenu({ unread, onOpenNotifications }: { unread: number; onOp
             <DropdownMenuItem onClick={() => navigate('/perfil')}>
               <UserRoundIcon /> Meu perfil
             </DropdownMenuItem>
+            {onInstall && (
+              <DropdownMenuItem onClick={install}>
+                <DownloadIcon /> Instalar app
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">Tema</DropdownMenuLabel>
             <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>

@@ -4,10 +4,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router'
 import { router } from '@/app/router'
+import { ThemeColor } from '@/components/ThemeColor'
 import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { ApiError } from '@/lib/api'
+import { setupPwa } from '@/lib/pwa'
 import './index.css'
 
 // Remove token legado (a sessão agora é cookie).
@@ -32,9 +34,18 @@ const queryClient: QueryClient = new QueryClient({
   },
 })
 
+setupPwa({
+  navigate: (path) => void router.navigate(path),
+  push: () => {
+    void queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    void queryClient.invalidateQueries({ queryKey: ['chat', 'unread'] })
+  },
+})
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeColor />
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <TooltipProvider>

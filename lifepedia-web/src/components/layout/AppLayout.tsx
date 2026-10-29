@@ -8,7 +8,9 @@ import { ProfileGate } from '@/features/auth/ProfileGate'
 import { useUnreadNotifications } from '@/features/notifications/api'
 import { NotificationsSheet } from '@/features/notifications/NotificationsSheet'
 import { useReminderToasts } from '@/features/notifications/use-reminder-toasts'
+import { useInstallApp } from '@/lib/pwa'
 import { AppSidebar } from './AppSidebar'
+import { IosInstallDialog } from './IosInstallDialog'
 import { findActiveNav } from './nav-items'
 import { useDynamicLinks } from './use-dynamic-links'
 
@@ -19,13 +21,16 @@ function sidebarStartsOpen() {
 
 export function AppLayout() {
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [iosStepsOpen, setIosStepsOpen] = useState(false)
+  const installer = useInstallApp()
+  const onInstall = installer.canPrompt ? installer.install : installer.needsIosSteps ? () => setIosStepsOpen(true) : undefined
   // Fora da sidebar: no celular ela desmonta quando a gaveta fecha.
   const { data: unread = 0, isSuccess } = useUnreadNotifications()
   useReminderToasts(isSuccess ? unread : undefined)
 
   return (
     <SidebarProvider defaultOpen={sidebarStartsOpen()}>
-      <AppSidebar unread={unread} onOpenNotifications={() => setNotificationsOpen(true)} />
+      <AppSidebar unread={unread} onOpenNotifications={() => setNotificationsOpen(true)} onInstall={onInstall} />
       <SidebarInset className="min-w-0">
         <TopBar unread={unread} />
         <div className="mx-auto w-full max-w-6xl px-4 py-8">
@@ -34,6 +39,7 @@ export function AppLayout() {
       </SidebarInset>
       <CloseOnNavigate />
       <NotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
+      <IosInstallDialog open={iosStepsOpen} onOpenChange={setIosStepsOpen} />
       <ProfileGate />
     </SidebarProvider>
   )

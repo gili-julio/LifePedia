@@ -36,7 +36,12 @@ import { useDynamicLinks } from './use-dynamic-links'
 import { UserMenu } from './UserMenu'
 
 /** Navegação lateral: logo no topo, seções com itens que expandem e o usuário no rodapé. */
-export function AppSidebar({ unread, onOpenNotifications }: { unread: number; onOpenNotifications: () => void }) {
+export function AppSidebar({ unread, onOpenNotifications, onInstall }: {
+  unread: number
+  onOpenNotifications: () => void
+  /** Ausente = não dá para instalar (já instalado ou navegador sem suporte). */
+  onInstall?: () => void
+}) {
   const dynamic = useDynamicLinks()
   return (
     <Sidebar collapsible="icon" variant="inset">
@@ -62,7 +67,7 @@ export function AppSidebar({ unread, onOpenNotifications }: { unread: number; on
         ))}
       </SidebarContent>
       <SidebarFooter>
-        <UserMenu unread={unread} onOpenNotifications={onOpenNotifications} />
+        <UserMenu unread={unread} onOpenNotifications={onOpenNotifications} onInstall={onInstall} />
       </SidebarFooter>
       <SidebarRail aria-label="Recolher ou expandir o menu" title="Recolher ou expandir o menu (Ctrl+B)" />
     </Sidebar>

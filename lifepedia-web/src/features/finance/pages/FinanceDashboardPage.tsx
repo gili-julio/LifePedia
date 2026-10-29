@@ -1,6 +1,6 @@
 import { ArrowDownRightIcon, ArrowUpRightIcon, PercentIcon, PlusIcon, RepeatIcon, ScaleIcon, SparklesIcon } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { StatCard } from '@/components/StatCard'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,7 @@ export function FinanceDashboardPage() {
   const summary = useSummary(month)
   const history = useHistory(month, 6)
   const [transactionOpen, setTransactionOpen] = useState(false)
+  const [params, setParams] = useSearchParams()
   const [recurring, setRecurring] = useState<{ open: boolean; type: EntryType }>({ open: false, type: 'EXPENSE' })
 
   const data = summary.data
@@ -151,8 +152,15 @@ export function FinanceDashboardPage() {
       )}
 
       <TransactionDialog
-        open={transactionOpen}
-        onOpenChange={setTransactionOpen}
+        open={transactionOpen || params.has('novo')}
+        onOpenChange={(open) => {
+          setTransactionOpen(open)
+          if (!open && params.has('novo')) setParams((prev) => {
+            const next = new URLSearchParams(prev)
+            next.delete('novo')
+            return next
+          }, { replace: true })
+        }}
         defaultDate={defaultDateInMonth(month)}
       />
       <RecurringEntryDialog

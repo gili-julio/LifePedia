@@ -2,6 +2,9 @@
 
 App mobile do [LifePedia](../README.md). **Ainda não iniciado.**
 
+Enquanto isso, o celular usa o **PWA** do `lifepedia-web` (instalável pelo menu do usuário, *Instalar app*; veja o
+[README do web](../lifepedia-web/README.md#app-instalável-pwa)).
+
 Plano:
 
 - Consumir a mesma API (`lifepedia-api`) com o mesmo login JWT.
