@@ -16,6 +16,10 @@ public final class UserDtos {
     }
 
     /** Dados públicos de outro usuário (busca, membros). @param imageUrl nulo sem foto */
+    /** @param version versão dos Termos/Política que a pessoa leu (tem que ser a vigente) */
+    public record TermsRequest(@NotBlank(message = "Informe a versão.") @Size(max = 20) String version) {
+    }
+
     public record UserSummary(UUID id, String name, String username, String imageUrl) {
 
         public static UserSummary from(User user) {

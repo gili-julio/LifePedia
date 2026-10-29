@@ -17,7 +17,8 @@ export function ProfileGate() {
   const { user } = useAuth()
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const open = !!user && !user.profileComplete && pathname !== '/perfil'
+  // Depois do aceite dos termos (LegalGate vem antes).
+  const open = !!user && user.termsAccepted && !user.profileComplete && pathname !== '/perfil'
 
   return (
     <AlertDialog open={open}>

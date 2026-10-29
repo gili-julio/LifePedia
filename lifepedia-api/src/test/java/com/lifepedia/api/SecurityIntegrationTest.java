@@ -26,7 +26,7 @@ class SecurityIntegrationTest extends ApiTestSupport {
         return mvc.post().uri("/api/auth/register").header(CSRF, "test")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"name":"Seg","username":"%s","email":"%s","password":"segredo123"}
+                        {"name":"Seg","username":"%s","email":"%s","password":"segredo123","acceptTerms":true}
                         """.formatted(newUsername(), email))
                 .exchange();
     }
@@ -130,6 +130,45 @@ class SecurityIntegrationTest extends ApiTestSupport {
         MvcTestResult result = mvc.post().uri("/api/auth/logout").header(CSRF, "test").exchange();
         assertThat(result).hasStatus(204);
         assertThat(result.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains("lifepedia_session=", "Max-Age=0");
+    }
+
+    @Test
+    void rememberMeKeepsCookieOtherwiseBrowserSessionCookie() {
+        String email = newEmail();
+        register(email);
+        MvcTestResult remembered = mvc.post().uri("/api/auth/login").header(CSRF, "test")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"email":"%s","password":"segredo123","remember":true}
+                        """.formatted(email))
+                .exchange();
+        assertThat(remembered).hasStatusOk();
+        assertThat(remembered.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains("Max-Age=259");
+        assertThat(remembered).bodyJson().extractingPath("$.remember").isEqualTo(true);
+
+        MvcTestResult plain = login(email, "segredo123");
+        assertThat(plain.getResponse().getHeader(HttpHeaders.SET_COOKIE)).contains("lifepedia_session=").doesNotContain("Max-Age");
+    }
+
+    @Test
+    void logoutRevokesTheSession() {
+        Cookie session = register(newEmail()).getResponse().getCookie("lifepedia_session");
+        assertThat(mvc.get().uri("/api/users/me").cookie(session)).hasStatusOk();
+        assertThat(mvc.post().uri("/api/auth/logout").header(CSRF, "test").cookie(session)).hasStatus(204);
+        assertThat(mvc.get().uri("/api/users/me").cookie(session)).hasStatus(401);
+
+        String bearer = registerAndGetBearer();
+        assertThat(send("GET", bearer, "/api/users/me", null)).hasStatusOk();
+        assertThat(send("POST", bearer, "/api/auth/logout", null)).hasStatus(204);
+        assertThat(send("GET", bearer, "/api/users/me", null)).hasStatus(401);
+    }
+
+    @Test
+    void authConfigIsPublicAndGoogleOffWithoutClientId() {
+        assertThat(mvc.get().uri("/api/auth/config").cookie(new Cookie("lifepedia_session", "lixo")))
+                .bodyJson().extractingPath("$.googleClientId").isNull();
+        assertThat(mvc.post().uri("/api/auth/google").header(CSRF, "test").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"credential\":\"x\"}")).hasStatus(404);
     }
 
     @Test

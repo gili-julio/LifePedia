@@ -7,6 +7,8 @@ export type AuthContextValue = {
   loading: boolean
   login: (data: LoginRequest) => Promise<void>
   register: (data: RegisterRequest) => Promise<void>
+  /** Entra ou cria a conta com o ID token do botão do Google; devolve o usuário. */
+  loginWithGoogle: (credential: string, remember: boolean) => Promise<User>
   logout: () => void
   /** Atualiza o usuário após editar o perfil. */
   setUser: (user: User) => void

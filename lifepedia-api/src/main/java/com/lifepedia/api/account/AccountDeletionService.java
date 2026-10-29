@@ -83,7 +83,7 @@ public class AccountDeletionService {
 
     @Transactional
     public void delete(UUID userId, DeleteRequest request) {
-        auth.verifyPassword(userId, request.password());
+        auth.confirmIdentity(userId, request.password(), request.googleCredential());
         User user = userService.find(userId);
         for (GroupMember membership : members.findByUserId(userId)) {
             Departure departure = groups.leave(userId, membership.getGroupId());

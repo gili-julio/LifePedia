@@ -11,6 +11,7 @@ import java.time.Duration;
  * @param ipWindow        janela do limite por IP
  * @param maxFailedLogins senhas erradas antes do bloqueio
  * @param lockoutWindow   duração do bloqueio por e-mail
+ * @param rememberFor     validade da sessão com "lembrar de mim"
  */
 @ConfigurationProperties("lifepedia.auth")
 public record AuthProperties(
@@ -19,5 +20,6 @@ public record AuthProperties(
         int ipLimit,
         Duration ipWindow,
         int maxFailedLogins,
-        Duration lockoutWindow) {
+        Duration lockoutWindow,
+        Duration rememberFor) {
 }

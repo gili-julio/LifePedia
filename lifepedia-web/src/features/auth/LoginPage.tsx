@@ -1,20 +1,23 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2Icon } from 'lucide-react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm, useWatch } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api'
 import { AuthLayout } from './AuthLayout'
 import { returnTo, useAuth } from './auth-context'
+import { GoogleSignIn } from './GoogleSignIn'
 
 const schema = z.object({
   email: z.email('Informe um e-mail válido.'),
   password: z.string().min(1, 'Informe sua senha.'),
+  remember: z.boolean(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -27,9 +30,10 @@ export function LoginPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: '', password: '' },
+    defaultValues: { email: '', password: '', remember: false },
   })
   const { errors, isSubmitting } = form.formState
+  const remember = useWatch({ control: form.control, name: 'remember' })
 
   async function onSubmit(values: FormValues) {
     try {
@@ -62,10 +66,17 @@ export function LoginPage() {
                   aria-invalid={!!errors.password} {...form.register('password')} />
                 <FieldError errors={[errors.password]} />
               </Field>
+              <Field orientation="horizontal">
+                <Controller control={form.control} name="remember" render={({ field }) => (
+                  <Checkbox id="remember" checked={field.value} onCheckedChange={(v) => field.onChange(v === true)} />
+                )} />
+                <FieldLabel htmlFor="remember" className="font-normal">Lembrar de mim</FieldLabel>
+              </Field>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting && <Loader2Icon className="animate-spin" />}
                 Entrar
               </Button>
+              <GoogleSignIn remember={remember} text="signin_with" />
               <p className="text-center text-sm text-muted-foreground">
                 Ainda não tem conta?{' '}
                 <Link to="/cadastro" state={location.state} className="font-medium text-foreground underline underline-offset-4">

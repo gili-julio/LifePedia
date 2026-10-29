@@ -16,14 +16,15 @@ public class SessionCookies {
         this.properties = properties;
     }
 
+    /** @param maxAge nulo = cookie de sessão do navegador (some ao fechar), sem "lembrar de mim" */
     public ResponseCookie session(String token, Duration maxAge) {
-        return ResponseCookie.from(properties.cookieName(), token)
+        ResponseCookie.ResponseCookieBuilder cookie = ResponseCookie.from(properties.cookieName(), token)
                 .httpOnly(true)
                 .secure(properties.cookieSecure())
                 .sameSite("Strict")
-                .path("/api")
-                .maxAge(maxAge)
-                .build();
+                .path("/api");
+        if (maxAge != null) cookie.maxAge(maxAge);
+        return cookie.build();
     }
 
     /** Apaga o cookie (logout, conta excluída). */

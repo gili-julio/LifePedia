@@ -44,6 +44,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser((await api<AuthResponse>('/api/auth/login', { method: 'POST', body: data })).user),
       register: async (data: RegisterRequest) =>
         setUser((await api<AuthResponse>('/api/auth/register', { method: 'POST', body: data })).user),
+      loginWithGoogle: async (credential: string, remember: boolean) => {
+        const { user } = await api<AuthResponse>('/api/auth/google', { method: 'POST', body: { credential, remember } })
+        setUser(user)
+        return user
+      },
     }),
     [user, loading, logout],
   )

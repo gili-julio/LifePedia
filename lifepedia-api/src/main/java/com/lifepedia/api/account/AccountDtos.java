@@ -34,8 +34,10 @@ public final class AccountDtos {
     private AccountDtos() {
     }
 
+    /** @param googleCredential ID token recente do Google, no lugar da senha em conta criada pelo Google */
     public record DeleteRequest(
-            @NotBlank(message = "Informe sua senha.") @Size(max = 200) String password,
+            @Size(max = 200) String password,
+            @Size(max = 4096) String googleCredential,
             @NotNull(message = "Digite EXCLUIR para confirmar.")
             @Pattern(regexp = "EXCLUIR", message = "Digite EXCLUIR para confirmar.") String confirmation) {
     }
@@ -97,7 +99,7 @@ public final class AccountDtos {
             @NotNull YearMonth startMonth,
             YearMonth endMonth,
             Boolean active,
-            @Size(max = 500) String notes,
+            @Size(max = 10000) String notes,
             @Size(max = 1_200) List<@NotNull @Valid AdjustmentData> adjustments) {
     }
 
@@ -116,7 +118,7 @@ public final class AccountDtos {
             @Digits(integer = 12, fraction = 2, message = "Valor inválido.") BigDecimal amount,
             @NotNull LocalDate date,
             @NotNull YearMonth month,
-            @Size(max = 500) String notes) {
+            @Size(max = 10000) String notes) {
     }
 
     /** Itens da pessoa num grupo, como estavam na exportação. */

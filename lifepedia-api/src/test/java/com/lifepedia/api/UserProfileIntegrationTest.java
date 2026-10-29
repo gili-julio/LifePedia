@@ -2,6 +2,7 @@ package com.lifepedia.api;
 
 import com.jayway.jsonpath.JsonPath;
 import com.lifepedia.api.config.StorageProperties;
+import com.lifepedia.api.user.LegalTerms;
 import com.lifepedia.api.user.UserImageStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,6 +45,30 @@ class UserProfileIntegrationTest extends ApiTestSupport {
         String username = newUsername();
         assertThat(register("@" + username.toUpperCase(), "d" + UUID.randomUUID() + "@x.dev")).isEqualTo(201);
         assertThat(register(username, "e" + UUID.randomUUID() + "@x.dev")).isEqualTo(409);
+    }
+
+    @Test
+    void termsAcceptanceIsRequiredAndRecorded() {
+        String email = UUID.randomUUID() + "@lifepedia.dev";
+        for (String terms : new String[]{"", ",\"acceptTerms\":false"}) {
+            assertThat(mvc.post().uri("/api/auth/register").header(CSRF, "test").contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                            {"name":"T","username":"%s","email":"%s","password":"segredo123"%s}
+                            """.formatted(newUsername(), email, terms))).hasStatus(400)
+                    .bodyJson().extractingPath("$.errors.acceptTerms").isEqualTo("Aceite os Termos de uso e a Política de privacidade.");
+        }
+        String alice = registerAndGetBearer();
+        assertThat(send("GET", alice, "/api/users/me", null)).bodyJson().extractingPath("$.termsAccepted").isEqualTo(true);
+
+        String id = userId(alice);
+        jdbc.update("update users set terms_version = '2000-01-01' where id = ?::uuid", id);
+        assertThat(send("GET", alice, "/api/users/me", null)).bodyJson().extractingPath("$.termsAccepted").isEqualTo(false);
+        assertThat(send("PUT", alice, "/api/users/me/terms", "{\"version\":\"2000-01-01\"}")).hasStatus(400);
+        assertThat(send("PUT", alice, "/api/users/me/terms", "{\"version\":\"%s\"}".formatted(LegalTerms.VERSION)))
+                .bodyJson().extractingPath("$.termsAccepted").isEqualTo(true);
+        assertThat(jdbc.queryForObject("select terms_accepted_at is not null from users where id = ?::uuid", Boolean.class, id)).isTrue();
+        assertThat(mvc.put().uri("/api/users/me/terms").header(CSRF, "test").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"version\":\"x\"}")).hasStatus(401);
     }
 
     @Test
@@ -125,7 +150,7 @@ class UserProfileIntegrationTest extends ApiTestSupport {
         return mvc.post().uri("/api/auth/register").header(CSRF, "test")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"name":"Teste","username":"%s","email":"%s","password":"segredo123"}
+                        {"name":"Teste","username":"%s","email":"%s","password":"segredo123","acceptTerms":true}
                         """.formatted(username, email))
                 .exchange().getResponse().getStatus();
     }

@@ -14,6 +14,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     boolean existsByEmail(String email);
 
+    Optional<User> findByGoogleSub(String googleSub);
+
     Optional<User> findByUsername(String username);
 
     /** Por nome (contém) ou username (começa com); só contas com username. @param term minúsculo */

@@ -49,7 +49,7 @@ export function useDeletionPreview(enabled: boolean) {
 
 export function useDeleteAccount() {
   return useMutation({
-    mutationFn: (data: { password: string; confirmation: string }) =>
+    mutationFn: (data: { password?: string; googleCredential?: string; confirmation: string }) =>
       api<void>('/api/account', { method: 'DELETE', body: data }),
   })
 }

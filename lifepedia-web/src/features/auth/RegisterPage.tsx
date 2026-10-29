@@ -1,16 +1,18 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2Icon } from 'lucide-react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { ApiError } from '@/lib/api'
 import { AuthLayout } from './AuthLayout'
 import { returnTo, useAuth } from './auth-context'
+import { GoogleSignIn } from './GoogleSignIn'
 import { usernameSchema } from './username'
 import { UsernameInput } from './UsernameInput'
 
@@ -21,6 +23,7 @@ const schema = z
     email: z.email('Informe um e-mail válido.'),
     password: z.string().min(8, 'A senha deve ter pelo menos 8 caracteres.').max(72, 'Máximo de 72 caracteres.'),
     confirmPassword: z.string(),
+    acceptTerms: z.boolean().refine((v) => v, 'Aceite os Termos de uso e a Política de privacidade.'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ['confirmPassword'],
@@ -37,13 +40,13 @@ export function RegisterPage() {
 
   const form = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { name: '', username: '', email: '', password: '', confirmPassword: '' },
+    defaultValues: { name: '', username: '', email: '', password: '', confirmPassword: '', acceptTerms: false },
   })
   const { errors, isSubmitting } = form.formState
 
-  async function onSubmit({ name, username, email, password }: FormValues) {
+  async function onSubmit({ name, username, email, password, acceptTerms }: FormValues) {
     try {
-      await registerUser({ name, username, email, password })
+      await registerUser({ name, username, email, password, acceptTerms })
       toast.success(`Bem-vindo(a), ${name.split(' ')[0]}!`)
       navigate(returnTo(location.state), { replace: true })
     } catch (error) {
@@ -104,10 +107,31 @@ export function RegisterPage() {
                   aria-invalid={!!errors.confirmPassword} {...form.register('confirmPassword')} />
                 <FieldError errors={[errors.confirmPassword]} />
               </Field>
+              <Field orientation="horizontal" data-invalid={!!errors.acceptTerms} className="items-start">
+                <Controller control={form.control} name="acceptTerms" render={({ field }) => (
+                  <Checkbox id="acceptTerms" checked={field.value} aria-invalid={!!errors.acceptTerms} className="mt-0.5"
+                    onCheckedChange={(v) => field.onChange(v === true)} />
+                )} />
+                <div className="space-y-1">
+                  <FieldLabel htmlFor="acceptTerms" className="block font-normal leading-snug">
+                    Tenho 18 anos ou mais, li e aceito os{' '}
+                    <Link to="/termos" target="_blank" rel="noopener" className="font-medium underline underline-offset-4">Termos de uso</Link>
+                    {' '}e a{' '}
+                    <Link to="/privacidade" target="_blank" rel="noopener" className="font-medium underline underline-offset-4">
+                      Política de privacidade
+                    </Link>.
+                  </FieldLabel>
+                  <FieldError errors={[errors.acceptTerms]} />
+                </div>
+              </Field>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting && <Loader2Icon className="animate-spin" />}
                 Criar conta
               </Button>
+              <GoogleSignIn remember={false} text="signup_with" />
+              <p className="text-center text-xs text-muted-foreground">
+                Com o Google, você aceita os termos no primeiro acesso.
+              </p>
               <p className="text-center text-sm text-muted-foreground">
                 Já tem conta?{' '}
                 <Link to="/login" state={location.state} className="font-medium text-foreground underline underline-offset-4">

@@ -25,7 +25,7 @@ class FinanceFlowIntegrationTest extends ApiTestSupport {
         assertThat(mvc.post().uri("/api/auth/register").header(CSRF, "test")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"name":"Maria","username":"%s","email":"%s","password":"segredo123"}
+                        {"name":"Maria","username":"%s","email":"%s","password":"segredo123","acceptTerms":true}
                         """.formatted(newUsername(), email)))
                 .hasStatus(201);
 
@@ -118,7 +118,7 @@ class FinanceFlowIntegrationTest extends ApiTestSupport {
     void rejectsDuplicatedEmail() {
         String email = "dup-" + UUID.randomUUID() + "@lifepedia.dev";
         String payload = """
-                {"name":"Ana","username":"%s","email":"%s","password":"segredo123"}
+                {"name":"Ana","username":"%s","email":"%s","password":"segredo123","acceptTerms":true}
                 """.formatted(newUsername(), email);
         assertThat(mvc.post().uri("/api/auth/register").header(CSRF, "test").contentType(MediaType.APPLICATION_JSON).content(payload))
                 .hasStatus(201);

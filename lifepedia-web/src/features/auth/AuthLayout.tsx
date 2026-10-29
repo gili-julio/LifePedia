@@ -1,6 +1,7 @@
 import { HeartPulseIcon, TargetIcon, WalletIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Logo } from '@/components/Logo'
+import { LegalLinks } from '@/features/legal/LegalLinks'
 
 const highlights = [
   { icon: WalletIcon, title: 'Finanças', text: 'Ganhos e despesas fixas, lançamentos do dia a dia e o saldo do mês.' },
@@ -39,6 +40,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       <main className="flex flex-col items-center justify-center gap-8 p-6">
         <Logo className="text-lg lg:hidden" />
         <div className="w-full max-w-sm">{children}</div>
+        <LegalLinks />
       </main>
     </div>
   )

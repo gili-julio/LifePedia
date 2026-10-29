@@ -1,7 +1,8 @@
 package com.lifepedia.api.config;
 
+import com.lifepedia.api.auth.TokenService;
+import com.lifepedia.api.auth.UserSessionRepository;
 import com.lifepedia.api.shared.RateLimiter;
-import com.lifepedia.api.user.UserRepository;
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import jakarta.servlet.http.Cookie;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -37,17 +38,20 @@ import org.springframework.web.util.WebUtils;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 /** JWT HS256 via cookie HttpOnly (navegador) ou {@code Authorization: Bearer}. */
 @Configuration
-@EnableConfigurationProperties({JwtProperties.class, CorsProperties.class, AuthProperties.class})
+@EnableConfigurationProperties({JwtProperties.class, CorsProperties.class, AuthProperties.class, GoogleProperties.class})
 public class SecurityConfig {
 
     /** Token ignorado aqui, para cookie vencido não bloquear o login. */
-    private static final Set<String> PUBLIC_AUTH_PATHS = Set.of("/api/auth/login", "/api/auth/register", "/api/auth/logout");
+    private static final Set<String> PUBLIC_AUTH_PATHS = Set.of("/api/auth/login", "/api/auth/register", "/api/auth/google",
+            "/api/auth/logout");
+    private static final String AUTH_CONFIG = "/api/auth/config";
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimiter rateLimiter, AuthProperties authProperties)
@@ -58,6 +62,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_PATHS.toArray(String[]::new)).permitAll()
+                        .requestMatchers(HttpMethod.GET, AUTH_CONFIG).permitAll()
                         .requestMatchers("/actuator/health", "/error").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
@@ -71,7 +76,7 @@ public class SecurityConfig {
     BearerTokenResolver bearerTokenResolver(AuthProperties properties) {
         DefaultBearerTokenResolver headerResolver = new DefaultBearerTokenResolver();
         return request -> {
-            if (PUBLIC_AUTH_PATHS.contains(request.getRequestURI())) return null;
+            if (PUBLIC_AUTH_PATHS.contains(request.getRequestURI()) || AUTH_CONFIG.equals(request.getRequestURI())) return null;
             String fromHeader = headerResolver.resolve(request);
             if (fromHeader != null) return fromHeader;
             Cookie cookie = WebUtils.getCookie(request, properties.cookieName());
@@ -89,20 +94,24 @@ public class SecurityConfig {
         return new NimbusJwtEncoder(new ImmutableSecret<>(jwtSecretKey));
     }
 
-    /** Além de assinatura, validade e emissor: a conta ainda existe (token de conta excluída → 401). */
+    /**
+     * Além de assinatura, validade e emissor: a sessão ({@code sid}) ainda existe. Logout e conta excluída apagam a
+     * sessão, então o token antigo dá 401.
+     */
     @Bean
-    JwtDecoder jwtDecoder(SecretKey jwtSecretKey, JwtProperties properties, UserRepository users) {
+    JwtDecoder jwtDecoder(SecretKey jwtSecretKey, JwtProperties properties, UserSessionRepository sessions) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSecretKey).macAlgorithm(MacAlgorithm.HS256).build();
-        OAuth2TokenValidator<Jwt> accountExists = jwt -> {
+        OAuth2TokenValidator<Jwt> sessionActive = jwt -> {
             try {
-                if (users.existsById(UUID.fromString(jwt.getSubject()))) return OAuth2TokenValidatorResult.success();
+                UUID sid = UUID.fromString(jwt.getClaimAsString(TokenService.SESSION_CLAIM));
+                if (sessions.existsByIdAndExpiresAtAfter(sid, Instant.now())) return OAuth2TokenValidatorResult.success();
             } catch (IllegalArgumentException | NullPointerException ignored) {
-                // sub ausente ou inválido
+                // sid ausente ou inválido
             }
-            return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Conta inexistente.", null));
+            return OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token", "Sessão encerrada.", null));
         };
         decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
-                JwtValidators.createDefaultWithIssuer(properties.issuer()), accountExists));
+                JwtValidators.createDefaultWithIssuer(properties.issuer()), sessionActive));
         return decoder;
     }
 

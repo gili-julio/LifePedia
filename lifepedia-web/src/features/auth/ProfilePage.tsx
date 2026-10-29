@@ -10,8 +10,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { AccountSections } from '@/features/account/components/AccountSections'
+import { LegalLinks } from '@/features/legal/LegalLinks'
+import { PushCard } from '@/features/notifications/PushCard'
 import { api, ApiError } from '@/lib/api'
 import { useAuth } from './auth-context'
+import { GoogleAccount } from './GoogleAccount'
 import { ProfilePhoto } from './ProfilePhoto'
 import type { ProfileRequest, User } from './types'
 import { usernameSchema } from './username'
@@ -104,7 +107,10 @@ export function ProfilePage() {
         </CardContent>
       </Card>
 
+      <GoogleAccount />
+      {!incomplete && <PushCard />}
       {!incomplete && <AccountSections />}
+      <LegalLinks />
     </div>
   )
 }

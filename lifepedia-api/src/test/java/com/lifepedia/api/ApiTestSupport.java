@@ -39,7 +39,7 @@ abstract class ApiTestSupport {
                 .header("X-Auth-Mode", "token").header(CSRF, "test")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
-                        {"name":"%s","username":"%s","email":"%s@lifepedia.dev","password":"segredo123"}
+                        {"name":"%s","username":"%s","email":"%s@lifepedia.dev","password":"segredo123","acceptTerms":true}
                         """.formatted(name, username, UUID.randomUUID()))
                 .exchange();
         assertThat(result).hasStatus(201);

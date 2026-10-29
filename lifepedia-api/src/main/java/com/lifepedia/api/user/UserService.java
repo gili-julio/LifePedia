@@ -36,6 +36,17 @@ public class UserService {
         return UserResponse.from(user);
     }
 
+    /** Aceite dos Termos e da Política (conta criada pelo Google ou versão nova). */
+    @Transactional
+    public UserResponse acceptTerms(UUID id, String version) {
+        if (!LegalTerms.VERSION.equals(version)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Os termos foram atualizados. Recarregue a página e leia a versão nova.");
+        }
+        User user = find(id);
+        user.acceptTerms(version);
+        return UserResponse.from(user);
+    }
+
     /** Troca a foto; a anterior sai do disco depois do commit. */
     @Transactional
     public UserResponse setImage(UUID id, byte[] bytes) {

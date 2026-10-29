@@ -1,7 +1,10 @@
 package com.lifepedia.api.user;
 
+import com.lifepedia.api.auth.AuthDtos.GoogleLinkRequest;
+import com.lifepedia.api.auth.AuthService;
 import com.lifepedia.api.shared.CurrentUser;
 import com.lifepedia.api.shared.image.Images;
+import com.lifepedia.api.user.UserDtos.TermsRequest;
 import com.lifepedia.api.user.UserDtos.UpdateProfileRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
@@ -25,9 +28,11 @@ import java.util.UUID;
 public class UserController {
 
     private final UserService service;
+    private final AuthService auth;
 
-    public UserController(UserService service) {
+    public UserController(UserService service, AuthService auth) {
         this.service = service;
+        this.auth = auth;
     }
 
     @GetMapping("/me")
@@ -50,6 +55,23 @@ public class UserController {
     @DeleteMapping("/me/image")
     public UserResponse removeImage(@AuthenticationPrincipal Jwt jwt) {
         return service.removeImage(CurrentUser.id(jwt));
+    }
+
+    @PutMapping("/me/terms")
+    public UserResponse acceptTerms(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody TermsRequest request) {
+        return service.acceptTerms(CurrentUser.id(jwt), request.version());
+    }
+
+    /** Vincula a conta Google do ID token (botão do Google no perfil). */
+    @PutMapping("/me/google")
+    public UserResponse linkGoogle(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody GoogleLinkRequest request) {
+        return auth.linkGoogle(CurrentUser.id(jwt), request.credential());
+    }
+
+    /** Só para conta com senha (conta criada pelo Google ficaria sem como entrar). */
+    @DeleteMapping("/me/google")
+    public UserResponse unlinkGoogle(@AuthenticationPrincipal Jwt jwt) {
+        return auth.unlinkGoogle(CurrentUser.id(jwt));
     }
 
     /** Qualquer usuário logado. A URL leva {@code ?v=} (versão), então pode ficar em cache. */

@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { DownloadIcon, Loader2Icon, FileSpreadsheetIcon } from 'lucide-react'
+import { CheckCircle2Icon, DownloadIcon, Loader2Icon, FileSpreadsheetIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate } from 'react-router'
@@ -12,13 +12,14 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/c
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/features/auth/auth-context'
+import { GoogleButton } from '@/features/auth/GoogleButton'
 import { ApiError } from '@/lib/api'
 import { downloadExport, downloadSpreadsheet, useDeleteAccount, useDeletionPreview } from '../api'
 import { count } from '../count'
 import type { DeletionPreview, GroupImpact } from '../types'
 
 const schema = z.object({
-  password: z.string().min(1, 'Informe sua senha.'),
+  password: z.string(),
   confirmation: z.string().refine((v) => v === 'EXCLUIR', 'Digite EXCLUIR, em maiúsculas.'),
 })
 
@@ -27,7 +28,7 @@ type FormValues = z.output<typeof schema>
 
 type Props = { open: boolean; onOpenChange: (open: boolean) => void }
 
-/** Mostra o que some (e o que acontece em cada grupo), oferece baixar os dados e pede senha + "EXCLUIR". */
+/** Mostra o que some (e o que acontece em cada grupo), oferece baixar os dados e pede senha (ou Google) + "EXCLUIR". */
 export function DeleteAccountDialog({ open, onOpenChange }: Props) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -43,7 +44,9 @@ export function DeleteAccountDialog({ open, onOpenChange }: Props) {
 }
 
 function DeleteForm({ onCancel }: { onCancel: () => void }) {
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
+  const googleOnly = !!user && !user.hasPassword
+  const [googleCredential, setGoogleCredential] = useState<string | null>(null)
   const navigate = useNavigate()
   const preview = useDeletionPreview(true)
   const remove = useDeleteAccount()
@@ -63,8 +66,18 @@ function DeleteForm({ onCancel }: { onCancel: () => void }) {
   }
 
   async function onSubmit(values: FormValues) {
+    if (!googleOnly && !values.password) {
+      form.setError('password', { message: 'Informe sua senha.' })
+      return
+    }
+    if (googleOnly && !googleCredential) {
+      toast.error('Confirme com a sua conta Google.')
+      return
+    }
     try {
-      await remove.mutateAsync(values)
+      await remove.mutateAsync(googleOnly
+        ? { googleCredential: googleCredential!, confirmation: values.confirmation }
+        : { password: values.password, confirmation: values.confirmation })
       toast.success('Conta excluída. Até mais!')
       logout()
       navigate('/login', { replace: true })
@@ -72,6 +85,7 @@ function DeleteForm({ onCancel }: { onCancel: () => void }) {
       if (error instanceof ApiError && error.status === 400 && /senha/i.test(error.message)) {
         form.setError('password', { message: error.message })
       } else {
+        if (googleOnly) setGoogleCredential(null)
         toast.error(error instanceof ApiError ? error.message : 'Não foi possível excluir a conta.')
       }
     }
@@ -96,12 +110,24 @@ function DeleteForm({ onCancel }: { onCancel: () => void }) {
         </div>
 
         <FieldGroup className="gap-4">
-          <Field data-invalid={!!errors.password}>
-            <FieldLabel htmlFor="delete-password">Sua senha</FieldLabel>
-            <Input id="delete-password" type="password" autoComplete="current-password" aria-invalid={!!errors.password}
-              {...form.register('password')} />
-            <FieldError errors={[errors.password]} />
-          </Field>
+          {googleOnly ? (
+            <Field>
+              <FieldLabel>Confirme que é você</FieldLabel>
+              {googleCredential ? (
+                <p className="flex items-center gap-2 text-sm"><CheckCircle2Icon className="size-4 text-income" /> Confirmado com o Google.</p>
+              ) : (
+                <GoogleButton onCredential={setGoogleCredential} text="continue_with" />
+              )}
+              <FieldDescription>Sua conta entra pelo Google, então a confirmação é por ele.</FieldDescription>
+            </Field>
+          ) : (
+            <Field data-invalid={!!errors.password}>
+              <FieldLabel htmlFor="delete-password">Sua senha</FieldLabel>
+              <Input id="delete-password" type="password" autoComplete="current-password" aria-invalid={!!errors.password}
+                {...form.register('password')} />
+              <FieldError errors={[errors.password]} />
+            </Field>
+          )}
           <Field data-invalid={!!errors.confirmation}>
             <FieldLabel htmlFor="delete-confirmation">Digite EXCLUIR para confirmar</FieldLabel>
             <Input id="delete-confirmation" autoComplete="off" autoCapitalize="characters" spellCheck={false}

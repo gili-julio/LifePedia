@@ -39,7 +39,7 @@ final class SecurityFilters {
         }
     }
 
-    /** Limite de login/cadastro por IP. */
+    /** Limite de login/cadastro (senha ou Google) por IP. */
     static final class AuthRateLimitFilter extends OncePerRequestFilter {
 
         private final RateLimiter limiter;
@@ -54,7 +54,7 @@ final class SecurityFilters {
         protected boolean shouldNotFilter(HttpServletRequest request) {
             String path = request.getRequestURI();
             return !HttpMethod.POST.matches(request.getMethod())
-                    || !(path.equals("/api/auth/login") || path.equals("/api/auth/register"));
+                    || !(path.equals("/api/auth/login") || path.equals("/api/auth/register") || path.equals("/api/auth/google"));
         }
 
         @Override
