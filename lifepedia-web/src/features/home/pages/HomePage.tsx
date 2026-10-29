@@ -11,6 +11,7 @@ import { formatTime } from '@/features/tasks/dates'
 import type { TaskFilters, TaskItem } from '@/features/tasks/types'
 import { currentYearMonth, formatCurrency, formatDate, formatMonth, todayIso } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { RecentChanges } from '../components/RecentChanges'
 
 const FILTERS: TaskFilters = { list: null, tag: null, assignee: null, sort: 'MANUAL' }
 const SHOWN = 5
@@ -23,7 +24,7 @@ function taskLink(item: TaskItem) {
   return item.groupId ? `/grupos/${item.groupId}?aba=tarefas&tarefa=${id}` : `/tarefas?tarefa=${id}`
 }
 
-/** Início: resumo de tarefas de hoje, hábitos e o mês no financeiro. */
+/** Início: resumo de tarefas de hoje, hábitos, o mês no financeiro e as mudanças recentes do sistema. */
 export function HomePage() {
   const { user } = useAuth()
   const today = todayIso()
@@ -39,6 +40,17 @@ export function HomePage() {
         <HabitsCard />
         <FinanceCard />
       </div>
+      <section aria-labelledby="recent-changes" className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="recent-changes" className="text-lg font-semibold tracking-tight">Mudanças recentes no sistema</h2>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/novidades">Ver todas <ArrowRightIcon /></Link>
+          </Button>
+        </div>
+        <div className="max-w-3xl">
+          <RecentChanges limit={3} />
+        </div>
+      </section>
     </div>
   )
 }

@@ -23,6 +23,10 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/home/pages/HomePage')).HomePage }),
           },
           {
+            path: '/novidades',
+            lazy: async () => ({ Component: (await import('@/features/home/pages/ChangelogPage')).ChangelogPage }),
+          },
+          {
             path: '/financeiro',
             lazy: async () => ({
               Component: (await import('@/features/finance/pages/FinanceDashboardPage')).FinanceDashboardPage,
@@ -57,6 +61,10 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/tasks/pages/TasksPage')).TasksPage }),
           },
           {
+            path: '/agenda',
+            lazy: async () => ({ Component: (await import('@/features/tasks/pages/AgendaPage')).AgendaPage }),
+          },
+          {
             path: '/grupos',
             lazy: async () => ({ Component: (await import('@/features/groups/pages/GroupsPage')).GroupsPage }),
           },
@@ -86,5 +94,8 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  // Públicas, com ou sem sessão.
+  { path: '/privacidade', lazy: async () => ({ Component: (await import('@/features/legal/PrivacyPage')).PrivacyPage }) },
+  { path: '/termos', lazy: async () => ({ Component: (await import('@/features/legal/TermsPage')).TermsPage }) },
   { path: '*', element: <Navigate to="/" replace /> },
 ])

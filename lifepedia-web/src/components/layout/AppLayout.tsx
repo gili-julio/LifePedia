@@ -5,8 +5,11 @@ import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar'
 import { ProfileGate } from '@/features/auth/ProfileGate'
+import { LegalGate } from '@/features/legal/LegalGate'
+import { useChatStream } from '@/features/chat/use-chat-stream'
 import { useUnreadNotifications } from '@/features/notifications/api'
 import { NotificationsSheet } from '@/features/notifications/NotificationsSheet'
+import { useDevicePush } from '@/features/notifications/push'
 import { useReminderToasts } from '@/features/notifications/use-reminder-toasts'
 import { useInstallApp } from '@/lib/pwa'
 import { AppSidebar } from './AppSidebar'
@@ -27,6 +30,9 @@ export function AppLayout() {
   // Fora da sidebar: no celular ela desmonta quando a gaveta fecha.
   const { data: unread = 0, isSuccess } = useUnreadNotifications()
   useReminderToasts(isSuccess ? unread : undefined)
+  useChatStream()
+  // Religa o push deste aparelho à sessão atual (depois de sair e entrar de novo).
+  useDevicePush()
 
   return (
     <SidebarProvider defaultOpen={sidebarStartsOpen()}>
@@ -40,6 +46,7 @@ export function AppLayout() {
       <CloseOnNavigate />
       <NotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
       <IosInstallDialog open={iosStepsOpen} onOpenChange={setIosStepsOpen} />
+      <LegalGate />
       <ProfileGate />
     </SidebarProvider>
   )

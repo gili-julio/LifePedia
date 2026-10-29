@@ -1,4 +1,4 @@
-import { formatDistanceToNow } from 'date-fns'
+import { formatDistanceToNow, isToday, isYesterday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 const currency = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -56,6 +56,19 @@ export function formatDate(isoDate: string) {
 /** Instante ISO → "15/09/2026" no fuso do navegador. */
 export function formatInstantDate(iso: string) {
   return new Date(iso).toLocaleDateString('pt-BR')
+}
+
+/** Instante ISO → "14:05" no fuso do navegador. */
+export function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+}
+
+/** Instante ISO → "Hoje", "Ontem" ou "15/09/2026" (separador de dia do chat). */
+export function formatDayLabel(iso: string) {
+  const date = new Date(iso)
+  if (isToday(date)) return 'Hoje'
+  if (isYesterday(date)) return 'Ontem'
+  return date.toLocaleDateString('pt-BR')
 }
 
 /** Instante ISO → "há 5 minutos" ("há menos de um minuto" no início). */
