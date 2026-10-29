@@ -1,4 +1,4 @@
-import { AlertTriangleIcon, BriefcaseIcon, CalendarClockIcon, Loader2Icon, MoonIcon, SunIcon } from 'lucide-react'
+import { AlertTriangleIcon, BriefcaseIcon, CalendarClockIcon, HourglassIcon, Loader2Icon, MoonIcon, SunIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { StatCard } from '@/components/StatCard'
@@ -39,7 +39,7 @@ export function AgendaMetrics({ monday, defaultMinutes }: { monday: string; defa
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <StatCard label="Ocupadas na semana" tone="data" icon={CalendarClockIcon}
           hint={metrics && `${metrics.tasks} ${metrics.tasks === 1 ? 'tarefa' : 'tarefas'} com horário`}>
           {metrics ? formatHours(metrics.busy) : undefined}
@@ -52,11 +52,17 @@ export function AgendaMetrics({ monday, defaultMinutes }: { monday: string; defa
           hint={metrics && `Média de ${formatHours(metrics.weekend / 2)} por dia`}>
           {metrics ? formatHours(metrics.weekend) : undefined}
         </StatCard>
-        <StatCard label="Horas livres" tone="income" icon={MoonIcon}
-          hint={metrics && `Já sem ${formatHours(metrics.sleep)} de sono${awake > 0
-            ? `; ${Math.round((metrics.busy / awake) * 100)}% do tempo acordado ocupado` : ''}`}>
-          {metrics ? formatHours(metrics.free) : undefined}
+        <StatCard label="Sono na semana" tone="data" icon={MoonIcon}
+          hint={metrics && `Média de ${formatHours(metrics.sleep / 7)} por noite`}>
+          {metrics ? formatHours(metrics.sleep) : undefined}
         </StatCard>
+        <div className="col-span-2 xl:col-span-1">
+          <StatCard label="Horas livres" tone="income" icon={HourglassIcon}
+            hint={metrics && `Já sem o sono${awake > 0
+              ? `; ${Math.round((metrics.busy / awake) * 100)}% do tempo acordado ocupado` : ''}`}>
+            {metrics ? formatHours(metrics.free) : undefined}
+          </StatCard>
+        </div>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">

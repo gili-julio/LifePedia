@@ -193,7 +193,8 @@ compartilham usuário, autenticação, design e padrões.
   - **Horário visível** (botão de ajustes): início e fim (padrão 6h às 23h, mínimo 4 horas), salvo na sua conta.
     Tarefas fora dele aparecem num aviso com *Mostrar o dia todo*.
   - **Indicadores da semana** (agenda pessoal, no fim da página; o botão *Indicadores* no topo leva até eles): horas
-    ocupadas na semana, de segunda a sexta e no fim de semana, e **horas livres** já descontando o **sono de cada dia**
+    ocupadas na semana, de segunda a sexta e no fim de semana, **sono da semana** (com a média por noite) e **horas
+    livres** já descontando o **sono de cada dia**
     (editável por dia da semana, padrão 8h, salvo na conta; mudança ainda não salva fica em laranja, com aviso e
     *Descartar*). Ocupado = tarefas com horário (sem duração: 30 min; o que
     se cruza conta uma vez; puladas não contam). Barra por dia com sono, ocupado e livre.
