@@ -12,7 +12,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * A cada minuto (fuso do app): avisa dos lembretes que venceram. Pessoal: o dono; grupo: os responsáveis que ainda
@@ -22,6 +24,9 @@ import java.util.UUID;
 public class TaskReminderJob {
 
     static final int MAX_CATCH_UP_MINUTES = 10;
+    private static final int MINUTES_PER_DAY = 24 * 60;
+    /** Lembrete mais antecipado (30 dias, igual à validação da tarefa). */
+    private static final int MAX_REACH_DAYS = 30;
 
     private final TaskRepository tasks;
     private final TaskAgendaService agenda;
@@ -52,16 +57,20 @@ public class TaskReminderJob {
     /** Avisa dos lembretes com momento em ({@code from}, {@code to}]; devolve quantos avisos saíram. */
     @Transactional
     public int remind(LocalDateTime from, LocalDateTime to) {
-        // Lembrete de até 1 dia antes: a ocorrência pode ser no dia seguinte.
         LocalDate first = from.toLocalDate();
-        LocalDate lastDay = to.toLocalDate().plusDays(1);
+        // Cada tarefa olha só até onde o lembrete dela alcança (1 dia antes: o dia seguinte; 30 dias: um mês à frente).
+        Map<Long, List<Task>> byReach = tasks.withReminders(first, to.toLocalDate().plusDays(MAX_REACH_DAYS)).stream()
+                .collect(Collectors.groupingBy(TaskReminderJob::reachDays));
         int sent = 0;
-        for (Pending p : agenda.pending(tasks.withReminders(first, lastDay), first, lastDay)) {
-            Integer minutes = p.task().getReminderMinutes();
-            if (p.time() == null || minutes == null) continue;
-            LocalDateTime at = p.shown().atTime(p.time()).minusMinutes(minutes);
-            if (!at.isAfter(from) || at.isAfter(to)) continue;
-            sent += notifier.reminder(p.task(), p.shown(), p.time(), p.title(), recipients(p));
+        for (Map.Entry<Long, List<Task>> group : byReach.entrySet()) {
+            LocalDate lastDay = to.toLocalDate().plusDays(group.getKey());
+            for (Pending p : agenda.pending(group.getValue(), first, lastDay)) {
+                Integer minutes = p.task().getReminderMinutes();
+                if (p.time() == null || minutes == null) continue;
+                LocalDateTime at = p.shown().atTime(p.time()).minusMinutes(minutes);
+                if (!at.isAfter(from) || at.isAfter(to)) continue;
+                sent += notifier.reminder(p.task(), p.shown(), p.time(), p.title(), recipients(p));
+            }
         }
         return sent;
     }
@@ -71,5 +80,10 @@ public class TaskReminderJob {
         if (task.getGroupId() == null) return List.of(task.getUserId());
         if (!p.assignees().isEmpty()) return p.assignees();
         return members.findByGroupIdOrderByCreatedAtAsc(task.getGroupId()).stream().map(GroupMember::getUserId).toList();
+    }
+
+    /** Dias à frente que o lembrete alcança (pelo menos 1: o horário pode ser no dia seguinte). */
+    private static long reachDays(Task task) {
+        return Math.max(1, (task.getReminderMinutes() + MINUTES_PER_DAY - 1) / MINUTES_PER_DAY);
     }
 }

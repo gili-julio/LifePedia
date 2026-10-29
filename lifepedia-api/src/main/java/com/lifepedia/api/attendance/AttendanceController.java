@@ -4,6 +4,7 @@ import com.lifepedia.api.attendance.AttendanceDtos.AgendaItem;
 import com.lifepedia.api.attendance.AttendanceDtos.CommitmentRequest;
 import com.lifepedia.api.attendance.AttendanceDtos.CommitmentResponse;
 import com.lifepedia.api.attendance.AttendanceDtos.Day;
+import com.lifepedia.api.attendance.AttendanceDtos.ImportRequest;
 import com.lifepedia.api.attendance.AttendanceDtos.MarkRequest;
 import com.lifepedia.api.shared.CurrentUser;
 import com.lifepedia.api.task.TaskLinks.LinkedTask;
@@ -46,6 +47,12 @@ public class AttendanceController {
     @ResponseStatus(HttpStatus.CREATED)
     public CommitmentResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CommitmentRequest request) {
         return service.create(CurrentUser.id(jwt), request);
+    }
+
+    /** Cria (ou usa o {@code targetId}) e grava as marcações de uma vez; o texto do SIGAA é lido no navegador. */
+    @PostMapping("/import")
+    public CommitmentResponse importDays(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody ImportRequest request) {
+        return service.importDays(CurrentUser.id(jwt), request);
     }
 
     @PutMapping("/{id}")

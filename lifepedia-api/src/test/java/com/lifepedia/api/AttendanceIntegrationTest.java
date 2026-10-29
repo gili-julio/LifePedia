@@ -114,6 +114,42 @@ class AttendanceIntegrationTest extends ApiTestSupport {
         assertThat(mark(me, id, today.minusDays(1), "\"ABSENT\"")).hasStatus(400);
     }
 
+    @Test
+    void importsCommitmentWithMarksAllOrNothing() {
+        String me = registerAndGetBearer();
+        LocalDate start = today.minusDays(6);
+        String commitment = request("GCM", start, today.minusDays(1), null);
+
+        // Dia fora do compromisso: nada é criado.
+        assertThat(send("POST", me, "/api/attendance/import", """
+                {"commitment":%s,"marks":[{"date":"%s","status":"PRESENT"}]}""".formatted(commitment, today.plusDays(3))))
+                .hasStatus(400);
+        assertThat(JsonPath.<List<Object>>read(body(send("GET", me, "/api/attendance", null)), "$")).isEmpty();
+
+        MvcTestResult created = send("POST", me, "/api/attendance/import", """
+                {"commitment":%s,"marks":[{"date":"%s","status":"PRESENT"},{"date":"%s","status":"ABSENT"},
+                 {"date":"%s","status":"CANCELED"}]}""".formatted(commitment, start, start.plusDays(1), start.plusDays(2)));
+        assertThat(created).hasStatusOk();
+        String id = JsonPath.read(body(created), "$.id");
+        assertThat(JsonPath.<Integer>read(body(created), "$.stats.presences")).isEqualTo(1);
+        assertThat(JsonPath.<Integer>read(body(created), "$.stats.absences")).isEqualTo(1);
+        assertThat(JsonPath.<Integer>read(body(created), "$.stats.canceled")).isEqualTo(1);
+
+        // Importar de novo no mesmo: a marcação do arquivo vale sobre a antiga.
+        String merged = body(send("POST", me, "/api/attendance/import", """
+                {"targetId":"%s","marks":[{"date":"%s","status":"PRESENT"},{"date":"%s","status":"ABSENT"}]}"""
+                .formatted(id, start.plusDays(1), start.plusDays(3))));
+        assertThat(JsonPath.<Integer>read(merged, "$.stats.presences")).isEqualTo(2);
+        assertThat(JsonPath.<Integer>read(merged, "$.stats.absences")).isEqualTo(1);
+        assertThat(JsonPath.<String>read(merged, "$.name")).isEqualTo("GCM");
+
+        assertThat(send("POST", me, "/api/attendance/import", """
+                {"marks":[]}""")).hasStatus(400);
+        String other = registerAndGetBearer();
+        assertThat(send("POST", other, "/api/attendance/import", """
+                {"targetId":"%s","marks":[]}""".formatted(id))).hasStatus(404);
+    }
+
     private MvcTestResult mark(String bearer, String id, LocalDate date, String status) {
         return send("PUT", bearer, "/api/attendance/" + id + "/days/" + date, """
                 {"status":%s}""".formatted(status));

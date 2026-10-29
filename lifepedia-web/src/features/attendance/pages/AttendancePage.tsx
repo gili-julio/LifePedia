@@ -1,4 +1,4 @@
-import { CalendarCheck2Icon, EllipsisVerticalIcon, LinkIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
+import { CalendarCheck2Icon, ClipboardPasteIcon, EllipsisVerticalIcon, LinkIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
@@ -14,6 +14,7 @@ import { useCommitments, useDeleteCommitment } from '../api'
 import { AbsenceMeter } from '../components/AbsenceMeter'
 import { CommitmentDialog } from '../components/CommitmentDialog'
 import { DaysDialog } from '../components/DaysDialog'
+import { SigaaImportDialog } from '../components/SigaaImportDialog'
 import type { Commitment } from '../types'
 
 /** Frequência: compromissos (ex.: matérias) com dias, horário e limite de faltas. */
@@ -24,6 +25,7 @@ export function AttendancePage() {
   const [days, setDays] = useState<Commitment | null>(null)
   const [menu, setMenu] = useState<{ open: boolean; item?: Commitment }>({ open: false })
   const [deleting, setDeleting] = useState<{ open: boolean; item?: Commitment }>({ open: false })
+  const [importing, setImporting] = useState(false)
 
   async function onDelete(item: Commitment) {
     try {
@@ -37,7 +39,10 @@ export function AttendancePage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Frequência" description="Seus compromissos com presença, faltas e o limite de cada um."
-        actions={[{ label: 'Novo compromisso', icon: PlusIcon, primary: true, onSelect: () => setEditing({ open: true }) }]} />
+        actions={[
+          { label: 'Novo compromisso', icon: PlusIcon, primary: true, onSelect: () => setEditing({ open: true }) },
+          { label: 'Importar do SIGAA', icon: ClipboardPasteIcon, onSelect: () => setImporting(true) },
+        ]} />
 
       {isError ? <p className="text-sm text-destructive">Não foi possível carregar a frequência.</p>
         : isLoading || !data ? (
@@ -54,7 +59,10 @@ export function AttendancePage() {
                   Cadastre uma matéria ou outro compromisso fixo para acompanhar presenças e faltas.
                 </p>
               </div>
-              <Button onClick={() => setEditing({ open: true })}><PlusIcon /> Novo compromisso</Button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button onClick={() => setEditing({ open: true })}><PlusIcon /> Novo compromisso</Button>
+                <Button variant="outline" onClick={() => setImporting(true)}><ClipboardPasteIcon /> Importar do SIGAA</Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -67,6 +75,7 @@ export function AttendancePage() {
 
       <CommitmentDialog open={editing.open} commitment={editing.item}
         onOpenChange={(open) => setEditing((s) => ({ ...s, open }))} />
+      <SigaaImportDialog open={importing} onOpenChange={setImporting} commitments={data ?? []} />
       <DaysDialog commitment={days} onOpenChange={(open) => !open && setDays(null)} />
       <ActionSheet open={menu.open} onOpenChange={(open) => setMenu((s) => ({ ...s, open }))} title={menu.item?.name ?? ''}
         actions={[

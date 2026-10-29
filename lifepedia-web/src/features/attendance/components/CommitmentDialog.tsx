@@ -1,5 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2Icon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
@@ -16,7 +17,7 @@ import { COLOR_SWATCHES } from '@/lib/colors'
 import { todayIso } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useLinkableTasks, useSaveCommitment } from '../api'
-import type { Commitment } from '../types'
+import type { Commitment, CommitmentRequest } from '../types'
 
 const WEEKDAYS = ['seg', 'ter', 'qua', 'qui', 'sex', 'sáb', 'dom']
 const NO_TASK = '__none'
@@ -38,17 +39,18 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-function toForm(commitment: Commitment | undefined): FormValues {
+function toForm(commitment: Commitment | undefined, defaults: Partial<CommitmentRequest> = {}): FormValues {
+  const base = { ...commitment, ...defaults }
   return {
-    name: commitment?.name ?? '',
-    color: commitment?.color ?? COLOR_SWATCHES[0],
-    weekdays: commitment?.weekdays ?? [],
-    time: commitment?.time ?? '08:00',
-    durationMinutes: String(commitment?.durationMinutes ?? 60),
-    startDate: commitment?.startDate ?? todayIso(),
-    endDate: commitment?.endDate ?? '',
-    maxAbsences: String(commitment?.maxAbsences ?? 8),
-    taskId: commitment?.task?.id ?? NO_TASK,
+    name: base.name ?? '',
+    color: base.color ?? COLOR_SWATCHES[0],
+    weekdays: base.weekdays ?? [],
+    time: base.time ?? '08:00',
+    durationMinutes: String(base.durationMinutes ?? 60),
+    startDate: base.startDate ?? todayIso(),
+    endDate: base.endDate ?? '',
+    maxAbsences: String(base.maxAbsences ?? 8),
+    taskId: defaults.taskId ?? commitment?.task?.id ?? NO_TASK,
   }
 }
 
@@ -69,31 +71,47 @@ export function CommitmentDialog({ open, onOpenChange, commitment }: Props) {
   )
 }
 
-function CommitmentForm({ commitment, onDone }: { commitment?: Commitment; onDone: () => void }) {
+type FormProps = {
+  commitment?: Commitment
+  /** Valores iniciais de um compromisso novo (ex.: lidos do SIGAA). */
+  defaults?: Partial<CommitmentRequest>
+  /** Troca o salvar padrão (a importação manda junto as marcações); devolve false se não deu certo. */
+  onSubmit?: (data: CommitmentRequest) => Promise<boolean>
+  submitLabel?: string
+  /** Conteúdo antes dos campos (ex.: resumo da importação). */
+  children?: ReactNode
+  onDone: () => void
+  onBack?: () => void
+}
+
+/** Campos do compromisso (também usados na importação do SIGAA). */
+export function CommitmentForm({ commitment, defaults, onSubmit: submit, submitLabel = 'Salvar', children, onDone, onBack }: FormProps) {
   const save = useSaveCommitment()
   const tasks = useLinkableTasks(true)
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: toForm(commitment) })
+  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: toForm(commitment, defaults) })
   const { errors, isSubmitting } = form.formState
   const endDate = useWatch({ control: form.control, name: 'endDate' })
   const options = [...(tasks.data ?? [])]
   if (commitment?.task && !options.some((t) => t.id === commitment.task?.id)) options.unshift(commitment.task)
 
   async function onSubmit(values: FormValues) {
+    const data: CommitmentRequest = {
+      name: values.name,
+      color: values.color,
+      weekdays: values.weekdays,
+      time: values.time,
+      durationMinutes: Number(values.durationMinutes),
+      startDate: values.startDate,
+      endDate: values.endDate || null,
+      maxAbsences: Number(values.maxAbsences),
+      taskId: values.taskId === NO_TASK ? null : values.taskId,
+    }
+    if (submit) {
+      if (await submit(data)) onDone()
+      return
+    }
     try {
-      await save.mutateAsync({
-        id: commitment?.id,
-        data: {
-          name: values.name,
-          color: values.color,
-          weekdays: values.weekdays,
-          time: values.time,
-          durationMinutes: Number(values.durationMinutes),
-          startDate: values.startDate,
-          endDate: values.endDate || null,
-          maxAbsences: Number(values.maxAbsences),
-          taskId: values.taskId === NO_TASK ? null : values.taskId,
-        },
-      })
+      await save.mutateAsync({ id: commitment?.id, data })
       toast.success(commitment ? 'Compromisso atualizado.' : 'Compromisso criado.')
       onDone()
     } catch (error) {
@@ -104,6 +122,7 @@ function CommitmentForm({ commitment, onDone }: { commitment?: Commitment; onDon
   return (
     <>
       <DialogBody>
+        {children}
         <form id="commitment-form" onSubmit={form.handleSubmit(onSubmit)} noValidate>
           <FieldGroup className="gap-4">
             <Field data-invalid={!!errors.name}>
@@ -208,9 +227,9 @@ function CommitmentForm({ commitment, onDone }: { commitment?: Commitment; onDon
         </form>
       </DialogBody>
       <DialogFooter>
-        <Button variant="outline" onClick={onDone}>Cancelar</Button>
+        <Button variant="outline" onClick={onBack ?? onDone}>{onBack ? 'Voltar' : 'Cancelar'}</Button>
         <Button type="submit" form="commitment-form" disabled={isSubmitting}>
-          {isSubmitting && <Loader2Icon className="animate-spin" />} Salvar
+          {isSubmitting && <Loader2Icon className="animate-spin" />} {submitLabel}
         </Button>
       </DialogFooter>
     </>

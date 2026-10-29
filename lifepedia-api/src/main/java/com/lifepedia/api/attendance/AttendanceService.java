@@ -6,6 +6,7 @@ import com.lifepedia.api.attendance.AttendanceDtos.CommitmentRequest;
 import com.lifepedia.api.attendance.AttendanceDtos.CommitmentResponse;
 import com.lifepedia.api.attendance.AttendanceDtos.Day;
 import com.lifepedia.api.attendance.AttendanceDtos.DayStatus;
+import com.lifepedia.api.attendance.AttendanceDtos.ImportRequest;
 import com.lifepedia.api.attendance.AttendanceDtos.MarkData;
 import com.lifepedia.api.attendance.AttendanceDtos.MarkRequest;
 import com.lifepedia.api.attendance.AttendanceDtos.Stats;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -42,6 +44,7 @@ public class AttendanceService {
     static final int MAX_COMMITMENTS = 50;
     static final int MAX_RANGE_DAYS = 62;
     private static final int MAX_YEARS = 5;
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final CommitmentRepository commitments;
     private final CommitmentMarkRepository marks;
@@ -102,14 +105,9 @@ public class AttendanceService {
     @Transactional
     public Day mark(UUID userId, UUID id, LocalDate date, MarkRequest request) {
         Commitment commitment = require(userId, id);
-        if (!commitment.occursOn(date)) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "Esse compromisso não acontece nesse dia.");
-        }
         LocalDate today = LocalDate.now(clock);
         Mark status = request.status();
-        if (status != null && status != Mark.CANCELED && date.isAfter(today)) {
-            throw new BusinessException(HttpStatus.BAD_REQUEST, "Presença e falta só a partir do dia do compromisso.");
-        }
+        checkMark(commitment, date, status, today);
         Optional<CommitmentMark> existing = marks.findByCommitmentIdAndDate(id, date);
         if (status == null) {
             existing.ifPresent(marks::delete);
@@ -120,6 +118,39 @@ public class AttendanceService {
         }
         marks.flush();
         return context(userId, List.of(commitment), today).day(commitment, date);
+    }
+
+    /**
+     * Importação (ex.: frequência do SIGAA): cria o compromisso, ou usa o {@code targetId} já existente sem mudar os dados
+     * dele, e grava as marcações (a do arquivo vale sobre a que já havia). Tudo ou nada.
+     */
+    @Transactional
+    public CommitmentResponse importDays(UUID userId, ImportRequest request) {
+        Commitment commitment;
+        if (request.targetId() != null) {
+            commitment = require(userId, request.targetId());
+        } else if (request.commitment() != null) {
+            if (commitments.countByUserId(userId) >= MAX_COMMITMENTS) {
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "Limite de " + MAX_COMMITMENTS + " compromissos.");
+            }
+            commitment = new Commitment(userId);
+            apply(userId, commitment, request.commitment());
+            commitment = commitments.save(commitment);
+        } else {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Informe o compromisso.");
+        }
+        LocalDate today = LocalDate.now(clock);
+        UUID id = commitment.getId();
+        Map<LocalDate, CommitmentMark> existing = new HashMap<>();
+        marks.findByCommitmentIdIn(List.of(id)).forEach(m -> existing.put(m.getDate(), m));
+        for (MarkData data : request.marks()) {
+            checkMark(commitment, data.date(), data.status(), today);
+            CommitmentMark mark = existing.computeIfAbsent(data.date(), date -> new CommitmentMark(id, date));
+            mark.setStatus(data.status());
+        }
+        marks.saveAll(existing.values());
+        marks.flush();
+        return single(commitment);
     }
 
     @Transactional(readOnly = true)
@@ -188,6 +219,16 @@ public class AttendanceService {
         commitment.update(request.name().trim(), request.color(), request.weekdays(), request.time(),
                 request.durationMinutes(), request.startDate(), request.endDate(), request.maxAbsences(),
                 request.taskId());
+    }
+
+    /** Dia precisa ser do compromisso; presença e falta só até hoje. */
+    private static void checkMark(Commitment commitment, LocalDate date, Mark status, LocalDate today) {
+        if (!commitment.occursOn(date)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Esse compromisso não acontece em " + DAY.format(date) + ".");
+        }
+        if (status != null && status != Mark.CANCELED && date.isAfter(today)) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Presença e falta só a partir do dia do compromisso.");
+        }
     }
 
     private Commitment require(UUID userId, UUID id) {

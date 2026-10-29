@@ -99,7 +99,7 @@ export const PRIORITY_COLOR: Record<Priority, string | null> = {
   HIGH: '#e34948',
 }
 
-/** Opções de lembrete (minutos antes do horário). */
+/** Opções de lembrete (minutos antes do horário; a API aceita até 30 dias). */
 export const REMINDERS: { minutes: number; label: string }[] = [
   { minutes: 0, label: 'Na hora' },
   { minutes: 5, label: '5 min antes' },
@@ -107,6 +107,9 @@ export const REMINDERS: { minutes: number; label: string }[] = [
   { minutes: 30, label: '30 min antes' },
   { minutes: 60, label: '1 hora antes' },
   { minutes: 1440, label: '1 dia antes' },
+  { minutes: 7 * 1440, label: '7 dias antes' },
+  { minutes: 15 * 1440, label: '15 dias antes' },
+  { minutes: 30 * 1440, label: '30 dias antes' },
 ]
 
 export function reminderLabel(minutes: number) {

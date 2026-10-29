@@ -150,7 +150,8 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 - **Frequência** (`attendance/`): dias gerados pela regra (`Commitment.occursOn`); só a marcação é gravada. Contagem e
   status num `Context` por requisição (marcações + dias concluídos da tarefa ligada). Tarefa só pela fachada
   `task/TaskLinks` (pessoal e do usuário; nunca ler `task_occurrences` direto). "Hoje"/horário pelo `Clock`. Teste em
-  `AttendanceIntegrationTest` (período já encerrado para não depender da hora).
+  `AttendanceIntegrationTest` (período já encerrado para não depender da hora). Importação (`importDays`) valida cada
+  dia com a mesma regra da marcação (`checkMark`) numa transação só; a leitura do SIGAA é do front.
 
 ## Testes
 

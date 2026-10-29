@@ -25,6 +25,13 @@ export type Commitment = {
 
 export type CommitmentRequest = Omit<Commitment, 'id' | 'task' | 'stats'> & { taskId: string | null }
 
+/** Importação: `targetId` = compromisso existente (só as marcações mudam); senão cria com `commitment`. */
+export type CommitmentImport = {
+  commitment: CommitmentRequest | null
+  targetId: string | null
+  marks: { date: string; status: Mark }[]
+}
+
 /** `fromTask`: presença vinda da tarefa ligada concluída. */
 export type CommitmentDay = { date: string; status: DayStatus; fromTask: boolean }
 

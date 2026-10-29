@@ -3,6 +3,7 @@ package com.lifepedia.api.attendance;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.lifepedia.api.attendance.CommitmentMark.Mark;
 import com.lifepedia.api.task.TaskLinks.LinkedTask;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -69,7 +70,17 @@ public final class AttendanceDtos {
                                  LocalDate endDate, int maxAbsences, String task, List<MarkData> marks) {
     }
 
-    public record MarkData(LocalDate date, Mark status) {
+    public record MarkData(@NotNull(message = "Informe o dia.") LocalDate date,
+                           @NotNull(message = "Informe a marcação.") Mark status) {
+    }
+
+    /**
+     * Importação (ex.: SIGAA): {@code targetId} = compromisso já existente (só as marcações mudam); senão cria com
+     * {@code commitment}.
+     */
+    public record ImportRequest(@Valid CommitmentRequest commitment, UUID targetId,
+                                @NotNull(message = "Informe as marcações.") @Size(max = 500, message = "Dias demais.")
+                                List<@NotNull @Valid MarkData> marks) {
     }
 
     /** Um dia do compromisso na agenda, com as faltas do compromisso inteiro. */

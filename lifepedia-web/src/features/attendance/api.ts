@@ -1,6 +1,6 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { AttendanceAgendaItem, Commitment, CommitmentDay, CommitmentRequest, LinkedTask, Mark } from './types'
+import type { AttendanceAgendaItem, Commitment, CommitmentDay, CommitmentImport, CommitmentRequest, LinkedTask, Mark } from './types'
 
 /** Chaves sob 'attendance': toda mutação invalida o módulo. */
 const keys = {
@@ -56,4 +56,10 @@ export function useDeleteCommitment() {
 export function useMarkDay() {
   return useAttendanceMutation(({ id, date, status }: { id: string; date: string; status: Mark | null }) =>
     api<CommitmentDay>(`/api/attendance/${id}/days/${date}`, { method: 'PUT', body: { status } }))
+}
+
+/** Cria (ou usa o `targetId`) e grava as marcações de uma vez (tudo ou nada). */
+export function useImportCommitment() {
+  return useAttendanceMutation((data: CommitmentImport) =>
+    api<Commitment>('/api/attendance/import', { method: 'POST', body: data }))
 }

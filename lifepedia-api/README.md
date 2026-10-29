@@ -273,10 +273,11 @@ exige repetição em dias fixos (não "a partir da conclusão").
   pendente (hoje). `streak` = feitos desde o último não feito (pulado e hoje pendente não contam nem quebram);
   `best` = maior sequência; `monthRate` = feitos ÷ (feitos + não feitos) no mês (nulo sem dias). O item da agenda traz
   `streak` (nulo se não é hábito). Dividir a série cria outra tarefa: a sequência recomeça.
-- **Lembrete** (`reminderMinutes` 0–1440, exige `dueTime`; tirar o horário apaga): `TaskReminderJob` roda a cada
+- **Lembrete** (`reminderMinutes` 0–43200, ou seja, até 30 dias; exige `dueTime`; tirar o horário apaga): `TaskReminderJob` roda a cada
   minuto (fuso `TIME_ZONE`) e avisa as ocorrências pendentes cujo horário menos os minutos caiu na janela; mover ou
   editar só esta usa o dia e o horário novos. Destino: pessoal → dono; grupo → responsável da ocorrência ou todos os
-  membros. API parada: recupera no máximo 10 min.
+  membros. API parada: recupera no máximo 10 min. Cada tarefa gera as ocorrências só até onde o lembrete dela alcança
+  (1 dia para os curtos; 7, 15 ou 30 dias para os antecipados).
 - **Fixo** (`recurringEntryId`): só em tarefa pessoal e só fixo do próprio usuário (`400` senão); excluir o fixo
   desliga (`SET NULL`). O valor é registrado pelo front em `PUT /api/finance/recurring/{id}/adjustments/{month}`.
 
@@ -304,6 +305,7 @@ atrasadas: `TaskOverdueJob` (8h no fuso `TIME_ZONE`). Agendamentos ligam com `li
 | PUT | `/api/attendance/{id}/days/{date}` | `{status: PRESENT \| ABSENT \| CANCELED \| null}` (nulo tira) · dia fora da regra → 400 · presença/falta depois de hoje → 400 |
 | GET | `/api/attendance/agenda?from=&to=` | Dias dos compromissos no intervalo (até 62 dias) com `status`, `taskId` e as faltas do compromisso |
 | GET | `/api/attendance/tasks` | Tarefas pessoais em aberto com data, para ligar |
+| POST | `/api/attendance/import` | `{commitment, marks: [{date, status}]}` cria com as marcações; `{targetId, marks}` grava no existente (dados do compromisso não mudam; a marcação nova vale sobre a antiga) · até 500 dias · dia inválido → 400 e nada é gravado |
 
 `status` do dia: marcação gravada; senão `PRESENT` com `fromTask` se a tarefa ligada foi concluída naquele dia (pela
 regra); senão `PENDING` se já terminou (hoje: depois de `time + durationMinutes`, fuso `TIME_ZONE`) ou `UPCOMING`.
@@ -406,5 +408,5 @@ src/main/resources/
                     · V20 sessões, Google e observações de 10 mil · V21 chat do grupo
                     · V22 vários responsáveis, "cada um conclui", horas da agenda
                     · V23 push · V24 aceite dos termos · V25 sono por dia na agenda
-                    · V26 frequência
+                    · V26 frequência · V27 lembrete até 30 dias
 ```

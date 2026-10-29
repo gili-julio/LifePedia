@@ -197,7 +197,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   admin (`canDelete` no item). Comentários só em grupo.
   **Hábito** (`habit`, só com regra de dias fixos): sequência/recorde/% do mês calculados na API (`HabitStats`;
   pulada é neutra, só dia passado pendente quebra) — `streak` no item da agenda e `GET /habits`. **Lembrete**
-  (`reminderMinutes` 0–1440, exige `dueTime`) vira notificação `TASK_REMINDER` pelo `TaskReminderJob` (a cada minuto).
+  (`reminderMinutes` 0–43200 = até 30 dias, exige `dueTime`) vira notificação `TASK_REMINDER` pelo `TaskReminderJob` (a cada minuto).
   **Fixo** (`recurringEntryId`, só pessoal e do próprio usuário): o front abre o diálogo e grava o ajuste do mês pela
   rota do financeiro; a API de tarefas não mexe em valores.
 - **Frequência** (`/api/attendance`): compromisso pessoal (`commitments`: dias da semana `1..7`, horário, duração,
@@ -206,7 +206,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   (`fromTask`); dia que já terminou (fuso `TIME_ZONE`) = `PENDING`; senão `UPCOMING`. Contagem (`stats`) só até hoje (ou o
   fim) e sempre da API. `GET` (lista completa, até 50), `POST`, `PUT/DELETE /{id}`, `GET /{id}/days` (até hoje, do mais
   novo), `PUT /{id}/days/{date} {status}` (nulo tira; presença/falta só até hoje, "sem aula" também no futuro),
-  `GET /agenda?from&to` (até 62 dias, com as faltas do compromisso) e `GET /tasks` (tarefas pessoais abertas para ligar).
+  `GET /agenda?from&to` (até 62 dias, com as faltas do compromisso), `GET /tasks` (tarefas pessoais abertas para ligar) e
+  `POST /import {commitment | targetId, marks}` (cria, ou usa o existente sem mudar os dados, e grava as marcações; tudo
+  ou nada). O texto do SIGAA é lido só no front (`features/attendance/sigaa.ts`) e nunca vai para a API.
   Tarefa excluída: `task_id` vira nulo. Mutação de tarefa invalida `['attendance']` no front.
 - **Importação por IA**: `POST /api/finance/import` grava ocasionais + ajustes de fixos (tudo ou nada). O modelo de
   resposta é `lifepedia/transactions@3`: `descriptionOficial` (como no documento, só leitura, gravada em

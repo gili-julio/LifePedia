@@ -21,7 +21,7 @@ compartilham usuário, autenticação, design e padrões.
 | **Amigos** | ✅ v1.0 | Pedidos de amizade por nome ou @username (aceitar/recusar/cancelar), perfil do amigo e **conquistas** com níveis (tarefas, hábitos, amigos, grupos, lançamentos) |
 | **Financeiro** | ✅ v1.3 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **investimentos** (fora das despesas, somam na reserva do grupo), **adiantar/adiar parcelas**, **importação de extrato/fatura via agente de IA** e **finanças em grupo** |
 | **Tarefas** | ✅ v1.1 | Tarefas pessoais e **em grupo** para hoje, outros dias ou sem data, **atrasadas**, **repetição** (a cada N dias/semanas/meses/anos, dias da semana, dia do mês, a partir da conclusão), prioridade, horário e duração, **subtarefas**, **listas** e **etiquetas**; **agenda** em grade de horários (dia/semana, pessoal e no grupo); no grupo, **vários responsáveis** ou **todos**, "basta um" ou "cada um conclui a sua", **rodízio**, **comentários** e avisos; **levar tarefa pessoal para um grupo**; **semana** (arrastar muda o dia), **hábitos** (sequência e % do mês), **lembretes** e **ligação com fixos do financeiro** |
-| **Frequência** | ✅ v1.0 | Compromissos fixos (ex.: matérias) com dias da semana, horário, período e **limite de faltas**; marcar presença, falta ou sem aula em cada dia; **tarefa ligada** concluída conta presença; aparece na **agenda** e no **Início** |
+| **Frequência** | ✅ v1.0 | Compromissos fixos (ex.: matérias) com dias da semana, horário, período e **limite de faltas**; marcar presença, falta ou sem aula em cada dia; **tarefa ligada** concluída conta presença; aparece na **agenda** e no **Início**; **importar do SIGAA** (UFRN) colando a página de frequência |
 | Metas | 💡 ideia | Objetivos pessoais e financeiros com acompanhamento |
 | Saúde | 💡 ideia | Consultas, exames, medicamentos, hábitos |
 | Documentos | 💡 ideia | Documentos importantes, vencimentos, lembretes |
@@ -207,7 +207,7 @@ compartilham usuário, autenticação, design e padrões.
   feitos seguidos), o recorde e o **% do mês** (feitos ÷ devidos até hoje). **Pular não quebra** a sequência; só quebra
   um dia que passou sem fazer. Na aba *Hábitos*, tocar num dos últimos 7 dias marca ou desmarca. Dividir a série
   ("esta e as próximas") começa uma sequência nova.
-- **Lembrete** (tarefa com horário): na hora, 5/15/30/60 min antes ou no dia anterior; chega como notificação (tarefa
+- **Lembrete** (tarefa com horário): na hora, 5/15/30/60 min antes, 1 dia antes ou 7, 15 ou 30 dias antes; chega como notificação (tarefa
   pessoal: você; de grupo: o responsável ou, sem ninguém, todos os membros). Checado a cada minuto; com a API parada,
   recupera no máximo os últimos 10 minutos.
 - **Fixo do financeiro** (só tarefa pessoal): ligue a tarefa a um fixo seu (ex.: "Pagar luz"). Ao concluir, abre
@@ -250,6 +250,13 @@ compartilham usuário, autenticação, design e padrões.
 - **Agenda pessoal**: bloco tracejado com o nome e as faltas; tocar abre *Presente / Falta / Sem aula*. Com a tarefa
   ligada no mesmo dia, aparece um bloco só (o da tarefa, com o selo do compromisso). Os **indicadores da semana**
   somam os compromissos (menos *Sem aula*). **Início**: card com faltas/limite de cada um e os dias pendentes.
+- **Importar do SIGAA** (UFRN): na turma virtual, aba *Grupos* → *Frequência*, `Ctrl + A`, copiar e colar no campo (o
+  passo a passo fica no "i" ao lado). O texto é lido no navegador e preenche: nome (do código da turma), dias da semana
+  (os que se repetem no Mapa de Frequências), início (1ª aula) e fim (última avaliação), horário pelo código (ex.: `T12`
+  = 13:00 às 14:40, aulas de 50 min) e o **limite** (aulas da carga horária × faltas permitidas ÷ aulas por dia; ex.:
+  72 × 25% = 18 aulas ÷ 2 = 9 dias). Marca *Presente*, *Falta* (`N Falta(s)`) e, se quiser, *Sem aula* nos dias avisados
+  nas notícias ("Não haverá aula...") e nos dias de aula que não aparecem no Mapa (feriados); "Não Registrada" fica
+  pendente. Tudo aparece para conferir antes de salvar. Importar de novo na mesma matéria só atualiza as marcações.
 
 ## Arquitetura
 

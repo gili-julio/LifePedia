@@ -26,6 +26,28 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'lembrete-dias',
+    date: '2026-10-29',
+    title: 'Lembretes com mais antecedência nas tarefas',
+    modules: ['Tarefas', 'Notificações'],
+    details: [
+      'Além das opções que já existiam, agora dá para ser lembrado 7, 15 ou 30 dias antes do horário da tarefa.',
+      'Bom para provas, pagamentos e prazos que pedem preparo.',
+    ],
+  },
+  {
+    id: 'frequencia-sigaa',
+    date: '2026-10-29',
+    title: 'Traga suas matérias do SIGAA para a Frequência',
+    modules: ['Frequência'],
+    details: [
+      'Na Frequência, toque em Importar do SIGAA e cole o texto da página de frequência da turma virtual. O passo a passo fica no "i" ao lado do campo.',
+      'O nome, os dias, o horário, o período e o limite de faltas já vêm preenchidos para você conferir.',
+      'Presenças e faltas registradas no SIGAA já entram marcadas. Dias de aula cancelada nas notícias e feriados podem entrar como sem aula.',
+      'Importar de novo a mesma matéria só atualiza as marcações.',
+    ],
+  },
+  {
     id: 'frequencia',
     date: '2026-10-29',
     title: 'Controle suas faltas nas matérias e compromissos fixos',

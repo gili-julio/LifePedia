@@ -52,7 +52,7 @@ public final class TaskDtos {
      * @param allMembers       todos do grupo, inclusive quem entrar depois (no lugar dos responsáveis fixos)
      * @param rotation         rodízio em ordem (só grupo, com repetição; no lugar dos responsáveis)
      * @param completion       com mais de um responsável: basta um concluir (padrão) ou cada um conclui a sua
-     * @param reminderMinutes  lembrete N minutos antes do horário (0 = na hora)
+     * @param reminderMinutes  lembrete N minutos antes do horário (0 = na hora; até 30 dias)
      * @param recurringEntryId fixo do financeiro ligado (só pessoal)
      */
     public record TaskRequest(
@@ -72,7 +72,7 @@ public final class TaskDtos {
             Boolean allMembers,
             @Size(max = 50, message = "Máximo de 50 pessoas no rodízio.") List<@NotNull UUID> rotation,
             Completion completion,
-            @Min(value = 0, message = "Lembrete inválido.") @Max(value = 1440, message = "Lembrete de até 1 dia antes.")
+            @Min(value = 0, message = "Lembrete inválido.") @Max(value = 43_200, message = "Lembrete de até 30 dias antes.")
             Integer reminderMinutes,
             UUID recurringEntryId) {
     }
@@ -251,7 +251,7 @@ public final class TaskDtos {
             LocalDate dueDate,
             LocalTime dueTime,
             @Min(1) @Max(1440) Integer durationMinutes,
-            @Min(0) @Max(1440) Integer reminderMinutes,
+            @Min(0) @Max(43_200) Integer reminderMinutes,
             @Size(max = 64) String list,
             @Size(max = 10) List<@NotBlank @Size(max = 64) String> tags,
             Boolean habit,

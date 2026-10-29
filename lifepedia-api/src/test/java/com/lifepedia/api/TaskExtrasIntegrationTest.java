@@ -129,6 +129,20 @@ class TaskExtrasIntegrationTest extends ApiTestSupport {
         assertThat(reminderTitles(alice).stream().filter("Caminhar"::equals)).isEmpty();
         reminders.remind(day.plusDays(3).atTime(7, 59), day.plusDays(3).atTime(8, 0));
         assertThat(reminderTitles(alice).stream().filter("Caminhar"::equals)).hasSize(1);
+
+        // Com antecedência: 7 e 30 dias antes (mais que isso é recusado).
+        LocalDate later = today.plusDays(40);
+        create(alice, "/api/tasks", """
+                {"title":"Prova","dueDate":"%s","dueTime":"13:00","reminderMinutes":10080}""".formatted(later));
+        create(alice, "/api/tasks", """
+                {"title":"Matrícula","dueDate":"%s","dueTime":"13:00","reminderMinutes":43200}""".formatted(later));
+        assertThat(send("POST", alice, "/api/tasks", """
+                {"title":"X","dueDate":"%s","dueTime":"13:00","reminderMinutes":43201}""".formatted(later))).hasStatus(400);
+        reminders.remind(later.minusDays(30).atTime(12, 59), later.minusDays(30).atTime(13, 0));
+        assertThat(reminderTitles(alice).stream().filter("Matrícula"::equals)).hasSize(1);
+        assertThat(reminderTitles(alice).stream().filter("Prova"::equals)).isEmpty();
+        reminders.remind(later.minusDays(7).atTime(12, 59), later.minusDays(7).atTime(13, 0));
+        assertThat(reminderTitles(alice).stream().filter("Prova"::equals)).hasSize(1);
     }
 
     @Test

@@ -117,6 +117,10 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   Dia futuro só aceita "Sem aula" (`MarkButtons future`). Agenda pessoal: `useAttendanceAgenda` no `AgendaBoard`, bloco
   `CommitmentBlock` (posição pela grade, `blockStyle`); compromisso com a tarefa ligada no mesmo dia vira selo no bloco
   da tarefa (sem duplicar). Indicadores somam os compromissos (menos "sem aula") em `metrics.ts`.
+  **SIGAA**: `sigaa.ts` é puro (`parseSigaa` lê o texto colado; `sigaaMarks` filtra pelos dias/período escolhidos e até
+  hoje); o texto nunca vai para a API, só `POST /api/attendance/import`. Horário da UFRN em `SLOT_STARTS` (aulas de
+  50 min). Página do SIGAA mudou? Ajuste o parser e confira com um texto real; sempre mostre o que foi lido antes de salvar.
+  O formulário da importação é o `CommitmentForm` (com `defaults` e `onSubmit`).
 - **Amigos** (`features/friends`): chaves `['friends', ...]`; mutações invalidam o módulo e as notificações.
   Conquistas: nível (nunca cai), meta, valor e `unlockedAt` sempre da API; o front só tem texto/ícone por código (`achievements.ts`, espelha
   `Achievement`). Perfil de não amigo → 404 (tela com volta para Amigos).
