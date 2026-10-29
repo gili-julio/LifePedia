@@ -112,6 +112,13 @@ class AttendanceIntegrationTest extends ApiTestSupport {
                 .formatted(today.plusDays(1), today.plusDays(3)), null));
         assertThat(JsonPath.<List<String>>read(agenda, "$[*].status")).containsExactly("UPCOMING", "CANCELED", "UPCOMING");
         assertThat(mark(me, id, today.minusDays(1), "\"ABSENT\"")).hasStatus(400);
+
+        // Encontros que restam: só com data de fim e sem os dias já marcados como "sem aula".
+        String later = id(post(me, "/api/attendance", request("Física", today.plusDays(1), today.plusDays(10), null)));
+        assertThat(mark(me, later, today.plusDays(4), "\"CANCELED\"")).hasStatusOk();
+        String list = body(send("GET", me, "/api/attendance", null));
+        assertThat(JsonPath.<List<Integer>>read(list, "$[?(@.name == 'Física')].stats.upcoming")).containsExactly(9);
+        assertThat(JsonPath.<List<Object>>read(list, "$[?(@.name == 'Inglês')].stats.upcoming")).containsExactly((Object) null);
     }
 
     @Test

@@ -5,8 +5,15 @@ export type Mark = 'PRESENT' | 'ABSENT' | 'CANCELED'
 
 export type LinkedTask = { id: string; title: string; dueTime: string | null; repeating: boolean }
 
-/** `remaining`: faltas que ainda cabem no limite (negativo = passou). */
-export type AttendanceStats = { presences: number; absences: number; pending: number; canceled: number; remaining: number }
+/** `remaining`: faltas que ainda cabem no limite (negativo = passou); `upcoming`: encontros de hoje até o fim (nulo sem fim). */
+export type AttendanceStats = {
+  presences: number
+  absences: number
+  pending: number
+  canceled: number
+  remaining: number
+  upcoming: number | null
+}
 
 export type Commitment = {
   id: string

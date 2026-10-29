@@ -204,7 +204,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   período, `maxAbsences`, `taskId` opcional) com os dias **gerados pela regra**; `commitment_marks` guarda só a marcação
   (`PRESENT`/`ABSENT`/`CANCELED`). Sem marcação: tarefa ligada (pessoal, `TaskLinks`) concluída no dia = `PRESENT`
   (`fromTask`); dia que já terminou (fuso `TIME_ZONE`) = `PENDING`; senão `UPCOMING`. Contagem (`stats`) só até hoje (ou o
-  fim) e sempre da API. `GET` (lista completa, até 50), `POST`, `PUT/DELETE /{id}`, `GET /{id}/days` (até hoje, do mais
+  fim) e sempre da API; `stats.upcoming` = dias `UPCOMING` de hoje até o fim (nulo sem fim). `GET` (lista completa, até 50), `POST`, `PUT/DELETE /{id}`, `GET /{id}/days` (até hoje, do mais
   novo), `PUT /{id}/days/{date} {status}` (nulo tira; presença/falta só até hoje, "sem aula" também no futuro),
   `GET /agenda?from&to` (até 62 dias, com as faltas do compromisso), `GET /tasks` (tarefas pessoais abertas para ligar) e
   `POST /import {commitment | targetId, marks}` (cria, ou usa o existente sem mudar os dados, e grava as marcações; tudo

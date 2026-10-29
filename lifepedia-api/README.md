@@ -298,7 +298,7 @@ atrasadas: `TaskOverdueJob` (8h no fuso `TIME_ZONE`). Agendamentos ligam com `li
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/api/attendance` | Compromissos da pessoa (lista completa, até 50, por nome) com `stats` `{presences, absences, pending, canceled, remaining}` contados até hoje (ou até o fim) e `task` ligada |
+| GET | `/api/attendance` | Compromissos da pessoa (lista completa, até 50, por nome) com `stats` `{presences, absences, pending, canceled, remaining, upcoming}` contados até hoje (ou até o fim); `upcoming` = encontros que ainda vão acontecer, de hoje até o fim (sem os já marcados; nulo sem data de fim) e `task` ligada |
 | POST / PUT | `/api/attendance` · `/{id}` | `{name, color, weekdays [1..7], time "HH:mm", durationMinutes 5–720, startDate, endDate?, maxAbsences 0–999, taskId?}` · início até 5 anos atrás, período até 5 anos · `taskId` de tarefa pessoal da pessoa (senão 404) |
 | DELETE | `/api/attendance/{id}` | Apaga com as marcações (a tarefa fica) → `204` |
 | GET | `/api/attendance/{id}/days` | Dias que já chegaram, do mais novo: `{date, status, fromTask}` |

@@ -9,7 +9,7 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api'
 import { formatDate } from '@/lib/format'
-import { scheduleLabel } from '../absences'
+import { scheduleLabel, upcomingLabel } from '../absences'
 import { useCommitments, useDeleteCommitment } from '../api'
 import { AbsenceMeter } from '../components/AbsenceMeter'
 import { CommitmentDialog } from '../components/CommitmentDialog'
@@ -112,6 +112,7 @@ function CommitmentCard({ commitment: c, onDays, onMenu }: { commitment: Commitm
       <CardContent className="space-y-3">
         <AbsenceMeter absences={stats.absences} max={c.maxAbsences} />
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground tabular-nums">
+          {stats.upcoming !== null && <span className="font-medium text-foreground">{upcomingLabel(stats.upcoming)}</span>}
           <span>{stats.presences} {stats.presences === 1 ? 'presença' : 'presenças'}</span>
           {stats.canceled > 0 && <span>{stats.canceled} sem aula</span>}
           {stats.pending > 0 && (

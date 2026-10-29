@@ -26,6 +26,16 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'frequencia-restantes',
+    date: '2026-10-29',
+    title: 'Quantos encontros ainda restam',
+    modules: ['Frequência'],
+    details: [
+      'O card de cada compromisso com data de fim mostra quantos encontros ainda vão acontecer, de hoje até o fim.',
+      'Dias que já passaram e os marcados como sem aula não entram, para comparar com as faltas que ainda cabem.',
+    ],
+  },
+  {
     id: 'ocultar-valores',
     date: '2026-10-29',
     title: 'Olhinho para ocultar os valores',

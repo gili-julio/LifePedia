@@ -17,6 +17,12 @@ export function remainingLabel(absences: number, max: number) {
   return `Pode faltar mais ${remaining}`
 }
 
+/** "Restam 4 encontros" (de hoje até o fim do período). */
+export function upcomingLabel(upcoming: number) {
+  if (upcoming === 0) return 'Nenhum encontro restante'
+  return upcoming === 1 ? 'Resta 1 encontro' : `Restam ${upcoming} encontros`
+}
+
 export const TONE_BAR: Record<AbsenceTone, string> = {
   ok: 'bg-data',
   near: 'bg-orange-500',

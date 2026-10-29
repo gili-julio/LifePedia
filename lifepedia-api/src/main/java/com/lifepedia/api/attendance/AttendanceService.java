@@ -305,7 +305,18 @@ public class AttendanceService {
                     case UPCOMING -> { }
                 }
             }
-            return new Stats(presences, absences, pending, canceled, c.getMaxAbsences() - absences);
+            return new Stats(presences, absences, pending, canceled, c.getMaxAbsences() - absences, upcoming(c));
+        }
+
+        /** Dias de hoje até o fim que ainda vão acontecer (sem os já marcados, como "sem aula"). */
+        private Integer upcoming(Commitment c) {
+            if (c.getEndDate() == null) return null;
+            int count = 0;
+            LocalDate from = c.getStartDate().isAfter(today) ? c.getStartDate() : today;
+            for (LocalDate date = from; !date.isAfter(c.getEndDate()); date = date.plusDays(1)) {
+                if (c.occursOn(date) && day(c, date).status() == DayStatus.UPCOMING) count++;
+            }
+            return count;
         }
 
         /** Já terminou (dia passado, ou hoje depois do fim do horário). */

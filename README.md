@@ -250,6 +250,8 @@ compartilham usuário, autenticação, design e padrões.
   mais). Excluir a tarefa só desliga.
 - **Cores**: barra de faltas azul; **laranja** quando já faltou e sobram até 2 (ou nenhuma); **vermelha** ao passar do
   limite. Sempre com o texto ("Pode faltar mais 3", "No limite", "Passou do limite").
+- **Encontros restantes**: com data de fim, o card mostra quantos ainda vão acontecer de hoje até o fim ("Restam 4
+  encontros"), sem os que já passaram (pendentes) e sem os marcados como *Sem aula*.
 - **Agenda pessoal**: bloco tracejado com o nome e as faltas; tocar abre *Presente / Falta / Sem aula*. Com a tarefa
   ligada no mesmo dia, aparece um bloco só (o da tarefa, com o selo do compromisso). Os **indicadores da semana**
   somam os compromissos (menos *Sem aula*). **Início**: card com faltas/limite de cada um e os dias pendentes.

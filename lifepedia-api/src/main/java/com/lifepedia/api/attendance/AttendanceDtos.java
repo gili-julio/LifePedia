@@ -46,8 +46,11 @@ public final class AttendanceDtos {
     /** Situação de um dia: marcado, pendente (já aconteceu e não foi marcado) ou ainda por vir. */
     public enum DayStatus { PRESENT, ABSENT, CANCELED, PENDING, UPCOMING }
 
-    /** @param remaining faltas que ainda cabem no limite (negativo = passou) */
-    public record Stats(int presences, int absences, int pending, int canceled, int remaining) {
+    /**
+     * @param remaining faltas que ainda cabem no limite (negativo = passou)
+     * @param upcoming encontros que ainda vão acontecer, de hoje até o fim (nulo sem data de fim)
+     */
+    public record Stats(int presences, int absences, int pending, int canceled, int remaining, Integer upcoming) {
     }
 
     public record CommitmentResponse(UUID id, String name, String color, List<Integer> weekdays,
