@@ -39,6 +39,10 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:?defina CORS_ORIGINS com o endereço público (https://...)}
       STORAGE_DIR: /data/uploads
       TIME_ZONE: ${TIME_ZONE:-America/Sao_Paulo}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
       # Heap proporcional ao limite do container (cabe numa VPS de 4 GB junto com o Coolify).
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
     volumes:

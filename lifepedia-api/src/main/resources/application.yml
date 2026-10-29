@@ -55,3 +55,19 @@ lifepedia:
     ip-window: 10m
     max-failed-logins: 5
     lockout-window: 15m
+    # Sessão com "Lembrar de mim" (sem ele vale lifepedia.jwt.expiration e o cookie some ao fechar o navegador).
+    remember-for: 30d
+  google:
+    # OAuth Client ID (tipo "Aplicativo da Web") do Google Cloud. Vazio = botão do Google escondido.
+    client-id: ${GOOGLE_CLIENT_ID:}
+  push:
+    # Chaves VAPID (base64url) do Web Push; vazias = push desligado. Gerar: ver README da API.
+    public-key: ${VAPID_PUBLIC_KEY:}
+    private-key: ${VAPID_PRIVATE_KEY:}
+    # Contato para os serviços de push (mailto: ou https:).
+    subject: ${VAPID_SUBJECT:}
+    allowed-hosts:
+      - fcm.googleapis.com
+      - push.services.mozilla.com
+      - push.apple.com
+      - notify.windows.com

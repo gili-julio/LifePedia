@@ -2,6 +2,8 @@ package com.lifepedia.api.notification;
 
 import com.lifepedia.api.group.UserGroup;
 import com.lifepedia.api.group.UserGroupRepository;
+import com.lifepedia.api.notification.push.PushService;
+import com.lifepedia.api.notification.push.PushTexts;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.shared.PageResponse;
@@ -13,6 +15,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -28,17 +31,20 @@ public class NotificationService {
     private final NotificationRepository repository;
     private final UserGroupRepository groups;
     private final JsonMapper json;
+    private final PushService push;
 
-    public NotificationService(NotificationRepository repository, UserGroupRepository groups, JsonMapper json) {
+    public NotificationService(NotificationRepository repository, UserGroupRepository groups, JsonMapper json, PushService push) {
         this.repository = repository;
         this.groups = groups;
         this.json = json;
+        this.push = push;
     }
 
-    /** Cria uma notificação para {@code userId}. @param data parâmetros do texto (só strings) */
+    /** Cria uma notificação para {@code userId} e manda o push depois do commit. @param data parâmetros do texto (só strings) */
     @Transactional
     public void notify(UUID userId, NotificationType type, UUID actorId, UUID groupId, Map<String, String> data) {
         repository.save(new Notification(userId, type, actorId, groupId, json.writeValueAsString(data)));
+        push.send(List.of(userId), PushTexts.of(type, data, groupId));
     }
 
     @Transactional(readOnly = true)

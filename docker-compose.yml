@@ -40,6 +40,10 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:${WEB_PORT:-3080},http://127.0.0.1:${WEB_PORT:-3080},http://localhost:5173,http://127.0.0.1:5173}
       STORAGE_DIR: /data/uploads
       TIME_ZONE: ${TIME_ZONE:-America/Sao_Paulo}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8080}:8080"
     volumes:
