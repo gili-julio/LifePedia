@@ -85,9 +85,9 @@ e `sort=campo,asc|desc` (campos da lista de cada rota; outro campo → `400`). R
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@2` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) e `groups` (itens da pessoa em cada grupo, só registro) · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@3` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) e `commitments` (frequência com `marks`, só registro) · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
-| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` ou `@2`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
+| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1`, `@2` ou `@3`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
 | DELETE | `/` | `{password, confirmation: "EXCLUIR"}` → `204` + cookie apagado · `400` senha errada · `429` após 5 erros |
 
@@ -293,6 +293,21 @@ do grupo deixa de ser responsável, sai dos rodízios e leva os comentários (as
 atrasadas: `TaskOverdueJob` (8h no fuso `TIME_ZONE`). Agendamentos ligam com `lifepedia.scheduling.enabled` (padrão
 `true`; `false` nos testes).
 
+### Frequência (`/api/attendance`)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/attendance` | Compromissos da pessoa (lista completa, até 50, por nome) com `stats` `{presences, absences, pending, canceled, remaining}` contados até hoje (ou até o fim) e `task` ligada |
+| POST / PUT | `/api/attendance` · `/{id}` | `{name, color, weekdays [1..7], time "HH:mm", durationMinutes 5–720, startDate, endDate?, maxAbsences 0–999, taskId?}` · início até 5 anos atrás, período até 5 anos · `taskId` de tarefa pessoal da pessoa (senão 404) |
+| DELETE | `/api/attendance/{id}` | Apaga com as marcações (a tarefa fica) → `204` |
+| GET | `/api/attendance/{id}/days` | Dias que já chegaram, do mais novo: `{date, status, fromTask}` |
+| PUT | `/api/attendance/{id}/days/{date}` | `{status: PRESENT \| ABSENT \| CANCELED \| null}` (nulo tira) · dia fora da regra → 400 · presença/falta depois de hoje → 400 |
+| GET | `/api/attendance/agenda?from=&to=` | Dias dos compromissos no intervalo (até 62 dias) com `status`, `taskId` e as faltas do compromisso |
+| GET | `/api/attendance/tasks` | Tarefas pessoais em aberto com data, para ligar |
+
+`status` do dia: marcação gravada; senão `PRESENT` com `fromTask` se a tarefa ligada foi concluída naquele dia (pela
+regra); senão `PENDING` se já terminou (hoje: depois de `time + durationMinutes`, fuso `TIME_ZONE`) ou `UPCOMING`.
+
 ### Financeiro
 
 | Método | Rota | Descrição |
@@ -368,7 +383,8 @@ src/main/java/com/lifepedia/api/
 ├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda (e choque de horário),
 │                 horas visíveis e sono da agenda (AgendaPreference), listas/etiquetas, grupo (responsáveis, Completion)
 │                 (responsável, rodízio, comentários, avisos, aviso diário de atrasadas), hábitos (HabitStats),
-│                 lembretes (TaskReminderJob), export/import (TaskTransferService)
+│                 lembretes (TaskReminderJob), export/import (TaskTransferService), TaskLinks (leitura para a frequência)
+├── attendance/    frequência: compromissos (Commitment), marcações por dia (CommitmentMark), contagem e agenda
 ├── planning/      planejamento do grupo: itens, cenários, base, simulação (PlanningSimulator), prévia de link,
 │                  preço de referência (PriceReferenceService + ProductMatcher)
 └── finance/
@@ -390,4 +406,5 @@ src/main/resources/
                     · V20 sessões, Google e observações de 10 mil · V21 chat do grupo
                     · V22 vários responsáveis, "cada um conclui", horas da agenda
                     · V23 push · V24 aceite dos termos · V25 sono por dia na agenda
+                    · V26 frequência
 ```

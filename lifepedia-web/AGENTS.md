@@ -111,12 +111,19 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   (`link.group.unread`) e na aba *Chat*.
 - **Investimentos/parcelas**: `invested`, `investedPercent` e `reserve` sempre da API; parcela pelo nome com
   `parseInstallment` (só para mostrar a ação; a API decide quais seguem).
+- **Frequência** (`features/attendance`): chaves `['attendance', ...]`; mutações invalidam o módulo, e as de tarefas
+  também (tarefa ligada concluída conta presença). Contagem, status do dia e "pendente" sempre da API; o front só
+  escolhe o tom (`absenceTone`: laranja com falta e até 2 sobrando, vermelho ao passar) e sempre mostra o texto junto.
+  Dia futuro só aceita "Sem aula" (`MarkButtons future`). Agenda pessoal: `useAttendanceAgenda` no `AgendaBoard`, bloco
+  `CommitmentBlock` (posição pela grade, `blockStyle`); compromisso com a tarefa ligada no mesmo dia vira selo no bloco
+  da tarefa (sem duplicar). Indicadores somam os compromissos (menos "sem aula") em `metrics.ts`.
 - **Amigos** (`features/friends`): chaves `['friends', ...]`; mutações invalidam o módulo e as notificações.
   Conquistas: nível (nunca cai), meta, valor e `unlockedAt` sempre da API; o front só tem texto/ícone por código (`achievements.ts`, espelha
   `Achievement`). Perfil de não amigo → 404 (tela com volta para Amigos).
 - **Instante x dia**: `yyyy-MM-dd` → `formatDate` (texto, sem fuso); instante ISO (`createdAt`, `since`) →
   `formatInstantDate`/`formatRelative` (fuso do navegador). Nunca `slice(0, 10)` num instante (vira o dia em UTC).
-- **Início** (`features/home`, rota índice `/`): só lê hooks de outros módulos (`useAgenda`, `useHabits`, `useSummary`);
+- **Início** (`features/home`, rota índice `/`): só lê hooks de outros módulos (`useAgenda`, `useHabits`, `useSummary`,
+  `useCommitments` + os textos/tom de `attendance/absences.ts`);
   não some valores nem calcule sequência no front. **Mudanças do sistema**: lista em `home/changelog.ts` (mais nova
   primeiro; `modules` só com os valores de `ChangeModule`); toda entrega que o usuário percebe adiciona uma entrada,
   escrita para quem usa (sem nomes de tela internos, rota, API ou termos técnicos), sem travessão. "Novo" = até 7
@@ -124,7 +131,7 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil e grupos do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos e frequência do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@3`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.

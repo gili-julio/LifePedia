@@ -1,5 +1,6 @@
 package com.lifepedia.api.account;
 
+import com.lifepedia.api.attendance.AttendanceDtos.CommitmentData;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.group.GroupMember;
 import com.lifepedia.api.planning.PlanItem;
@@ -26,10 +27,10 @@ import java.util.UUID;
 
 public final class AccountDtos {
 
-    /** Versão do arquivo exportado; mudou o formato? Crie {@code @3} e mantenha a importação das anteriores. */
-    public static final String FORMAT = "lifepedia/account@2";
-    /** Versões aceitas na importação ({@code @1}: sem tarefas). */
-    public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", FORMAT);
+    /** Versão do arquivo exportado; mudou o formato? Crie {@code @4} e mantenha a importação das anteriores. */
+    public static final String FORMAT = "lifepedia/account@3";
+    /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência). */
+    public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2", FORMAT);
 
     private AccountDtos() {
     }
@@ -55,8 +56,8 @@ public final class AccountDtos {
     }
 
     /**
-     * Arquivo de exportação. Categorias, fixos, listas e etiquetas são ligados pelo {@code ref}; {@code groups} é só
-     * registro (não importa).
+     * Arquivo de exportação. Categorias, fixos, listas e etiquetas são ligados pelo {@code ref}; {@code groups} e
+     * {@code commitments} (frequência, desde o {@code @3}) são só registro (não importam).
      *
      * @param profile ignorado na importação
      * @param tasks   tarefas pessoais (nulo no {@code @1}: a importação não mexe nas tarefas)
@@ -74,7 +75,8 @@ public final class AccountDtos {
             List<GroupData> groups,
             @Size(max = 500, message = "Listas demais no arquivo.") List<@NotNull @Valid LabelData> taskLists,
             @Size(max = 500, message = "Etiquetas demais no arquivo.") List<@NotNull @Valid LabelData> taskTags,
-            @Size(max = 50_000, message = "Tarefas demais no arquivo.") List<@NotNull @Valid TaskData> tasks) {
+            @Size(max = 50_000, message = "Tarefas demais no arquivo.") List<@NotNull @Valid TaskData> tasks,
+            List<CommitmentData> commitments) {
     }
 
     public record Profile(String name, String username, String email) {

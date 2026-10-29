@@ -113,6 +113,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Versão dos termos (`user/LegalTerms.VERSION`) ↔ `features/legal/legal.ts` (`LEGAL_VERSION`)
   - Versão do arquivo da conta (`account/AccountDtos.FORMAT`) ↔ `features/account/types.ts` (`ACCOUNT_FORMAT`)
   - Tarefas: `Priority`, `Recurrence.Unit/MonthMode`, `TaskOccurrence.Status`, `TaskDtos.Sort/Scope` ↔ `features/tasks/types.ts`
+  - Frequência: `AttendanceDtos.DayStatus`, `CommitmentMark.Mark` ↔ `features/attendance/types.ts`
   - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
@@ -172,11 +173,11 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@2`, anexo; importa `@1` e `@2`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@3`, anexo; importa `@1`, `@2` e `@3`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
-  `profile` e `groups` são só registro. Mudou o formato? Crie `@3` e mantenha a importação dos anteriores (usuários guardam
+  `profile`, `groups` e `commitments` (frequência, desde o `@3`) são só registro. Mudou o formato? Crie `@4` e mantenha a importação dos anteriores (usuários guardam
   arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -199,6 +200,14 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   (`reminderMinutes` 0–1440, exige `dueTime`) vira notificação `TASK_REMINDER` pelo `TaskReminderJob` (a cada minuto).
   **Fixo** (`recurringEntryId`, só pessoal e do próprio usuário): o front abre o diálogo e grava o ajuste do mês pela
   rota do financeiro; a API de tarefas não mexe em valores.
+- **Frequência** (`/api/attendance`): compromisso pessoal (`commitments`: dias da semana `1..7`, horário, duração,
+  período, `maxAbsences`, `taskId` opcional) com os dias **gerados pela regra**; `commitment_marks` guarda só a marcação
+  (`PRESENT`/`ABSENT`/`CANCELED`). Sem marcação: tarefa ligada (pessoal, `TaskLinks`) concluída no dia = `PRESENT`
+  (`fromTask`); dia que já terminou (fuso `TIME_ZONE`) = `PENDING`; senão `UPCOMING`. Contagem (`stats`) só até hoje (ou o
+  fim) e sempre da API. `GET` (lista completa, até 50), `POST`, `PUT/DELETE /{id}`, `GET /{id}/days` (até hoje, do mais
+  novo), `PUT /{id}/days/{date} {status}` (nulo tira; presença/falta só até hoje, "sem aula" também no futuro),
+  `GET /agenda?from&to` (até 62 dias, com as faltas do compromisso) e `GET /tasks` (tarefas pessoais abertas para ligar).
+  Tarefa excluída: `task_id` vira nulo. Mutação de tarefa invalida `['attendance']` no front.
 - **Importação por IA**: `POST /api/finance/import` grava ocasionais + ajustes de fixos (tudo ou nada). O modelo de
   resposta é `lifepedia/transactions@3`: `descriptionOficial` (como no documento, só leitura, gravada em
   `original_description` e nunca alterada depois) e `descriptionNormal` (nome padronizado, editável, vira

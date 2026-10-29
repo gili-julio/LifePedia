@@ -21,6 +21,7 @@ compartilham usuário, autenticação, design e padrões.
 | **Amigos** | ✅ v1.0 | Pedidos de amizade por nome ou @username (aceitar/recusar/cancelar), perfil do amigo e **conquistas** com níveis (tarefas, hábitos, amigos, grupos, lançamentos) |
 | **Financeiro** | ✅ v1.3 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **investimentos** (fora das despesas, somam na reserva do grupo), **adiantar/adiar parcelas**, **importação de extrato/fatura via agente de IA** e **finanças em grupo** |
 | **Tarefas** | ✅ v1.1 | Tarefas pessoais e **em grupo** para hoje, outros dias ou sem data, **atrasadas**, **repetição** (a cada N dias/semanas/meses/anos, dias da semana, dia do mês, a partir da conclusão), prioridade, horário e duração, **subtarefas**, **listas** e **etiquetas**; **agenda** em grade de horários (dia/semana, pessoal e no grupo); no grupo, **vários responsáveis** ou **todos**, "basta um" ou "cada um conclui a sua", **rodízio**, **comentários** e avisos; **levar tarefa pessoal para um grupo**; **semana** (arrastar muda o dia), **hábitos** (sequência e % do mês), **lembretes** e **ligação com fixos do financeiro** |
+| **Frequência** | ✅ v1.0 | Compromissos fixos (ex.: matérias) com dias da semana, horário, período e **limite de faltas**; marcar presença, falta ou sem aula em cada dia; **tarefa ligada** concluída conta presença; aparece na **agenda** e no **Início** |
 | Metas | 💡 ideia | Objetivos pessoais e financeiros com acompanhamento |
 | Saúde | 💡 ideia | Consultas, exames, medicamentos, hábitos |
 | Documentos | 💡 ideia | Documentos importantes, vencimentos, lembretes |
@@ -95,10 +96,10 @@ compartilham usuário, autenticação, design e padrões.
   novidades mais recentes (título, áreas afetadas em badges, "Novo" por 7 dias; tocar abre o detalhe em linguagem
   simples) e *Ver todas* (`/novidades`).
 - **Meus dados** (em *Meu perfil*):
-  - **Exportar (.json)**: arquivo `lifepedia/account@2` com perfil, categorias, fixos (com os valores de cada mês),
+  - **Exportar (.json)**: arquivo `lifepedia/account@3` com perfil, categorias, fixos (com os valores de cada mês),
     lançamentos e **tarefas pessoais** (com listas, etiquetas e o que foi feito em cada ocorrência) — é o que dá para
-    importar; arquivos `@1` antigos continuam aceitos e não mexem nas tarefas — e, só como registro, os seus itens em cada grupo (lançamentos, fixos,
-    planejamento). **Planilha (.xlsx)**: as mesmas informações em abas, para ver no Excel/Google Planilhas.
+    importar; arquivos `@1` e `@2` antigos continuam aceitos e o `@1` não mexe nas tarefas — e, só como registro, os seus itens em cada grupo (lançamentos, fixos,
+    planejamento) e a **frequência** (compromissos com as marcações). **Planilha (.xlsx)**: as mesmas informações em abas, para ver no Excel/Google Planilhas.
   - **Importar** (nesta ou em outra conta): mostra antes o que vai acontecer. *Somar* junta ao que já existe
     (categoria com mesmo tipo e nome é reaproveitada; lançamento/fixo igual não duplica). *Substituir* apaga os
     lançamentos e fixos pessoais antes (e as tarefas pessoais, se o arquivo tiver tarefas; pede confirmação); categorias sem uso saem, e itens **sincronizados** em grupos
@@ -234,6 +235,21 @@ compartilham usuário, autenticação, design e padrões.
     para os responsáveis que ainda não fizeram a sua parte. Nunca avisa quem fez a ação.
   - **Quem sai do grupo** deixa de ser responsável, sai dos rodízios (rodízio de uma pessoa vira responsável fixo) e
     leva os comentários; as tarefas que criou ficam no grupo.
+
+### Frequência - conceitos
+
+- **Compromisso** (menu *Organização → Frequência*): nome, cor, **dias da semana**, horário e duração, início e fim
+  opcional do período, **limite de faltas** (número) e, se quiser, uma **tarefa pessoal ligada**. Até 50 por pessoa.
+- **Cada dia** que já aconteceu (hoje conta depois do fim do horário) fica **pendente** até você marcar **Presente**,
+  **Falta** ou **Sem aula** (feriado, aula cancelada: não conta). Tocar de novo no marcado tira a marcação. Dias que
+  ainda vêm aceitam só *Sem aula*. Pendente não conta como falta.
+- **Tarefa ligada**: concluí-la num dia do compromisso conta **presença** nesse dia (sem marcação; marcar Falta vale
+  mais). Excluir a tarefa só desliga.
+- **Cores**: barra de faltas azul; **laranja** quando já faltou e sobram até 2 (ou nenhuma); **vermelha** ao passar do
+  limite. Sempre com o texto ("Pode faltar mais 3", "No limite", "Passou do limite").
+- **Agenda pessoal**: bloco tracejado com o nome e as faltas; tocar abre *Presente / Falta / Sem aula*. Com a tarefa
+  ligada no mesmo dia, aparece um bloco só (o da tarefa, com o selo do compromisso). Os **indicadores da semana**
+  somam os compromissos (menos *Sem aula*). **Início**: card com faltas/limite de cada um e os dias pendentes.
 
 ## Arquitetura
 

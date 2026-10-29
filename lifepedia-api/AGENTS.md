@@ -142,11 +142,15 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@2`; aceita `AccountDtos.IMPORTABLE` = `@1` e `@2`); mudou o arquivo ⇒ `@3` e importação dos
+  (`lifepedia/account@3`; aceita `AccountDtos.IMPORTABLE` = `@1`, `@2` e `@3`; frequência só como registro); mudou o arquivo ⇒ `@4` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para
   `users` — tabela nova com `user_id` precisa de uma delas. Teste em `AccountIntegrationTest`.
+- **Frequência** (`attendance/`): dias gerados pela regra (`Commitment.occursOn`); só a marcação é gravada. Contagem e
+  status num `Context` por requisição (marcações + dias concluídos da tarefa ligada). Tarefa só pela fachada
+  `task/TaskLinks` (pessoal e do usuário; nunca ler `task_occurrences` direto). "Hoje"/horário pelo `Clock`. Teste em
+  `AttendanceIntegrationTest` (período já encerrado para não depender da hora).
 
 ## Testes
 

@@ -4,6 +4,7 @@ export type ChangeModule =
   | 'Finanças'
   | 'Tarefas'
   | 'Agenda'
+  | 'Frequência'
   | 'Grupos'
   | 'Chat'
   | 'Amigos'
@@ -24,6 +25,19 @@ export type Change = {
 
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
+  {
+    id: 'frequencia',
+    date: '2026-10-29',
+    title: 'Controle suas faltas nas matérias e compromissos fixos',
+    modules: ['Frequência', 'Agenda', 'Tarefas', 'Geral'],
+    details: [
+      'Nova área Frequência, no menu Organização. Cadastre cada matéria com os dias, o horário e quantas faltas você pode ter.',
+      'Depois de cada dia, marque Presente, Falta ou Sem aula. Os dias sem marcação ficam pendentes e não contam como falta.',
+      'Ligue a uma tarefa: ao concluir a tarefa no dia, a presença já fica marcada.',
+      'A barra de faltas fica laranja perto do limite e vermelha quando passa dele.',
+      'Os compromissos aparecem na Agenda e no Início, e entram nas horas ocupadas da semana.',
+    ],
+  },
   {
     id: 'agenda-indicadores',
     date: '2026-10-29',

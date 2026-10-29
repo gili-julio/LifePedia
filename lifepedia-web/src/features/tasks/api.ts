@@ -122,6 +122,8 @@ function useTasksMutation<TVariables, TResult>(fn: (variables: TVariables) => Pr
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      // Tarefa ligada a um compromisso: concluir conta presença na frequência.
+      queryClient.invalidateQueries({ queryKey: ['attendance'] })
     },
   })
 }

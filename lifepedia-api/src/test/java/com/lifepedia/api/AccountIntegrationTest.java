@@ -49,7 +49,7 @@ class AccountIntegrationTest extends ApiTestSupport {
         assertThat(exported.getResponse().getHeader(HttpHeaders.CONTENT_DISPOSITION)).contains("attachment", ".json");
         String file = body(exported);
         assertThat(exported).bodyJson().satisfies(json -> {
-            assertThat(json).extractingPath("$.format").isEqualTo("lifepedia/account@2");
+            assertThat(json).extractingPath("$.format").isEqualTo("lifepedia/account@3");
             assertThat(json).extractingPath("$.profile.name").isEqualTo("Alice");
             assertThat(json).extractingPath("$.transactions.length()").isEqualTo(2);
             assertThat(json).extractingPath("$.recurring[0].adjustments[0].amount").asNumber().isEqualTo(1600.0);

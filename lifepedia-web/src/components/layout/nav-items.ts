@@ -1,4 +1,5 @@
 import {
+  CalendarCheck2Icon,
   CalendarClockIcon,
   CalendarDaysIcon,
   CalendarRangeIcon,
@@ -88,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/agenda', label: 'Agenda', icon: CalendarRangeIcon },
+      { to: '/frequencia', label: 'Frequência', icon: CalendarCheck2Icon },
     ],
   },
   {

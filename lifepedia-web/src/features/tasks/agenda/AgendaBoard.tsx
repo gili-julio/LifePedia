@@ -9,11 +9,14 @@ import {
   useSensors,
 } from '@dnd-kit/core'
 import { CSS } from '@dnd-kit/utilities'
-import { ChartColumnIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, Clock3Icon, PlusIcon, UsersIcon } from 'lucide-react'
+import { CalendarCheck2Icon, ChartColumnIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, Clock3Icon, PlusIcon, UsersIcon } from 'lucide-react'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { UserAvatar } from '@/components/UserAvatar'
+import { useAttendanceAgenda } from '@/features/attendance/api'
+import { CommitmentBlock } from '@/features/attendance/components/CommitmentBlock'
+import type { AttendanceAgendaItem } from '@/features/attendance/types'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -57,8 +60,11 @@ type Props = {
   header?: (newTask: () => void) => ReactNode
 }
 
-/** Bloco da ocorrência na grade (minutos desde 0h). */
-type Entry = Span<TaskItem>
+/** O que ocupa a grade: ocorrência de tarefa ou dia de compromisso da Frequência (só na agenda pessoal). */
+type Slot = { kind: 'task'; item: TaskItem } | { kind: 'commitment'; item: AttendanceAgendaItem }
+/** Bloco na grade (minutos desde 0h). */
+type Entry = Span<Slot>
+type Range = { start: number; end: number }
 /** Mostra no lugar novo até a agenda recarregar. */
 type Moved = { basis: Agenda; key: string; to: string; time: string }
 type SeriesMove = { item: TaskItem; to: string; time: string }
@@ -117,6 +123,7 @@ export function AgendaBoard({ group, header }: Props) {
   const from = view === 'semana' ? mondayOf(day) : day
   const to = view === 'semana' ? addDays(from, 6) : day
   const { data, isLoading, isError } = useAgenda(groupId, from, to, false, { list: null, tag: null, assignee, sort: 'TIME' })
+  const attendance = useAttendanceAgenda(from, to, !groupId)
   const labels = useLabelLookup(groupId)
   const today = data?.today ?? todayIso()
   const actions = useTaskActions({ today, groupId, onEdit: setChosen })
@@ -163,19 +170,28 @@ export function AgendaBoard({ group, header }: Props) {
   const byKey = new Map(all.map((i) => [occurrenceKey(i), i]))
   const visible = (item: TaskItem) => source === ALL || (source === PERSONAL ? !item.groupId : item.groupId === source)
   const sources = [...new Set(all.map((i) => i.groupId).filter((g): g is string => !!g))]
+  const commitments = !groupId && (source === ALL || source === PERSONAL) ? attendance.data ?? [] : []
   const days = (data?.days ?? []).map((d) => {
     const items = d.items.filter((i) => occurrenceKey(i) !== pending?.key)
     if (pending && pending.to === d.date) {
       const item = byKey.get(pending.key)
       if (item) items.push({ ...item, scheduledDate: pending.to, dueTime: pending.time })
     }
-    return { date: d.date, items: items.filter(visible) }
+    const shown = items.filter(visible)
+    // Com a tarefa ligada no dia, o compromisso vira um selo no bloco dela (um bloco só).
+    const linked = new Map<string, AttendanceAgendaItem>()
+    const own = commitments.filter((c) => c.date === d.date).filter((c) => {
+      const task = c.taskId ? shown.find((i) => i.taskId === c.taskId) : undefined
+      if (task) linked.set(occurrenceKey(task), c)
+      return !task
+    })
+    return { date: d.date, items: shown, commitments: own, linked }
   })
-  const outside = !range ? 0 : days.flatMap((d) => d.items).filter((i) => {
-    if (!i.dueTime) return false
-    const start = toMinutes(i.dueTime)
-    return start < range.start * 60 || start >= range.end * 60
-  }).length
+  const starts = days.flatMap((d) => [
+    ...d.items.map((i) => (i.dueTime ? toMinutes(i.dueTime) : null)),
+    ...d.commitments.map((c) => toMinutes(c.time)),
+  ])
+  const outside = !range ? 0 : starts.filter((start) => start !== null && (start < range.start * 60 || start >= range.end * 60)).length
 
   async function apply(item: TaskItem, toDay: string, time: string, wholeSeries: boolean) {
     if (!data || !item.date) return
@@ -345,16 +361,28 @@ export function AgendaBoard({ group, header }: Props) {
                 <TimeAxis start={range.start} end={range.end} />
                 {days.map((d) => (
                   <DayColumn key={d.date} date={d.date} range={range} max={view === 'semana' ? 2 : 6}
-                    items={d.items.filter((i) => !!i.dueTime)} now={d.date === today ? now : null}
+                    items={d.items.filter((i) => !!i.dueTime)} commitments={d.commitments} now={d.date === today ? now : null}
                     onCreate={(time) => newTask(d.date, time)}>
-                    {(entry, cols) => (
-                      <Block key={occurrenceKey(entry.value)} entry={entry} cols={cols} range={range}
-                        color={colorOf(entry.value, colorBy, labels, memberIds)} actions={actions} board={board}
-                        compact={view === 'semana'} onOpen={() => {
-                          if (dragged.current) return
-                          setChosen({ mode: 'edit', groupId: entry.value.groupId, taskId: entry.value.taskId, occurrence: entry.value })
-                        }} />
-                    )}
+                    {(entry, cols) => {
+                      const slot = entry.value
+                      if (slot.kind === 'commitment') {
+                        const style = blockStyle(entry, cols, range)
+                        return (
+                          <CommitmentBlock key={slotKey(slot)} item={slot.item} today={today} style={style}
+                            short={style.height < 36 || (view === 'semana' && cols > 1)} />
+                        )
+                      }
+                      const item = slot.item
+                      return (
+                        <Block key={slotKey(slot)} item={item} style={blockStyle(entry, cols, range)}
+                          cols={cols} commitment={d.linked.get(occurrenceKey(item))}
+                          color={colorOf(item, colorBy, labels, memberIds)} actions={actions} board={board}
+                          compact={view === 'semana'} onOpen={() => {
+                            if (dragged.current) return
+                            setChosen({ mode: 'edit', groupId: item.groupId, taskId: item.taskId, occurrence: item })
+                          }} />
+                      )
+                    }}
                   </DayColumn>
                 ))}
               </div>
@@ -388,6 +416,20 @@ function showMetrics() {
   const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   title.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'start' })
   title.focus({ preventScroll: true })
+}
+
+const slotKey = (slot: Slot) =>
+  slot.kind === 'task' ? occurrenceKey(slot.item) : `commitment:${slot.item.commitmentId}:${slot.item.date}`
+
+/** Posição do bloco na grade: a coluna dentro dos que se cruzam e o intervalo visível. */
+function blockStyle(entry: Entry & { col: number }, cols: number, range: Range) {
+  const startMin = range.start * 60
+  return {
+    top: (Math.max(entry.start, startMin) - startMin) * PX,
+    height: Math.max((Math.min(entry.end, range.end * 60) - Math.max(entry.start, startMin)) * PX, MIN_BLOCK_MINUTES * PX),
+    left: `calc(${(entry.col / cols) * 100}% + 1px)`,
+    width: `calc(${100 / cols}% - 2px)`,
+  }
 }
 
 const rangeFormat = new Intl.DateTimeFormat('pt-BR', { day: 'numeric', month: 'short' })
@@ -500,11 +542,12 @@ function TimeAxis({ start, end }: { start: number; end: number }) {
   )
 }
 
-function DayColumn({ date, range, max, items, now, onCreate, children }: {
+function DayColumn({ date, range, max, items, commitments, now, onCreate, children }: {
   date: string
-  range: { start: number; end: number }
+  range: Range
   max: number
   items: TaskItem[]
+  commitments: AttendanceAgendaItem[]
   now: number | null
   onCreate: (time: string) => void
   children: (entry: Entry & { col: number }, cols: number) => ReactNode
@@ -512,10 +555,16 @@ function DayColumn({ date, range, max, items, now, onCreate, children }: {
   const { setNodeRef, isOver } = useDroppable({ id: date })
   const startMin = range.start * 60
   const endMin = range.end * 60
-  const spans: Entry[] = items.map((item) => {
-    const start = toMinutes(item.dueTime as string)
-    return { value: item, start, end: start + (item.durationMinutes ?? DEFAULT_MINUTES) }
-  }).filter((s) => s.end > startMin && s.start < endMin)
+  const spans: Entry[] = [
+    ...items.map((item): Entry => {
+      const start = toMinutes(item.dueTime as string)
+      return { value: { kind: 'task', item }, start, end: start + (item.durationMinutes ?? DEFAULT_MINUTES) }
+    }),
+    ...commitments.map((item): Entry => {
+      const start = toMinutes(item.time)
+      return { value: { kind: 'commitment', item }, start, end: start + item.durationMinutes }
+    }),
+  ].filter((s) => s.end > startMin && s.start < endMin)
   const { shown, more } = fit(place(spans), max)
 
   return (
@@ -544,15 +593,18 @@ function DayColumn({ date, range, max, items, now, onCreate, children }: {
                 left: `calc(${(m.col / m.cols) * 100}% + 1px)`,
                 width: `calc(${100 / m.cols}% - 2px)`,
               }}
-              aria-label={`Mais ${m.items.length} tarefas neste horário`}>
+              aria-label={`Mais ${m.items.length} itens neste horário`}>
               +{m.items.length}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-64 p-2">
             <ul className="space-y-1">
-              {m.items.map((p) => (
-                <li key={occurrenceKey(p.value)} className="text-sm">
-                  <span className="text-xs text-muted-foreground tabular-nums">{p.value.dueTime} </span>{p.value.title}
+              {m.items.map(({ value }) => (
+                <li key={slotKey(value)} className="text-sm">
+                  <span className="text-xs text-muted-foreground tabular-nums">
+                    {value.kind === 'task' ? value.item.dueTime : value.item.time}{' '}
+                  </span>
+                  {value.kind === 'task' ? value.item.title : value.item.name}
                 </li>
               ))}
             </ul>
@@ -571,24 +623,23 @@ function DayColumn({ date, range, max, items, now, onCreate, children }: {
   )
 }
 
-function Block({ entry, cols, range, color, actions, board, compact, onOpen }: {
-  entry: Entry & { col: number }
+function Block({ item, style, cols, commitment, color, actions, board, compact, onOpen }: {
+  item: TaskItem
+  style: ReturnType<typeof blockStyle>
   cols: number
-  range: { start: number; end: number }
+  /** Compromisso da Frequência ligado a esta tarefa no dia (vira selo, sem bloco próprio). */
+  commitment?: AttendanceAgendaItem
   color: string
   actions: TaskActions
   board: Board
   compact: boolean
   onOpen: () => void
 }) {
-  const item = entry.value
   const key = occurrenceKey(item)
   const busy = actions.busyKey === key
   const movable = item.status === 'PENDING' && !!item.date
   const { setNodeRef, attributes, listeners, transform, isDragging } = useDraggable({ id: key, disabled: !movable || busy })
-  const startMin = range.start * 60
-  const top = (Math.max(entry.start, startMin) - startMin) * PX
-  const height = Math.max((Math.min(entry.end, range.end * 60) - Math.max(entry.start, startMin)) * PX, MIN_BLOCK_MINUTES * PX)
+  const height = style.height
   const done = isDoneFor(item, board.meId)
   const progress = eachProgress(item)
   const duration = item.durationMinutes ?? DEFAULT_MINUTES
@@ -606,10 +657,7 @@ function Block({ entry, cols, range, color, actions, board, compact, onOpen }: {
       className={cn('absolute overflow-hidden rounded-md border text-xs shadow-xs', isDragging ? 'z-40 shadow-lg' : 'z-[5]',
         done && 'opacity-60')}
       style={{
-        top,
-        height,
-        left: `calc(${(entry.col / cols) * 100}% + 1px)`,
-        width: `calc(${100 / cols}% - 2px)`,
+        ...style,
         transform: CSS.Translate.toString(transform),
         background: `color-mix(in oklab, ${color} 16%, var(--card))`,
         borderColor: `color-mix(in oklab, ${color} 45%, transparent)`,
@@ -625,7 +673,8 @@ function Block({ entry, cols, range, color, actions, board, compact, onOpen }: {
           {done && <CheckIcon className="size-2.5" strokeWidth={3} />}
         </button>
         <button type="button" {...attributes} {...listeners} onClick={onOpen}
-          aria-label={`${item.title}, ${item.dueTime} às ${endTime(item.dueTime as string, duration)}. Abrir`}
+          aria-label={`${item.title}, ${item.dueTime} às ${endTime(item.dueTime as string, duration)}${commitment
+            ? `. ${commitment.name}: faltas ${commitment.absences} de ${commitment.maxAbsences}` : ''}. Abrir`}
           className={cn('min-w-0 flex-1 self-stretch text-left outline-none focus-visible:underline',
             movable ? 'cursor-grab touch-none active:cursor-grabbing' : 'cursor-pointer')}>
           <span className={cn('block leading-tight font-medium break-words', short ? 'truncate' : 'line-clamp-3', done && 'line-through')}>
@@ -643,6 +692,13 @@ function Block({ entry, cols, range, color, actions, board, compact, onOpen }: {
               )}
             </span>
           ) : null}
+          {commitment && !short && height >= 48 && (
+            <span className="mt-0.5 flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground tabular-nums">
+              <CalendarCheck2Icon className="size-3 shrink-0" style={{ color: commitment.color }} aria-hidden />
+              <span className="truncate">{compact ? `${commitment.absences}/${commitment.maxAbsences}`
+                : `${commitment.name} · faltas ${commitment.absences}/${commitment.maxAbsences}`}</span>
+            </span>
+          )}
           {!short && height >= 64 && faces.length > 0 && (
             <span className="mt-1 flex -space-x-1" aria-label={`Responsáveis: ${board.assigneesLabel(item)}`}>
               {faces.map((u) => <UserAvatar key={u.id} user={u} size="xs" className="ring-2 ring-card" />)}

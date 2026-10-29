@@ -4,6 +4,8 @@ import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { absenceTone, remainingLabel, TONE_BAR, TONE_TEXT } from '@/features/attendance/absences'
+import { useCommitments } from '@/features/attendance/api'
 import { useAuth } from '@/features/auth/auth-context'
 import { useSummary } from '@/features/finance/api'
 import { useAgenda, useHabits } from '@/features/tasks/api'
@@ -24,7 +26,7 @@ function taskLink(item: TaskItem) {
   return item.groupId ? `/grupos/${item.groupId}?aba=tarefas&tarefa=${id}` : `/tarefas?tarefa=${id}`
 }
 
-/** Início: resumo de tarefas de hoje, hábitos, o mês no financeiro e as mudanças recentes do sistema. */
+/** Início: resumo de tarefas de hoje, hábitos, frequência, o mês no financeiro e as mudanças recentes do sistema. */
 export function HomePage() {
   const { user } = useAuth()
   const today = todayIso()
@@ -38,6 +40,7 @@ export function HomePage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <TasksCard today={today} />
         <HabitsCard />
+        <AttendanceCard />
         <FinanceCard />
       </div>
       <section aria-labelledby="recent-changes" className="space-y-4">
@@ -170,6 +173,44 @@ function HabitsCard() {
   )
 }
 
+function AttendanceCard() {
+  const { data, isLoading, isError } = useCommitments()
+  const pending = (data ?? []).reduce((total, c) => total + c.stats.pending, 0)
+  return (
+    <HomeCard title="Frequência" to="/frequencia"
+      description={pending > 0 ? `${pending} ${pending === 1 ? 'dia pendente' : 'dias pendentes'} para marcar` : 'Faltas de cada compromisso'}>
+      {isError ? <p className="text-sm text-destructive">Não foi possível carregar a frequência.</p>
+        : isLoading || !data ? <Skeleton className="h-32 w-full" />
+        : data.length === 0 ? (
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-sm text-muted-foreground">Cadastre suas matérias ou compromissos fixos para contar as faltas.</p>
+            <Button asChild variant="outline" size="sm"><Link to="/frequencia">Cadastrar</Link></Button>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {data.slice(0, SHOWN).map((c) => {
+              const tone = absenceTone(c.stats.absences, c.maxAbsences)
+              return (
+                <li key={c.id} className="space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ background: c.color }} aria-hidden />
+                    <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                    <span className="shrink-0 font-semibold tabular-nums">{c.stats.absences}/{c.maxAbsences}</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
+                    <div className={cn('h-full rounded-full', TONE_BAR[tone])}
+                      style={{ width: `${c.maxAbsences > 0 ? Math.min(100, (c.stats.absences / c.maxAbsences) * 100) : c.stats.absences > 0 ? 100 : 0}%` }} />
+                  </div>
+                  <p className={cn('text-xs', TONE_TEXT[tone])}>{remainingLabel(c.stats.absences, c.maxAbsences)}</p>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+    </HomeCard>
+  )
+}
+
 function FinanceCard() {
   const month = currentYearMonth()
   const { data, isLoading, isError } = useSummary(month)
@@ -178,7 +219,7 @@ function FinanceCard() {
     { label: 'Saídas', value: data.total.expense, sign: '−', className: 'text-expense' },
   ]
   return (
-    <HomeCard title="Financeiro" to="/financeiro" description={formatMonth(month)} className="lg:col-span-3">
+    <HomeCard title="Financeiro" to="/financeiro" description={formatMonth(month)} className="lg:col-span-2">
       {isError ? <p className="text-sm text-destructive">Não foi possível carregar o resumo.</p>
         : isLoading || !data || !rows ? <Skeleton className="h-16 w-full" />
         : data.total.income === 0 && data.total.expense === 0 ? (

@@ -1,9 +1,9 @@
 import type { UserSummary } from '@/features/groups/types'
 
 /** Versão do arquivo exportado; espelha `AccountDtos.FORMAT` da API. */
-export const ACCOUNT_FORMAT = 'lifepedia/account@2'
-/** Versões que a importação aceita (o `@1` não tem tarefas). */
-export const IMPORTABLE_FORMATS = ['lifepedia/account@1', ACCOUNT_FORMAT]
+export const ACCOUNT_FORMAT = 'lifepedia/account@3'
+/** Versões que a importação aceita (o `@1` não tem tarefas; o `@2` não tem frequência). */
+export const IMPORTABLE_FORMATS = ['lifepedia/account@1', 'lifepedia/account@2', ACCOUNT_FORMAT]
 
 /** Arquivo exportado (só os campos que o front lê; o resto vai inteiro para a API). */
 export type AccountFile = {

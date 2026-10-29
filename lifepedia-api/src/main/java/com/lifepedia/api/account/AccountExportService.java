@@ -10,6 +10,7 @@ import com.lifepedia.api.account.AccountDtos.PlanItemData;
 import com.lifepedia.api.account.AccountDtos.Profile;
 import com.lifepedia.api.account.AccountDtos.RecurringData;
 import com.lifepedia.api.account.AccountDtos.TransactionData;
+import com.lifepedia.api.attendance.AttendanceService;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryRepository;
@@ -67,13 +68,15 @@ public class AccountExportService {
     private final GroupRecurringEntryRepository groupRecurring;
     private final PlanItemRepository planItems;
     private final TaskTransferService taskTransfer;
+    private final AttendanceService attendance;
     private final RateLimiter rateLimiter;
 
     public AccountExportService(UserService users, CategoryRepository categories, RecurringEntryRepository recurring,
                                 RecurringAdjustmentRepository adjustments, TransactionRepository transactions,
                                 GroupMemberRepository members, UserGroupRepository groups,
                                 GroupTransactionRepository groupTransactions, GroupRecurringEntryRepository groupRecurring,
-                                PlanItemRepository planItems, TaskTransferService taskTransfer, RateLimiter rateLimiter) {
+                                PlanItemRepository planItems, TaskTransferService taskTransfer,
+                                AttendanceService attendance, RateLimiter rateLimiter) {
         this.users = users;
         this.categories = categories;
         this.recurring = recurring;
@@ -85,6 +88,7 @@ public class AccountExportService {
         this.groupRecurring = groupRecurring;
         this.planItems = planItems;
         this.taskTransfer = taskTransfer;
+        this.attendance = attendance;
         this.rateLimiter = rateLimiter;
     }
 
@@ -116,7 +120,7 @@ public class AccountExportService {
         return new AccountData(AccountDtos.FORMAT, OffsetDateTime.now(),
                 new Profile(user.getName(), user.getUsername(), user.getEmail()),
                 cats.stream().map(c -> new CategoryData(ref(c.getId()), c.getName(), c.getType(), c.getColor())).toList(),
-                fixed, occasional, groups(userId, names), own.lists(), own.tags(), own.tasks());
+                fixed, occasional, groups(userId, names), own.lists(), own.tags(), own.tasks(), attendance.export(userId));
     }
 
     /** Planilha com as mesmas informações, para abrir no Excel/Google Planilhas. */

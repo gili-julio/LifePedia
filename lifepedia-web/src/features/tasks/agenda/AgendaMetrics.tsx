@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAttendanceAgenda } from '@/features/attendance/api'
 import { ApiError } from '@/lib/api'
 import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -24,7 +25,9 @@ const SLEEP_OPTIONS = Array.from({ length: 33 }, (_, i) => i * 30)
 export function AgendaMetrics({ monday, defaultMinutes }: { monday: string; defaultMinutes: number }) {
   const settings = useAgendaSettings()
   const { data } = useAgenda(null, monday, addDays(monday, 6), false, FILTERS)
-  const metrics = data && settings.data ? weekMetrics(data.days, settings.data.sleepMinutes, defaultMinutes) : null
+  const attendance = useAttendanceAgenda(monday, addDays(monday, 6))
+  const metrics = data && settings.data && attendance.data
+    ? weekMetrics(data.days, settings.data.sleepMinutes, defaultMinutes, attendance.data) : null
   const awake = metrics ? 7 * 24 * 60 - metrics.sleep : 0
 
   return (
@@ -35,13 +38,14 @@ export function AgendaMetrics({ monday, defaultMinutes }: { monday: string; defa
         </h2>
         <p className="text-sm text-muted-foreground">
           {formatDate(monday).slice(0, 5)} a {formatDate(addDays(monday, 6)).slice(0, 5)}. Contam as tarefas com horário
-          (sem duração valem {defaultMinutes} min); horários que se cruzam contam uma vez.
+          (sem duração valem {defaultMinutes} min) e os compromissos da Frequência; horários que se cruzam contam uma vez.
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
         <StatCard label="Ocupadas na semana" tone="data" icon={CalendarClockIcon}
-          hint={metrics && `${metrics.tasks} ${metrics.tasks === 1 ? 'tarefa' : 'tarefas'} com horário`}>
+          hint={metrics && `${metrics.tasks} ${metrics.tasks === 1 ? 'tarefa' : 'tarefas'} com horário${metrics.commitments
+            ? ` e ${metrics.commitments} ${metrics.commitments === 1 ? 'compromisso' : 'compromissos'}` : ''}`}>
           {metrics ? formatHours(metrics.busy) : undefined}
         </StatCard>
         <StatCard label="Segunda a sexta" tone="data" icon={BriefcaseIcon}

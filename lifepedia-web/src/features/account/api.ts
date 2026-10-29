@@ -17,7 +17,7 @@ export function useImportAccount() {
     mutationFn: ({ file, mode, dryRun }: { file: AccountFile; mode: ImportMode; dryRun: boolean }) =>
       api<ImportResult>('/api/account/import', {
         method: 'POST',
-        // Perfil e grupos ficam de fora: são só registro no arquivo. Sem tarefas (@1) = não mexe nelas.
+        // Perfil, grupos e frequência ficam de fora: são só registro no arquivo. Sem tarefas (@1) = não mexe nelas.
         body: {
           mode,
           dryRun,
