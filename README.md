@@ -194,7 +194,8 @@ compartilham usuário, autenticação, design e padrões.
     Tarefas fora dele aparecem num aviso com *Mostrar o dia todo*.
   - **Indicadores da semana** (agenda pessoal, no fim da página; o botão *Indicadores* no topo leva até eles): horas
     ocupadas na semana, de segunda a sexta e no fim de semana, e **horas livres** já descontando o **sono de cada dia**
-    (editável por dia da semana, padrão 8h, salvo na conta). Ocupado = tarefas com horário (sem duração: 30 min; o que
+    (editável por dia da semana, padrão 8h, salvo na conta; mudança ainda não salva fica em laranja, com aviso e
+    *Descartar*). Ocupado = tarefas com horário (sem duração: 30 min; o que
     se cruza conta uma vez; puladas não contam). Barra por dia com sono, ocupado e livre.
   - **Choque de horário**: ao criar/editar, o formulário avisa (sem impedir) se o horário bate com outra tarefa pendente
     dos responsáveis: na pessoal, a sua agenda inteira; no grupo, as do grupo dessas pessoas e, se você está entre elas,

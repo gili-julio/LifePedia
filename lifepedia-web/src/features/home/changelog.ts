@@ -32,6 +32,7 @@ export const CHANGES: Change[] = [
     details: [
       'No fim da Agenda aparecem as horas ocupadas na semana, de segunda a sexta e no fim de semana.',
       'As horas livres já descontam o seu sono. Informe quanto você dorme em cada dia da semana.',
+      'Mudou o sono e ainda não salvou? Os dias alterados ficam em laranja, com um aviso e a opção de descartar.',
       'Cada dia mostra uma barra com sono, ocupado e livre.',
       'No celular, o botão Indicadores no topo da Agenda leva direto até eles.',
     ],

@@ -1,4 +1,4 @@
-import { BriefcaseIcon, CalendarClockIcon, Loader2Icon, MoonIcon, SunIcon } from 'lucide-react'
+import { AlertTriangleIcon, BriefcaseIcon, CalendarClockIcon, Loader2Icon, MoonIcon, SunIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { StatCard } from '@/components/StatCard'
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api'
 import { formatDate } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import { useAgenda, useAgendaSettings, useSaveAgendaSettings } from '../api'
 import { addDays, isoWeekday, WEEKDAYS_SHORT } from '../dates'
 import type { AgendaSettings, TaskFilters } from '../types'
@@ -112,7 +113,8 @@ function DayBars({ days }: { days: DayMetrics[] }) {
 function SleepForm({ settings }: { settings: AgendaSettings }) {
   const save = useSaveAgendaSettings()
   const [sleep, setSleep] = useState(settings.sleepMinutes)
-  const dirty = sleep.some((m, i) => m !== settings.sleepMinutes[i])
+  const changed = sleep.map((m, i) => m !== settings.sleepMinutes[i])
+  const dirty = changed.some(Boolean)
 
   async function submit() {
     try {
@@ -132,7 +134,8 @@ function SleepForm({ settings }: { settings: AgendaSettings }) {
             <div key={label} className="min-w-0 space-y-1">
               <Label htmlFor={`sleep-${i}`} className="text-xs capitalize">{label}</Label>
               <Select value={String(sleep[i])} onValueChange={(v) => setSleep((s) => s.map((m, j) => (j === i ? Number(v) : m)))}>
-                <SelectTrigger id={`sleep-${i}`} size="sm" className="w-full min-w-0 px-2 tabular-nums" aria-label={`Sono de ${label}`}>
+                <SelectTrigger id={`sleep-${i}`} size="sm" aria-label={`Sono de ${label}${changed[i] ? ', não salvo' : ''}`}
+                  className={cn('w-full min-w-0 px-2 tabular-nums', changed[i] && 'border-orange-500 ring-1 ring-orange-500/40')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -143,6 +146,17 @@ function SleepForm({ settings }: { settings: AgendaSettings }) {
           )
         })}
       </div>
+      <div role="status" aria-live="polite">
+        {dirty && (
+          <p className="flex gap-2 rounded-lg border border-orange-500/40 bg-orange-500/10 px-3 py-2 text-sm">
+            <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-orange-600 dark:text-orange-400" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="font-medium text-orange-700 dark:text-orange-300">Alterações não salvas.</span>{' '}
+              Os dias em laranja mudaram; as horas livres só mudam depois de salvar.
+            </span>
+          </p>
+        )}
+      </div>
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => void submit()} disabled={!dirty || save.isPending}>
           {save.isPending && <Loader2Icon className="animate-spin" />} Salvar sono
@@ -151,6 +165,11 @@ function SleepForm({ settings }: { settings: AgendaSettings }) {
           onClick={() => setSleep((s) => s.map(() => s[0]))}>
           Usar o de segunda em todos
         </Button>
+        {dirty && (
+          <Button size="sm" variant="ghost" onClick={() => setSleep(settings.sleepMinutes)} disabled={save.isPending}>
+            Descartar
+          </Button>
+        )}
       </div>
     </div>
   )
