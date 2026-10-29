@@ -60,7 +60,8 @@ export type TransactionRequest = Omit<Transaction, 'id' | 'month' | 'originalDes
   originalDescription?: string | null
 }
 
-export type Totals = { income: number; expense: number; balance: number }
+/** `expense` sem os investimentos (categoria "Investir"/"Investimento"); `balance` desconta os dois. */
+export type Totals = { income: number; expense: number; invested: number; balance: number }
 
 /** Item da categoria no mês; ocasionais agrupados pela descrição. */
 export type CategoryItem = { description: string; fixed: boolean; count: number; total: number }
@@ -80,6 +81,9 @@ export type MonthlySummary = {
   occasional: Totals
   total: Totals
   fixedCommitmentPercent: number | null
+  /** % dos ganhos do mês que foi investido; nulo sem ganhos */
+  investedPercent: number | null
+  /** Sem as categorias de investimento */
   expensesByCategory: CategoryBreakdown[]
   incomesByCategory: CategoryBreakdown[]
 }
@@ -90,6 +94,8 @@ export type MonthPoint = {
   fixedExpense: number
   occasionalIncome: number
   occasionalExpense: number
+  /** Investido no mês (fixos + ocasionais), fora das despesas */
+  invested: number
   balance: number
 }
 

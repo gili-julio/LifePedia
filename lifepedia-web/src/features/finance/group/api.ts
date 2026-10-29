@@ -100,6 +100,13 @@ export function useUpdateGroupTransaction() {
   )
 }
 
+/** Parcela copiada para o grupo (sincronizada se move no pessoal). */
+export function useMoveGroupTransactionMonth() {
+  return useGroupFinanceMutation(({ groupId, id, month, following }: { groupId: string; id: string; month: YearMonth; following: boolean }) =>
+    api<{ moved: number }>(`${base(groupId)}/transactions/${id}/month`, { method: 'PUT', body: { month, following } }),
+  )
+}
+
 export function useUpdateGroupRecurring() {
   return useGroupFinanceMutation(({ groupId, id, data }: { groupId: string; id: string; data: RecurringEntryRequest }) =>
     api<void>(`${base(groupId)}/recurring/${id}`, { method: 'PUT', body: data }),

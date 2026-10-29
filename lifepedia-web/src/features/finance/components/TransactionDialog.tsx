@@ -28,7 +28,7 @@ const schema = z.object({
   amount: z.string().refine((v) => parseAmount(v) > 0, 'Informe um valor maior que zero.'),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data.'),
   month: z.string(),
-  notes: z.string().max(500, 'Máximo de 500 caracteres.'),
+  notes: z.string().max(10000, 'Máximo de 10000 caracteres.'),
   groupIds: z.array(z.string()),
   shareMode: z.enum(['SYNC', 'COPY']),
 }).refine((v) => v.month >= v.date.slice(0, 7), { path: ['month'], message: 'Não pode ser antes do mês da data.' })

@@ -149,6 +149,13 @@ export function useSaveTransaction() {
   )
 }
 
+/** Adianta/adia a parcela; `following` leva as próximas parcelas da mesma compra junto. */
+export function useMoveTransactionMonth() {
+  return useFinanceMutation(({ id, month, following }: { id: string; month: YearMonth; following: boolean }) =>
+    api<{ moved: number }>(`/api/finance/transactions/${id}/month`, { method: 'PUT', body: { month, following } }),
+  )
+}
+
 export function useDeleteTransaction() {
   return useFinanceMutation((id: string) => api<void>(`/api/finance/transactions/${id}`, { method: 'DELETE' }))
 }

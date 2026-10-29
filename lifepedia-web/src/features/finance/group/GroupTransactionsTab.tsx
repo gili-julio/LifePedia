@@ -1,4 +1,4 @@
-import { PackagePlusIcon, PencilIcon, PlusIcon, UserMinusIcon } from 'lucide-react'
+import { CalendarClockIcon, PackagePlusIcon, PencilIcon, PlusIcon, UserMinusIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
@@ -16,10 +16,14 @@ import { defaultDateInMonth, formatDate, formatMonth, type YearMonth } from '@/l
 import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { EntryListItem } from '../components/EntryListItem'
 import { Money } from '../components/Money'
+import { MoveInstallmentDialog } from '../components/MoveInstallmentDialog'
 import { TransactionDialog } from '../components/TransactionDialog'
 import { TypeIcon } from '../components/TypeIcon'
+import { parseInstallment } from '../installments'
 import type { EntryType, Transaction } from '../types'
-import { useCreateGroupTransaction, useGroupTransactionsPage, useRemoveGroupItem, useUpdateGroupTransaction } from './api'
+import {
+  useCreateGroupTransaction, useGroupTransactionsPage, useMoveGroupTransactionMonth, useRemoveGroupItem, useUpdateGroupTransaction,
+} from './api'
 import { CategoryLabel, ShareBadge } from './GroupItemParts'
 import type { GroupTransaction } from './types'
 
@@ -60,10 +64,13 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
   const [editing, setEditing] = useState<{ open: boolean; item?: GroupTransaction }>({ open: false })
   const [menu, setMenu] = useState<{ open: boolean; item?: GroupTransaction }>({ open: false })
   const [removing, setRemoving] = useState<GroupTransaction | null>(null)
+  const [moving, setMoving] = useState<{ open: boolean; item?: GroupTransaction }>({ open: false })
+  const move = useMoveGroupTransactionMonth()
   const items = data?.items ?? []
 
   const canEdit = (t: GroupTransaction) => t.mine && !t.synced
   const canRemove = (t: GroupTransaction) => t.mine || isAdmin
+  const canMove = (t: GroupTransaction) => canEdit(t) && !!parseInstallment(t.description)
 
   async function handleRemove(t: GroupTransaction) {
     try {
@@ -157,6 +164,12 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
                   <TableCell className="text-right"><Money value={t.amount} type={t.type} /></TableCell>
                   <TableCell>
                     <div className="flex justify-end">
+                      {canMove(t) && (
+                        <Button variant="ghost" size="icon-sm" aria-label="Adiantar ou adiar parcela" title="Adiantar ou adiar parcela"
+                          onClick={() => setMoving({ open: true, item: t })}>
+                          <CalendarClockIcon />
+                        </Button>
+                      )}
                       {canEdit(t) && (
                         <Button variant="ghost" size="icon-sm" aria-label="Editar cópia" onClick={() => setEditing({ open: true, item: t })}>
                           <PencilIcon />
@@ -185,6 +198,9 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
           description={`${menu.item.member.name} · ${menu.item.synced ? 'Sincronizado' : 'Cópia'}`}
           actions={[
             ...(canEdit(menu.item) ? [{ label: 'Editar cópia', icon: PencilIcon, onSelect: () => setEditing({ open: true, item: menu.item }) }] : []),
+            ...(canMove(menu.item)
+              ? [{ label: 'Adiantar ou adiar parcela', icon: CalendarClockIcon, onSelect: () => setMoving({ open: true, item: menu.item }) }]
+              : []),
             ...(canRemove(menu.item) ? [{ label: 'Tirar do grupo', icon: UserMinusIcon, destructive: true, onSelect: () => setRemoving(menu.item!) }] : []),
           ]}
         />
@@ -196,6 +212,12 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
         description={removing?.synced ? 'O lançamento pessoal continua como está.' : 'A cópia do grupo será apagada.'}
         confirmLabel="Tirar do grupo"
         onConfirm={() => removing && handleRemove(removing)}
+      />
+      <MoveInstallmentDialog
+        open={moving.open}
+        onOpenChange={(open) => setMoving((m) => ({ ...m, open }))}
+        item={moving.item}
+        onMove={(data) => move.mutateAsync({ groupId, id: moving.item!.id, ...data })}
       />
       <TransactionDialog
         open={editing.open}

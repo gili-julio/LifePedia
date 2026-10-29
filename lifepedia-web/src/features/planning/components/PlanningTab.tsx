@@ -295,8 +295,12 @@ function SummaryCards({ data, onAdjust, simulating }: { data: Simulation; onAdju
       <Card size="sm" className="bg-data/10 ring-data/20">
         <CardContent className="space-y-1">
           <p className="text-sm font-semibold text-data">Reserva hoje</p>
-          <p className="text-lg font-semibold text-data sm:text-xl"><Money value={settings.reserve} /></p>
-          <p className="text-xs text-muted-foreground">Quanto o grupo já tem guardado.</p>
+          <p className="text-lg font-semibold text-data sm:text-xl"><Money value={settings.totalReserve} /></p>
+          <p className="text-xs text-muted-foreground">
+            {settings.invested > 0
+              ? `${formatCurrency(settings.reserve)} informados + ${formatCurrency(settings.invested)} investidos no grupo.`
+              : 'Quanto o grupo já tem guardado.'}
+          </p>
           <Button variant="link" size="xs" className="h-auto px-0" onClick={onAdjust}>
             <PencilIcon /> Alterar
           </Button>

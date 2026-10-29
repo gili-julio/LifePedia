@@ -1,4 +1,4 @@
-import { ArrowDownRightIcon, ArrowUpRightIcon, PercentIcon, PlusIcon, RepeatIcon, ScaleIcon, SparklesIcon } from 'lucide-react'
+import { ArrowDownRightIcon, ArrowUpRightIcon, PercentIcon, PiggyBankIcon, PlusIcon, RepeatIcon, ScaleIcon, SparklesIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
@@ -11,7 +11,7 @@ import { currentYearMonth, defaultDateInMonth, formatCurrency, formatMonth } fro
 import { cn } from '@/lib/utils'
 import { useHistory, useSummary } from '../api'
 import { CategoryBreakdownList } from '../components/CategoryBreakdownList'
-import { FixedVsOccasionalChart, HistoryChart } from '../components/charts'
+import { FixedVsOccasionalChart, HistoryChart, InvestedChart } from '../components/charts'
 import { Money } from '../components/Money'
 import { MonthPicker } from '../components/MonthPicker'
 import { RecurringEntryDialog } from '../components/RecurringEntryDialog'
@@ -27,13 +27,14 @@ function commitmentHint(percent: number | null) {
 }
 
 function isEmpty(summary: MonthlySummary) {
-  return summary.total.income === 0 && summary.total.expense === 0
+  return summary.total.income === 0 && summary.total.expense === 0 && summary.total.invested === 0
 }
 
 export function FinanceDashboardPage() {
   const [month, setMonth] = useMonthParam()
   const summary = useSummary(month)
   const history = useHistory(month, 6)
+  const invested = useHistory(month, 12)
   const [transactionOpen, setTransactionOpen] = useState(false)
   const [params, setParams] = useSearchParams()
   const [recurring, setRecurring] = useState<{ open: boolean; type: EntryType }>({ open: false, type: 'EXPENSE' })
@@ -53,12 +54,12 @@ export function FinanceDashboardPage() {
       />
 
       {!data ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
         </div>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <StatCard label="Ganhos" tone="income" icon={ArrowUpRightIcon}
               hint={`Fixos ${formatCurrency(data.fixed.income)} · Ocasionais ${formatCurrency(data.occasional.income)}`}>
               <Money value={data.total.income} type="INCOME" />
@@ -66,6 +67,11 @@ export function FinanceDashboardPage() {
             <StatCard label="Despesas" tone="expense" icon={ArrowDownRightIcon}
               hint={`Fixas ${formatCurrency(data.fixed.expense)} · Ocasionais ${formatCurrency(data.occasional.expense)}`}>
               <Money value={data.total.expense} type="EXPENSE" />
+            </StatCard>
+            <StatCard label="Investido" tone="data" icon={PiggyBankIcon}
+              hint={data.investedPercent === null ? 'Fora das despesas; desconta do saldo.'
+                : `${data.investedPercent.toLocaleString('pt-BR')}% dos ganhos do mês.`}>
+              <Money value={data.total.invested} />
             </StatCard>
             <StatCard label="Saldo do mês" tone="data" icon={ScaleIcon}
               hint={`Só com os fixos: ${formatCurrency(data.fixed.balance)}`}>
@@ -118,6 +124,18 @@ export function FinanceDashboardPage() {
               </CardContent>
             </Card>
           </div>
+
+          {invested.data?.some((p) => p.invested > 0) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Investido nos últimos 12 meses</CardTitle>
+                <CardDescription>Despesas nas categorias "Investir" ou "Investimento": ficam fora das despesas.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <InvestedChart points={invested.data} />
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

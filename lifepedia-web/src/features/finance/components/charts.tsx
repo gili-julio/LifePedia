@@ -76,6 +76,36 @@ export function FixedVsOccasionalChart({ summary }: { summary: MonthlySummary })
 }
 
 /** Ganhos x despesas por mês. */
+const investedConfig = { invested: { label: 'Investido', color: 'var(--data)' } } satisfies ChartConfig
+
+/** Investido por mês (despesas em categoria de investimento), fora das despesas. */
+export function InvestedChart({ points }: { points: MonthPoint[] }) {
+  const data = points.map((p) => ({ ...p, label: formatMonth(p.month, 'short') }))
+  return (
+    <ChartContainer config={investedConfig} className="aspect-auto h-56 w-full">
+      <BarChart data={data} margin={{ top: 8, left: 4, right: 4 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} width={64} tickFormatter={(v: number) => formatCompactCurrency(v)} />
+        <ChartTooltip
+          cursor={{ fillOpacity: 0.4 }}
+          content={(props) => {
+            const { active, payload } = props as TooltipProps
+            if (!active || !payload?.length) return null
+            const row = payload[0].payload as (typeof data)[number]
+            return (
+              <TooltipBox title={formatMonth(row.month)}>
+                <TooltipLine color="var(--data)" label="Investido" value={row.invested} />
+              </TooltipBox>
+            )
+          }}
+        />
+        <Bar dataKey="invested" fill="var(--color-invested)" radius={[4, 4, 0, 0]} maxBarSize={32} />
+      </BarChart>
+    </ChartContainer>
+  )
+}
+
 export function HistoryChart({ points }: { points: MonthPoint[] }) {
   const data = points.map((p) => ({
     ...p,
@@ -104,6 +134,7 @@ export function HistoryChart({ points }: { points: MonthPoint[] }) {
                 <TooltipLine color="var(--expense)" label="Despesas" value={row.expense} />
                 <TooltipLine label="fixas" value={row.fixedExpense} muted />
                 <TooltipLine label="ocasionais" value={row.occasionalExpense} muted />
+                {row.invested > 0 && <TooltipLine color="var(--data)" label="Investido" value={row.invested} />}
                 <div className="my-0.5 border-t" />
                 <TooltipLine label="Saldo" value={row.balance} />
               </TooltipBox>

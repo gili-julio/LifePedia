@@ -35,7 +35,7 @@ public final class PlanningDtos {
             @NotNull(message = "Informe o prazo.") YearMonth targetMonth,
             @Min(value = 1, message = "Mínimo de 1 parcela.") @Max(value = 120, message = "Máximo de 120 parcelas.")
             Integer installments,
-            @Size(max = 500, message = "Máximo de 500 caracteres.") String notes,
+            @Size(max = 10000, message = "Máximo de 10000 caracteres.") String notes,
             Boolean active,
             @Size(max = 2048, message = "Link muito longo.") String url,
             @Size(max = 300) String linkTitle,
@@ -126,7 +126,13 @@ public final class PlanningDtos {
                              BigDecimal monthlySaving, BigDecimal installmentAmount, boolean overdue) {
     }
 
-    public record Settings(BigDecimal reserve, int averageMonths, BigDecimal manualBalance) {
+    /**
+     * @param reserve      valor informado (guardado fora dos lançamentos)
+     * @param invested     investimentos lançados no grupo até o mês atual
+     * @param totalReserve reserve + invested, ponto de partida da simulação
+     */
+    public record Settings(BigDecimal reserve, int averageMonths, BigDecimal manualBalance, BigDecimal invested,
+                           BigDecimal totalReserve) {
     }
 
     /**

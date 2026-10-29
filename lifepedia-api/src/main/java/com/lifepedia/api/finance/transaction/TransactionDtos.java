@@ -31,7 +31,7 @@ public final class TransactionDtos {
             @Digits(integer = 12, fraction = 2, message = "Valor inválido.") BigDecimal amount,
             @NotNull(message = "Informe a data.") LocalDate date,
             YearMonth month,
-            @Size(max = 500) String notes,
+            @Size(max = 10000) String notes,
             @Size(max = 200) String originalDescription,
             @Size(max = 20) List<UUID> groupIds,
             ShareMode shareMode) {

@@ -1,4 +1,5 @@
-import { PackagePlusIcon } from 'lucide-react'
+import { PackagePlusIcon, PiggyBankIcon, VaultIcon } from 'lucide-react'
+import { StatCard } from '@/components/StatCard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -6,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserAvatar } from '@/components/UserAvatar'
 import { formatCurrency, type YearMonth } from '@/lib/format'
 import { CategoryBreakdownList, CategoryItemList } from '../components/CategoryBreakdownList'
-import { FixedVsOccasionalChart, HistoryChart } from '../components/charts'
+import { FixedVsOccasionalChart, HistoryChart, InvestedChart } from '../components/charts'
+import { Money } from '../components/Money'
 import { TotalCard } from '../components/TotalCard'
 import { useGroupCategoryItems, useGroupHistory, useGroupSummary } from './api'
 import type { MemberTotals } from './types'
@@ -61,23 +63,29 @@ function MemberBreakdown({ members, totalExpense }: { members: MemberTotals[]; t
 export function GroupOverview({ groupId, month, onBring }: Props) {
   const summary = useGroupSummary(groupId, month)
   const history = useGroupHistory(groupId, month, 6)
+  const invested = useGroupHistory(groupId, month, 12)
   const data = summary.data
 
   if (!data) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
       </div>
     )
   }
 
-  const empty = data.total.income === 0 && data.total.expense === 0
+  const empty = data.total.income === 0 && data.total.expense === 0 && data.total.invested === 0
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <TotalCard label="Ganhos do grupo" value={data.total.income} kind="INCOME" />
         <TotalCard label="Despesas do grupo" value={data.total.expense} kind="EXPENSE" />
+        <StatCard label="Investido no mês" tone="data" icon={PiggyBankIcon}
+          hint={data.investedPercent === null ? 'Fora das despesas; desconta do saldo.'
+            : `${data.investedPercent.toLocaleString('pt-BR')}% dos ganhos do mês.`}>
+          <Money value={data.total.invested} />
+        </StatCard>
         <TotalCard label="Saldo do mês" value={data.total.balance} kind="BALANCE" />
         <Card size="sm">
           <CardContent className="space-y-1">
@@ -87,6 +95,10 @@ export function GroupOverview({ groupId, month, onBring }: Props) {
             </p>
           </CardContent>
         </Card>
+        <StatCard label="Reserva total" tone="data" icon={VaultIcon}
+          hint={`${formatCurrency(data.reserve.manual)} informados no planejamento + ${formatCurrency(data.reserve.invested)} investidos até este mês.`}>
+          <Money value={data.reserve.total} />
+        </StatCard>
       </div>
 
       {empty && (
@@ -100,6 +112,18 @@ export function GroupOverview({ groupId, month, onBring }: Props) {
           </CardHeader>
           <CardContent>
             <Button onClick={onBring}><PackagePlusIcon /> Levar meus itens</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {invested.data?.some((p) => p.invested > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Investido nos últimos 12 meses</CardTitle>
+            <CardDescription>Despesas do grupo nas categorias "Investir" ou "Investimento": somam na reserva.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <InvestedChart points={invested.data} />
           </CardContent>
         </Card>
       )}

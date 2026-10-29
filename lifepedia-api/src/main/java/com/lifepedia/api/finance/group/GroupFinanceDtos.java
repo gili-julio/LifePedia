@@ -64,7 +64,22 @@ public final class GroupFinanceDtos {
                                          BigDecimal fixed, BigDecimal occasional, BigDecimal total) {
     }
 
-    public record MemberTotals(UserSummary member, BigDecimal income, BigDecimal expense, BigDecimal balance) {
+    /** @param expense sem os investimentos; {@code balance} desconta os dois */
+    public record MemberTotals(UserSummary member, BigDecimal income, BigDecimal expense, BigDecimal invested,
+                               BigDecimal balance) {
+    }
+
+    /**
+     * Reserva do grupo até o mês.
+     *
+     * @param manual   valor informado no planejamento (guardado fora dos lançamentos)
+     * @param invested investimentos lançados no grupo até o mês
+     */
+    public record Reserve(BigDecimal manual, BigDecimal invested, BigDecimal total) {
+
+        public static Reserve of(BigDecimal manual, BigDecimal invested) {
+            return new Reserve(manual, invested, manual.add(invested));
+        }
     }
 
     /** Mesmo formato do resumo pessoal, com as categorias por nome e o total por membro. */
@@ -74,8 +89,10 @@ public final class GroupFinanceDtos {
             Totals occasional,
             Totals total,
             BigDecimal fixedCommitmentPercent,
+            BigDecimal investedPercent,
             List<GroupCategoryBreakdown> expensesByCategory,
             List<GroupCategoryBreakdown> incomesByCategory,
-            List<MemberTotals> members) {
+            List<MemberTotals> members,
+            Reserve reserve) {
     }
 }

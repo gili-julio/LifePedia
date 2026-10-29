@@ -1,5 +1,9 @@
 package com.lifepedia.api.finance.group;
 
+import com.lifepedia.api.finance.Installments;
+import com.lifepedia.api.finance.Installments.Installment;
+import com.lifepedia.api.finance.Installments.MoveRequest;
+import com.lifepedia.api.finance.Installments.MoveResult;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryRepository;
@@ -34,6 +38,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -216,6 +222,26 @@ public class GroupFinanceService {
                 .orElseThrow(() -> new NotFoundException("Lançamento não encontrado."));
         requireEditableCopy(item.getUserId(), item.isSynced(), userId);
         apply(item, userId, request);
+    }
+
+    /** Adianta/adia uma parcela copiada para o grupo (e as seguintes, se pedido); sincronizada se move no pessoal. */
+    @Transactional
+    public MoveResult moveMonth(UUID userId, UUID groupId, UUID id, MoveRequest request) {
+        access.requireMember(groupId, userId);
+        GroupTransaction item = groupTransactions.findByIdAndGroupId(id, groupId)
+                .orElseThrow(() -> new NotFoundException("Lançamento não encontrado."));
+        requireEditableCopy(item.getUserId(), item.isSynced(), userId);
+        long months = ChronoUnit.MONTHS.between(item.getMonth(), request.month());
+        List<GroupTransaction> moving = new ArrayList<>(List.of(item));
+        if (Boolean.TRUE.equals(request.following())) {
+            Installment installment = Installments.require(item.getDescription());
+            groupTransactions.findByGroupIdAndUserIdAndDescriptionStartingWithIgnoreCase(groupId, userId, installment.base())
+                    .stream()
+                    .filter(g -> !g.isSynced() && installment.isFollowedBy(g.getDescription()))
+                    .forEach(moving::add);
+        }
+        moving.forEach(g -> g.moveTo(Installments.shift(g.getMonth(), months, g.getDate(), g.getDescription())));
+        return new MoveResult(moving.size());
     }
 
     @Transactional

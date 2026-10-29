@@ -1,5 +1,7 @@
 package com.lifepedia.api.finance.transaction;
 
+import com.lifepedia.api.finance.Installments.MoveRequest;
+import com.lifepedia.api.finance.Installments.MoveResult;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionBatchRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionResponse;
@@ -87,6 +89,12 @@ public class TransactionController {
     public TransactionResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                       @Valid @RequestBody TransactionRequest request) {
         return service.update(CurrentUser.id(jwt), id, request);
+    }
+
+    /** Adianta/adia a parcela ({@code following}: e as seguintes). */
+    @PutMapping("/{id}/month")
+    public MoveResult moveMonth(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody MoveRequest request) {
+        return service.moveMonth(CurrentUser.id(jwt), id, request);
     }
 
     @DeleteMapping("/{id}")

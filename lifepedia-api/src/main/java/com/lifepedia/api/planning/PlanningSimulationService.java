@@ -1,5 +1,6 @@
 package com.lifepedia.api.planning;
 
+import com.lifepedia.api.finance.group.GroupFinanceDtos.Reserve;
 import com.lifepedia.api.finance.group.GroupSummaryService;
 import com.lifepedia.api.finance.summary.SummaryDtos.MonthPoint;
 import com.lifepedia.api.group.GroupAccess;
@@ -70,7 +71,7 @@ public class PlanningSimulationService {
         List<TimelinePoint> timeline = result.timeline().stream()
                 .map(p -> new TimelinePoint(p.month(), p.base(), p.planned(), p.withoutPlan(), p.balance(), p.due()))
                 .toList();
-        return new Simulation(ctx.start, scenarioId, PlanningService.settingsOf(ctx.settings), ctx.baseInfo,
+        return new Simulation(ctx.start, scenarioId, PlanningService.settingsOf(ctx.settings, ctx.reserve), ctx.baseInfo,
                 outcome(result), timeline, results, planning.responses(ctx.acquired, me));
     }
 
@@ -87,8 +88,8 @@ public class PlanningSimulationService {
         return list;
     }
 
-    private record Context(YearMonth start, PlanSettings settings, List<PlanItem> pending, List<PlanItem> acquired,
-                           List<BigDecimal> base, int display, Base baseInfo) {
+    private record Context(YearMonth start, PlanSettings settings, Reserve reserve, List<PlanItem> pending,
+                           List<PlanItem> acquired, List<BigDecimal> base, int display, Base baseInfo) {
     }
 
     private Context context(UUID groupId, BigDecimal extraIncome, BigDecimal extraExpense) {
@@ -119,7 +120,7 @@ public class PlanningSimulationService {
         MonthPoint first = future.getFirst();
         Base info = new Base(first.fixedIncome(), first.fixedExpense(), occasionalAverage, months,
                 basis.stream().map(MonthPoint::month).toList(), manual, extra, base.getFirst());
-        return new Context(start, settings, pending, acquired, base, display, info);
+        return new Context(start, settings, groupSummary.reserve(groupId, start), pending, acquired, base, display, info);
     }
 
     /**
@@ -138,7 +139,7 @@ public class PlanningSimulationService {
     }
 
     private static Result run(Context ctx, Set<UUID> considered) {
-        return PlanningSimulator.run(ctx.start, ctx.base, ctx.settings.getReserve(), entries(ctx.pending, considered),
+        return PlanningSimulator.run(ctx.start, ctx.base, ctx.reserve.total(), entries(ctx.pending, considered),
                 ctx.display);
     }
 

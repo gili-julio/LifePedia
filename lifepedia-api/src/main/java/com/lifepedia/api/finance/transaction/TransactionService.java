@@ -6,6 +6,10 @@ import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryService;
 import com.lifepedia.api.finance.group.GroupFinanceService;
+import com.lifepedia.api.finance.Installments;
+import com.lifepedia.api.finance.Installments.Installment;
+import com.lifepedia.api.finance.Installments.MoveRequest;
+import com.lifepedia.api.finance.Installments.MoveResult;
 import com.lifepedia.api.finance.group.GroupFinanceSync;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionResponse;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.YearMonth;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -136,6 +141,24 @@ public class TransactionService {
         apply(transaction, request);
         groupSync.transactionChanged(transaction);
         return TransactionResponse.from(transaction);
+    }
+
+    /** Adianta ou adia o mês da parcela; com {@code following}, as próximas parcelas da compra vão junto. */
+    @Transactional
+    public MoveResult moveMonth(UUID userId, UUID id, MoveRequest request) {
+        Transaction transaction = find(userId, id);
+        long months = ChronoUnit.MONTHS.between(transaction.getMonth(), request.month());
+        List<Transaction> moving = new ArrayList<>(List.of(transaction));
+        if (Boolean.TRUE.equals(request.following())) {
+            Installment installment = Installments.require(transaction.getDescription());
+            repository.findByUserIdAndDescriptionStartingWithIgnoreCase(userId, installment.base()).stream()
+                    .filter(t -> installment.isFollowedBy(t.getDescription()))
+                    .forEach(moving::add);
+        }
+        moving.forEach(t -> t.setMonth(Installments.shift(t.getMonth(), months, t.getDate(), t.getDescription())));
+        // A sincronização limpa o contexto do JPA: todos os meses mudam antes dela.
+        moving.forEach(groupSync::transactionChanged);
+        return new MoveResult(moving.size());
     }
 
     @Transactional

@@ -59,7 +59,7 @@ public class GroupRecurringEntry extends BaseEntity {
     @Column(nullable = false)
     private boolean active = true;
 
-    @Column(length = 500)
+    @Column(length = 10000)
     private String notes;
 
     protected GroupRecurringEntry() {

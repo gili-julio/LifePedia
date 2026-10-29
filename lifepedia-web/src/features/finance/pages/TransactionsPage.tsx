@@ -1,4 +1,4 @@
-import { PencilIcon, PlusIcon, RepeatIcon, SparklesIcon, Trash2Icon } from 'lucide-react'
+import { CalendarClockIcon, PencilIcon, PlusIcon, RepeatIcon, SparklesIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
@@ -14,17 +14,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/lib/api'
 import { defaultDateInMonth, formatDate, formatMonth, type YearMonth } from '@/lib/format'
-import { useDeleteTransaction, useSummary, useTransactionsPage } from '../api'
+import { useDeleteTransaction, useMoveTransactionMonth, useSummary, useTransactionsPage } from '../api'
 import { CategoryBadge } from '../components/CategoryBadge'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { EntryListItem } from '../components/EntryListItem'
 import { Money } from '../components/Money'
+import { MoveInstallmentDialog } from '../components/MoveInstallmentDialog'
 import { MonthPicker } from '../components/MonthPicker'
 import { RecurringEntryDialog } from '../components/RecurringEntryDialog'
 import { TotalCard } from '../components/TotalCard'
 import { TransactionDialog } from '../components/TransactionDialog'
 import { TypeIcon } from '../components/TypeIcon'
 import type { EntryType, Transaction } from '../types'
+import { parseInstallment } from '../installments'
 import { useMonthParam } from '../use-month-param'
 
 type Filter = 'ALL' | EntryType
@@ -48,6 +50,8 @@ export function TransactionsPage() {
   const [makeFixed, setMakeFixed] = useState<{ open: boolean; transaction?: Transaction }>({ open: false })
   const [menu, setMenu] = useState<{ open: boolean; item?: Transaction }>({ open: false })
   const [deleting, setDeleting] = useState<Transaction | null>(null)
+  const [moving, setMoving] = useState<{ open: boolean; item?: Transaction }>({ open: false })
+  const move = useMoveTransactionMonth()
 
   const items = data?.items ?? []
   const setMonth = (next: YearMonth) => {
@@ -154,6 +158,12 @@ export function TransactionsPage() {
                       <TableCell className="text-right"><Money value={t.amount} type={t.type} /></TableCell>
                       <TableCell>
                         <div className="flex justify-end">
+                          {parseInstallment(t.description) && (
+                            <Button variant="ghost" size="icon-sm" aria-label="Adiantar ou adiar parcela" title="Adiantar ou adiar parcela"
+                              onClick={() => setMoving({ open: true, item: t })}>
+                              <CalendarClockIcon />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon-sm" aria-label="Tornar fixo" title="Tornar fixo" onClick={() => openMakeFixed(t)}>
                             <RepeatIcon />
                           </Button>
@@ -183,6 +193,9 @@ export function TransactionsPage() {
           description={formatDate(menu.item.date)}
           actions={[
             { label: 'Editar', icon: PencilIcon, onSelect: () => openEdit(menu.item!) },
+            ...(parseInstallment(menu.item.description)
+              ? [{ label: 'Adiantar ou adiar parcela', icon: CalendarClockIcon, onSelect: () => setMoving({ open: true, item: menu.item }) }]
+              : []),
             { label: 'Tornar fixo', icon: RepeatIcon, onSelect: () => openMakeFixed(menu.item!) },
             { label: 'Excluir', icon: Trash2Icon, destructive: true, onSelect: () => setDeleting(menu.item!) },
           ]}
@@ -200,6 +213,12 @@ export function TransactionsPage() {
         onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
         transaction={dialog.transaction}
         defaultDate={defaultDateInMonth(month)}
+      />
+      <MoveInstallmentDialog
+        open={moving.open}
+        onOpenChange={(open) => setMoving((m) => ({ ...m, open }))}
+        item={moving.item}
+        onMove={(data) => move.mutateAsync({ id: moving.item!.id, ...data })}
       />
       <RecurringEntryDialog
         open={makeFixed.open}

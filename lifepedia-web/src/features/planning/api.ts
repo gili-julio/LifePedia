@@ -119,7 +119,7 @@ export function useUnacquireItem() {
 }
 
 export function useSaveSettings() {
-  return usePlanningMutation(({ groupId, data }: { groupId: string; data: PlanSettings }) =>
+  return usePlanningMutation(({ groupId, data }: { groupId: string; data: Pick<PlanSettings, 'reserve' | 'averageMonths' | 'manualBalance'> }) =>
     api<PlanSettings>(`${base(groupId)}/settings`, { method: 'PUT', body: data }),
   )
 }

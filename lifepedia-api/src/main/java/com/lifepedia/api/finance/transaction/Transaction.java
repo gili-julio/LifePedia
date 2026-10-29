@@ -44,7 +44,7 @@ public class Transaction extends BaseEntity {
     @Column(nullable = false)
     private YearMonth month;
 
-    @Column(length = 500)
+    @Column(length = 10000)
     private String notes;
 
     /** Descrição como veio no documento importado; não muda depois de criada. */

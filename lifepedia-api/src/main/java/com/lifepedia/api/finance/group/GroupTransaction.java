@@ -54,7 +54,7 @@ public class GroupTransaction extends BaseEntity {
     @Column(nullable = false)
     private YearMonth month;
 
-    @Column(length = 500)
+    @Column(length = 10000)
     private String notes;
 
     protected GroupTransaction() {
@@ -87,6 +87,10 @@ public class GroupTransaction extends BaseEntity {
         this.date = date;
         this.month = month;
         this.notes = notes;
+    }
+
+    public void moveTo(YearMonth month) {
+        this.month = month;
     }
 
     public boolean isSynced() {

@@ -3,6 +3,7 @@ package com.lifepedia.api.finance.summary;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryService;
+import com.lifepedia.api.finance.category.InvestmentCategories;
 import com.lifepedia.api.finance.recurring.RecurringAdjustment;
 import com.lifepedia.api.finance.recurring.RecurringAdjustmentRepository;
 import com.lifepedia.api.finance.recurring.RecurringEntry;
@@ -19,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -57,24 +58,19 @@ public class SummaryService {
                 .toList();
         List<Transaction> occasional = transactionRepository.findByUserIdAndMonthOrderByDateDescCreatedAtDesc(userId, month);
         Function<RecurringEntry, BigDecimal> fixedAmount = amountIn(month, adjustments(userId));
-
-        Totals fixedTotals = Totals.of(
-                sum(fixed.stream(), EntryType.INCOME, RecurringEntry::getType, fixedAmount),
-                sum(fixed.stream(), EntryType.EXPENSE, RecurringEntry::getType, fixedAmount));
-        Totals occasionalTotals = Totals.of(
-                sum(occasional.stream(), EntryType.INCOME, Transaction::getType, Transaction::getAmount),
-                sum(occasional.stream(), EntryType.EXPENSE, Transaction::getType, Transaction::getAmount));
-        Totals total = Totals.of(
-                fixedTotals.income().add(occasionalTotals.income()),
-                fixedTotals.expense().add(occasionalTotals.expense()));
-
-        BigDecimal commitment = fixedTotals.income().signum() == 0 ? null
-                : fixedTotals.expense().multiply(BigDecimal.valueOf(100))
-                .divide(fixedTotals.income(), 1, RoundingMode.HALF_UP);
-
         Map<UUID, Category> categories = categoryService.mapByIdFor(userId);
-        return new MonthlySummary(month, fixedTotals, occasionalTotals, total, commitment,
-                breakdown(fixed, fixedAmount, occasional, EntryType.EXPENSE, categories),
+        Set<UUID> investing = InvestmentCategories.ids(categories.values());
+
+        Totals fixedTotals = totals(fixed, RecurringEntry::getType, RecurringEntry::getCategoryId, fixedAmount, investing);
+        Totals occasionalTotals = totals(occasional, Transaction::getType, Transaction::getCategoryId,
+                Transaction::getAmount, investing);
+        Totals total = fixedTotals.plus(occasionalTotals);
+
+        return new MonthlySummary(month, fixedTotals, occasionalTotals, total,
+                SummaryDtos.percent(fixedTotals.expense(), fixedTotals.income()),
+                SummaryDtos.percent(total.invested(), total.income()),
+                breakdown(fixed, fixedAmount, occasional, EntryType.EXPENSE, categories).stream()
+                        .filter(c -> !investing.contains(c.categoryId())).toList(),
                 breakdown(fixed, fixedAmount, occasional, EntryType.INCOME, categories));
     }
 
@@ -101,6 +97,7 @@ public class SummaryService {
         List<RecurringEntry> fixed = recurringRepository.findByUserIdOrderByTypeAscAmountDesc(userId);
         Map<UUID, Map<YearMonth, BigDecimal>> adjustments = adjustments(userId);
         List<Transaction> occasional = transactionRepository.findByUserIdAndMonthBetween(userId, from, until);
+        Set<UUID> investing = InvestmentCategories.ids(categoryService.mapByIdFor(userId).values());
 
         List<MonthPoint> points = new ArrayList<>(months);
         for (YearMonth month = from; !month.isAfter(until); month = month.plusMonths(1)) {
@@ -110,12 +107,11 @@ public class SummaryService {
                     .filter(t -> t.getMonth().equals(current)).toList();
 
             Function<RecurringEntry, BigDecimal> fixedAmount = amountIn(current, adjustments);
-            BigDecimal fixedIncome = sum(monthFixed.stream(), EntryType.INCOME, RecurringEntry::getType, fixedAmount);
-            BigDecimal fixedExpense = sum(monthFixed.stream(), EntryType.EXPENSE, RecurringEntry::getType, fixedAmount);
-            BigDecimal occIncome = sum(monthOccasional.stream(), EntryType.INCOME, Transaction::getType, Transaction::getAmount);
-            BigDecimal occExpense = sum(monthOccasional.stream(), EntryType.EXPENSE, Transaction::getType, Transaction::getAmount);
-            BigDecimal balance = fixedIncome.add(occIncome).subtract(fixedExpense).subtract(occExpense);
-            points.add(new MonthPoint(current, fixedIncome, fixedExpense, occIncome, occExpense, balance));
+            Totals f = totals(monthFixed, RecurringEntry::getType, RecurringEntry::getCategoryId, fixedAmount, investing);
+            Totals o = totals(monthOccasional, Transaction::getType, Transaction::getCategoryId, Transaction::getAmount,
+                    investing);
+            Totals all = f.plus(o);
+            points.add(new MonthPoint(current, f.income(), f.expense(), o.income(), o.expense(), all.invested(), all.balance()));
         }
         return points;
     }
@@ -152,6 +148,15 @@ public class SummaryService {
                 })
                 .sorted(Comparator.comparing(CategoryBreakdown::total).reversed())
                 .toList();
+    }
+
+    /** Ganhos, despesas e investido (despesa em categoria de investimento) da lista. */
+    private static <T> Totals totals(List<T> items, Function<T, EntryType> typeOf, Function<T, UUID> categoryOf,
+                                     Function<T, BigDecimal> amountOf, Set<UUID> investing) {
+        Predicate<T> invested = i -> investing.contains(categoryOf.apply(i));
+        return Totals.of(sum(items.stream(), EntryType.INCOME, typeOf, amountOf),
+                sum(items.stream().filter(invested.negate()), EntryType.EXPENSE, typeOf, amountOf),
+                sum(items.stream().filter(invested), EntryType.EXPENSE, typeOf, amountOf));
     }
 
     private static <T> Map<UUID, BigDecimal> sumByCategory(Stream<T> items, EntryType type,

@@ -30,10 +30,13 @@ export type GroupRecurringEntry = GroupItemBase & {
   active: boolean
 }
 
-export type MemberTotals = { member: UserSummary; income: number; expense: number; balance: number }
+export type MemberTotals = { member: UserSummary; income: number; expense: number; invested: number; balance: number }
+
+/** Reserva até o mês: valor do planejamento + investimentos lançados no grupo. */
+export type GroupReserve = { manual: number; invested: number; total: number }
 
 /** Mesmo formato do resumo pessoal (categorias somadas pelo nome) + total por membro. */
-export type GroupFinanceSummary = MonthlySummary & { members: MemberTotals[] }
+export type GroupFinanceSummary = MonthlySummary & { members: MemberTotals[]; reserve: GroupReserve }
 
 export type ShareRequest = { transactionIds?: string[]; recurringIds?: string[]; mode: ShareMode }
 

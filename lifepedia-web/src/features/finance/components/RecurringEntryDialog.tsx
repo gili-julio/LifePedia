@@ -36,7 +36,7 @@ const schema = z
     startMonth: z.string().regex(/^\d{4}-\d{2}$/, 'Informe o mês de início.'),
     endMonth: z.string(),
     active: z.boolean(),
-    notes: z.string().max(500, 'Máximo de 500 caracteres.'),
+    notes: z.string().max(10000, 'Máximo de 10000 caracteres.'),
     /** Ocasionais desmarcados (não serão removidos) */
     keep: z.array(z.string()),
     groupIds: z.array(z.string()),

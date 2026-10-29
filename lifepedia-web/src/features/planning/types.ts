@@ -52,7 +52,14 @@ export type ItemResult = {
 
 export type AverageMonths = 0 | 3 | 6 | 12
 
-export type PlanSettings = { reserve: number; averageMonths: AverageMonths; manualBalance: number | null }
+/** `reserve` é o valor informado; `totalReserve` soma os investimentos do grupo (`invested`) e é o que a simulação usa. */
+export type PlanSettings = {
+  reserve: number
+  averageMonths: AverageMonths
+  manualBalance: number | null
+  invested: number
+  totalReserve: number
+}
 
 /** Saldo previsto do primeiro mês e de onde vem. */
 export type PlanBase = {

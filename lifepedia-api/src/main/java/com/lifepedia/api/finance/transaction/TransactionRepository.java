@@ -49,6 +49,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
 
+    List<Transaction> findByUserIdAndDescriptionStartingWithIgnoreCase(UUID userId, String prefix);
+
     @Query("select t.categoryId as categoryId, count(t) as total from Transaction t "
             + "where t.userId = :userId group by t.categoryId")
     List<CategoryUsage> countByCategory(UUID userId);

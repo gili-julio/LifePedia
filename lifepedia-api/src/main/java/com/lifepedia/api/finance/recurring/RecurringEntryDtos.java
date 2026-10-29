@@ -38,7 +38,7 @@ public final class RecurringEntryDtos {
             YearMonth startMonth,
             YearMonth endMonth,
             Boolean active,
-            @Size(max = 500) String notes,
+            @Size(max = 10000) String notes,
             @Size(max = 500) List<UUID> removeTransactionIds,
             @Size(max = 20) List<UUID> groupIds,
             ShareMode shareMode) {

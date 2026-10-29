@@ -212,7 +212,7 @@ export function parseAiOutput(
       type,
       categoryId: category?.id ?? '',
       amount: Number.isFinite(amount) && amount > 0 ? amountToInput(amount) : '',
-      notes: typeof item.notes === 'string' ? item.notes.trim().slice(0, 500) : '',
+      notes: typeof item.notes === 'string' ? item.notes.trim().slice(0, 10000) : '',
       source,
       month: source === 'card' ? invoiceMonth : '',
       invoiceMonth,

@@ -87,9 +87,12 @@ function SettingsForm({ groupId, settings, base, onDone }: { groupId: string; se
     <>
       <FieldGroup className="gap-4">
         <Field data-invalid={!!errors.reserve}>
-          <FieldLabel htmlFor="plan-reserve">Reserva hoje (R$)</FieldLabel>
+          <FieldLabel htmlFor="plan-reserve">Reserva guardada fora dos lançamentos (R$)</FieldLabel>
           <Input id="plan-reserve" inputMode="decimal" placeholder="0,00" value={reserve} onChange={(e) => setReserve(e.target.value)} />
-          <FieldDescription>Quanto o grupo já tem guardado para esses planos.</FieldDescription>
+          <FieldDescription>
+            Quanto o grupo já tinha guardado. Despesas do grupo em categoria "Investir" ou "Investimento" somam sozinhas
+            {settings.invested > 0 && <> (hoje: {formatCurrency(settings.invested)})</>}.
+          </FieldDescription>
           <FieldError>{errors.reserve}</FieldError>
         </Field>
 

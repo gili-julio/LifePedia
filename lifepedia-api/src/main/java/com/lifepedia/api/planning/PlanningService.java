@@ -1,6 +1,8 @@
 package com.lifepedia.api.planning;
 
+import com.lifepedia.api.finance.group.GroupFinanceDtos.Reserve;
 import com.lifepedia.api.finance.group.GroupFinanceService;
+import com.lifepedia.api.finance.group.GroupSummaryService;
 import com.lifepedia.api.group.GroupAccess;
 import com.lifepedia.api.group.GroupDeletedEvent;
 import com.lifepedia.api.group.GroupMember;
@@ -55,10 +57,11 @@ public class PlanningService {
     private final GroupFinanceService groupFinance;
     private final UserRepository users;
     private final GroupAccess access;
+    private final GroupSummaryService groupSummary;
 
     public PlanningService(PlanItemRepository items, PlanScenarioRepository scenarios, PlanSettingsRepository settings,
                            PlanImageStore images, GroupFinanceService groupFinance, UserRepository users,
-                           GroupAccess access) {
+                           GroupAccess access, GroupSummaryService groupSummary) {
         this.items = items;
         this.scenarios = scenarios;
         this.settings = settings;
@@ -66,6 +69,7 @@ public class PlanningService {
         this.groupFinance = groupFinance;
         this.users = users;
         this.access = access;
+        this.groupSummary = groupSummary;
     }
 
     @Transactional
@@ -163,7 +167,7 @@ public class PlanningService {
         }
         PlanSettings current = settings.findByGroupId(groupId).orElseGet(() -> settings.save(new PlanSettings(groupId)));
         current.set(request.reserve(), request.averageMonths(), request.manualBalance());
-        return settingsOf(current);
+        return settingsOf(current, groupSummary.reserve(groupId, YearMonth.now()));
     }
 
     @Transactional(readOnly = true)
@@ -235,8 +239,8 @@ public class PlanningService {
         return scenarios.findByIdAndGroupId(id, groupId).orElseThrow(() -> new NotFoundException("Cenário não encontrado."));
     }
 
-    static Settings settingsOf(PlanSettings s) {
-        return new Settings(s.getReserve(), s.getAverageMonths(), s.getManualBalance());
+    static Settings settingsOf(PlanSettings s, Reserve reserve) {
+        return new Settings(s.getReserve(), s.getAverageMonths(), s.getManualBalance(), reserve.invested(), reserve.total());
     }
 
     List<PlanItemResponse> responses(List<PlanItem> list, GroupMember me) {

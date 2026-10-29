@@ -3,17 +3,22 @@ package com.lifepedia.api.finance.group;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryRepository;
+import com.lifepedia.api.finance.category.InvestmentCategories;
 import com.lifepedia.api.finance.group.GroupFinanceDtos.GroupCategoryBreakdown;
 import com.lifepedia.api.finance.group.GroupFinanceDtos.GroupSummary;
 import com.lifepedia.api.finance.group.GroupFinanceDtos.MemberTotals;
+import com.lifepedia.api.finance.group.GroupFinanceDtos.Reserve;
 import com.lifepedia.api.finance.recurring.RecurringAdjustment;
 import com.lifepedia.api.finance.recurring.RecurringAdjustmentRepository;
+import com.lifepedia.api.finance.summary.SummaryDtos;
 import com.lifepedia.api.finance.summary.SummaryDtos.CategoryItem;
 import com.lifepedia.api.finance.summary.SummaryDtos.MonthPoint;
 import com.lifepedia.api.finance.summary.SummaryDtos.Totals;
 import com.lifepedia.api.group.GroupAccess;
 import com.lifepedia.api.group.GroupMember;
 import com.lifepedia.api.group.GroupMemberRepository;
+import com.lifepedia.api.planning.PlanSettings;
+import com.lifepedia.api.planning.PlanSettingsRepository;
 import com.lifepedia.api.user.User;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import com.lifepedia.api.user.UserRepository;
@@ -21,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -33,6 +37,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,10 +52,12 @@ public class GroupSummaryService {
     private final GroupMemberRepository members;
     private final UserRepository users;
     private final GroupAccess access;
+    private final PlanSettingsRepository planSettings;
 
     public GroupSummaryService(GroupTransactionRepository transactions, GroupRecurringEntryRepository recurring,
                                RecurringAdjustmentRepository adjustments, CategoryRepository categories,
-                               GroupMemberRepository members, UserRepository users, GroupAccess access) {
+                               GroupMemberRepository members, UserRepository users, GroupAccess access,
+                               PlanSettingsRepository planSettings) {
         this.transactions = transactions;
         this.recurring = recurring;
         this.adjustments = adjustments;
@@ -58,6 +65,7 @@ public class GroupSummaryService {
         this.members = members;
         this.users = users;
         this.access = access;
+        this.planSettings = planSettings;
     }
 
     @Transactional(readOnly = true)
@@ -67,21 +75,21 @@ public class GroupSummaryService {
         List<GroupRecurringEntry> fixed = allFixed.stream().filter(e -> e.appliesTo(month)).toList();
         List<GroupTransaction> occasional = transactions.findByGroupIdAndMonth(groupId, month);
         Function<GroupRecurringEntry, BigDecimal> fixedAmount = amountIn(month, adjustmentsOf(fixed));
-
-        Totals fixedTotals = Totals.of(sum(fixed, EntryType.INCOME, fixedAmount), sum(fixed, EntryType.EXPENSE, fixedAmount));
-        Totals occasionalTotals = Totals.of(
-                sum(occasional, EntryType.INCOME, GroupTransaction::getAmount),
-                sum(occasional, EntryType.EXPENSE, GroupTransaction::getAmount));
-        Totals total = Totals.of(fixedTotals.income().add(occasionalTotals.income()),
-                fixedTotals.expense().add(occasionalTotals.expense()));
-        BigDecimal commitment = fixedTotals.income().signum() == 0 ? null
-                : fixedTotals.expense().multiply(BigDecimal.valueOf(100)).divide(fixedTotals.income(), 1, RoundingMode.HALF_UP);
-
         Map<UUID, Category> categoryById = categoriesOf(fixed, occasional);
-        return new GroupSummary(month, fixedTotals, occasionalTotals, total, commitment,
-                breakdown(fixed, fixedAmount, occasional, EntryType.EXPENSE, categoryById),
+        Predicate<Object> investing = investing(categoryById);
+
+        Totals fixedTotals = totals(fixed, fixedAmount, investing);
+        Totals occasionalTotals = totals(occasional, GroupTransaction::getAmount, investing);
+        Totals total = fixedTotals.plus(occasionalTotals);
+
+        return new GroupSummary(month, fixedTotals, occasionalTotals, total,
+                SummaryDtos.percent(fixedTotals.expense(), fixedTotals.income()),
+                SummaryDtos.percent(total.invested(), total.income()),
+                breakdown(fixed.stream().filter(investing.negate()).toList(), fixedAmount,
+                        occasional.stream().filter(investing.negate()).toList(), EntryType.EXPENSE, categoryById),
                 breakdown(fixed, fixedAmount, occasional, EntryType.INCOME, categoryById),
-                memberTotals(groupId, fixed, fixedAmount, occasional));
+                memberTotals(groupId, fixed, fixedAmount, occasional, investing),
+                reserve(groupId, month));
     }
 
     /** Série de {@code months} meses até {@code until}, do mais antigo ao mais novo. */
@@ -97,19 +105,17 @@ public class GroupSummaryService {
         List<GroupRecurringEntry> fixed = recurring.findByGroupId(groupId);
         Map<UUID, Map<YearMonth, BigDecimal>> adjusted = adjustmentsOf(fixed);
         List<GroupTransaction> occasional = transactions.findByGroupIdAndMonthBetween(groupId, from, until);
+        Predicate<Object> investing = investing(categoriesOf(fixed, occasional));
 
         List<MonthPoint> points = new ArrayList<>();
         for (YearMonth month = from; !month.isAfter(until); month = month.plusMonths(1)) {
             YearMonth current = month;
             List<GroupRecurringEntry> monthFixed = fixed.stream().filter(e -> e.appliesTo(current)).toList();
             List<GroupTransaction> monthOccasional = occasional.stream().filter(t -> t.getMonth().equals(current)).toList();
-            Function<GroupRecurringEntry, BigDecimal> amount = amountIn(current, adjusted);
-            BigDecimal fixedIncome = sum(monthFixed, EntryType.INCOME, amount);
-            BigDecimal fixedExpense = sum(monthFixed, EntryType.EXPENSE, amount);
-            BigDecimal occIncome = sum(monthOccasional, EntryType.INCOME, GroupTransaction::getAmount);
-            BigDecimal occExpense = sum(monthOccasional, EntryType.EXPENSE, GroupTransaction::getAmount);
-            points.add(new MonthPoint(current, fixedIncome, fixedExpense, occIncome, occExpense,
-                    fixedIncome.add(occIncome).subtract(fixedExpense).subtract(occExpense)));
+            Totals f = totals(monthFixed, amountIn(current, adjusted), investing);
+            Totals o = totals(monthOccasional, GroupTransaction::getAmount, investing);
+            Totals all = f.plus(o);
+            points.add(new MonthPoint(current, f.income(), f.expense(), o.income(), o.expense(), all.invested(), all.balance()));
         }
         return points;
     }
@@ -138,6 +144,26 @@ public class GroupSummaryService {
                 .toList();
     }
 
+    /** Reserva até o mês: valor do planejamento + investimentos lançados no grupo (fixos e ocasionais). */
+    @Transactional(readOnly = true)
+    public Reserve reserve(UUID groupId, YearMonth until) {
+        BigDecimal manual = planSettings.findByGroupId(groupId).map(PlanSettings::getReserve).orElse(BigDecimal.ZERO);
+        List<GroupRecurringEntry> fixed = recurring.findByGroupId(groupId);
+        List<GroupTransaction> occasional = transactions.findByGroupIdAndMonthLessThanEqual(groupId, until);
+        Predicate<Object> investing = investing(categoriesOf(fixed, occasional));
+        Map<UUID, Map<YearMonth, BigDecimal>> adjusted = adjustmentsOf(fixed);
+
+        BigDecimal invested = sum(occasional.stream().filter(investing).toList(), EntryType.EXPENSE, GroupTransaction::getAmount);
+        for (GroupRecurringEntry e : fixed) {
+            if (e.getType() != EntryType.EXPENSE || !investing.test(e)) continue;
+            for (YearMonth m = e.getStartMonth(); !m.isAfter(until); m = m.plusMonths(1)) {
+                if (e.getEndMonth() != null && m.isAfter(e.getEndMonth())) break;
+                if (e.appliesTo(m)) invested = invested.add(amountIn(m, adjusted).apply(e));
+            }
+        }
+        return Reserve.of(manual, invested);
+    }
+
     /** Chave da categoria no grupo: tipo + nome (cada membro tem as suas categorias). */
     static String key(Category category) {
         return category.getType() + ":" + category.getName().trim().toLowerCase(Locale.ROOT);
@@ -145,16 +171,15 @@ public class GroupSummaryService {
 
     private List<MemberTotals> memberTotals(UUID groupId, List<GroupRecurringEntry> fixed,
                                             Function<GroupRecurringEntry, BigDecimal> fixedAmount,
-                                            List<GroupTransaction> occasional) {
+                                            List<GroupTransaction> occasional, Predicate<Object> investing) {
         List<UUID> memberIds = members.findByGroupIdOrderByCreatedAtAsc(groupId).stream()
                 .map(GroupMember::getUserId).toList();
         Map<UUID, User> byId = users.findAllById(memberIds).stream().collect(Collectors.toMap(User::getId, Function.identity()));
         return memberIds.stream().map(id -> {
                     List<GroupRecurringEntry> f = fixed.stream().filter(e -> e.getUserId().equals(id)).toList();
                     List<GroupTransaction> o = occasional.stream().filter(t -> t.getUserId().equals(id)).toList();
-                    BigDecimal income = sum(f, EntryType.INCOME, fixedAmount).add(sum(o, EntryType.INCOME, GroupTransaction::getAmount));
-                    BigDecimal expense = sum(f, EntryType.EXPENSE, fixedAmount).add(sum(o, EntryType.EXPENSE, GroupTransaction::getAmount));
-                    return new MemberTotals(UserSummary.from(byId.get(id)), income, expense, income.subtract(expense));
+                    Totals t = totals(f, fixedAmount, investing).plus(totals(o, GroupTransaction::getAmount, investing));
+                    return new MemberTotals(UserSummary.from(byId.get(id)), t.income(), t.expense(), t.invested(), t.balance());
                 })
                 .sorted(Comparator.comparing(MemberTotals::expense).reversed())
                 .toList();
@@ -219,6 +244,18 @@ public class GroupSummaryService {
                                                                       Map<UUID, Map<YearMonth, BigDecimal>> adjusted) {
         return e -> e.getSourceId() == null ? e.getAmount()
                 : adjusted.getOrDefault(e.getSourceId(), Map.of()).getOrDefault(month, e.getAmount());
+    }
+
+    /** Item (fixo ou ocasional) em categoria de investimento. */
+    private static Predicate<Object> investing(Map<UUID, Category> categoryById) {
+        return item -> InvestmentCategories.isInvestment(categoryById.get(item instanceof GroupTransaction t
+                ? t.getCategoryId() : ((GroupRecurringEntry) item).getCategoryId()));
+    }
+
+    private static <T> Totals totals(List<T> items, Function<T, BigDecimal> amountOf, Predicate<Object> investing) {
+        return Totals.of(sum(items, EntryType.INCOME, amountOf),
+                sum(items.stream().filter(investing.negate()).toList(), EntryType.EXPENSE, amountOf),
+                sum(items.stream().filter(investing).toList(), EntryType.EXPENSE, amountOf));
     }
 
     private static <T> BigDecimal sum(List<T> items, EntryType type, Function<T, BigDecimal> amountOf) {

@@ -116,7 +116,7 @@ export function ImportRowSheet({ open, onOpenChange, row, categoriesById, fixedE
             </div>
             <Field>
               <FieldLabel htmlFor="imp-notes">Observações</FieldLabel>
-              <Textarea id="imp-notes" rows={2} maxLength={500} value={draft.notes}
+              <Textarea id="imp-notes" rows={2} maxLength={10000} value={draft.notes}
                 onChange={(e) => set({ notes: e.target.value })} />
             </Field>
           </FieldGroup>

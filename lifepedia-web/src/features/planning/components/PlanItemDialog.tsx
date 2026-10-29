@@ -29,7 +29,7 @@ const schema = z.object({
   targetMonth: z.string().regex(/^\d{4}-\d{2}$/, 'Informe o prazo.'),
   payment: z.enum(['CASH', 'INSTALLMENTS']),
   installments: z.string(),
-  notes: z.string().max(500, 'Máximo de 500 caracteres.'),
+  notes: z.string().max(10000, 'Máximo de 10000 caracteres.'),
   url: z.string().max(2048, 'Link muito longo.'),
 }).refine((v) => v.payment === 'CASH' || (Number(v.installments) >= 2 && Number(v.installments) <= 120), {
   path: ['installments'], message: 'De 2 a 120 parcelas.',

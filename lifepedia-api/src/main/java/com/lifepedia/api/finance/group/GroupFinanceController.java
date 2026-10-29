@@ -1,5 +1,7 @@
 package com.lifepedia.api.finance.group;
 
+import com.lifepedia.api.finance.Installments.MoveRequest;
+import com.lifepedia.api.finance.Installments.MoveResult;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.group.GroupFinanceDtos.GroupRecurringResponse;
 import com.lifepedia.api.finance.group.GroupFinanceDtos.GroupSummary;
@@ -84,6 +86,12 @@ public class GroupFinanceController {
     public void updateTransaction(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId, @PathVariable UUID id,
                                   @Valid @RequestBody TransactionRequest request) {
         service.updateTransaction(CurrentUser.id(jwt), groupId, id, request);
+    }
+
+    @PutMapping("/transactions/{id}/month")
+    public MoveResult moveMonth(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId, @PathVariable UUID id,
+                                @Valid @RequestBody MoveRequest request) {
+        return service.moveMonth(CurrentUser.id(jwt), groupId, id, request);
     }
 
     @DeleteMapping("/transactions/{id}")

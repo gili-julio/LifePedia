@@ -25,9 +25,13 @@ public interface GroupTransactionRepository extends JpaRepository<GroupTransacti
 
     Optional<GroupTransaction> findByIdAndGroupId(UUID id, UUID groupId);
 
+    List<GroupTransaction> findByGroupIdAndUserIdAndDescriptionStartingWithIgnoreCase(UUID groupId, UUID userId, String prefix);
+
     List<GroupTransaction> findByGroupIdAndMonth(UUID groupId, YearMonth month);
 
     List<GroupTransaction> findByGroupIdAndMonthBetween(UUID groupId, YearMonth from, YearMonth to);
+
+    List<GroupTransaction> findByGroupIdAndMonthLessThanEqual(UUID groupId, YearMonth until);
 
     List<GroupTransaction> findByGroupIdAndUserId(UUID groupId, UUID userId);
 
