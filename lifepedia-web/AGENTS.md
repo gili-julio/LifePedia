@@ -136,8 +136,8 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   preferência de tela). Foto: `shrinkImage` (1600 px, JPEG até 1 MB) e `uploadNoteImage`. Estilo do conteúdo em
   `.note-content` (`index.css`). Modelos prontos em `templates.ts` (item de lista com texto: markdown não guarda item
   vazio). Outras telas só levam para a lista por URL (`/notas?tarefa=` / `?compromisso=`), sem importar o módulo.
-- **Financiamentos** (`features/financing`): chaves `['financing', 'me' | groupId, ...]` e `['financing', 'overview']`;
-  mutações invalidam o módulo e `['finance']` (o fixo ligado muda os fixos). Rotas por `financingBase(groupId)`, telas
+- **Financiamentos** (`features/financing`): banco por `BankSelect` (`bankCode` + `bank` só em outro banco); chaves
+  `['financing', 'me' | groupId, ...]` e `['financing', 'overview']`; mutações invalidam o módulo e `['finance']` (o fixo ligado muda os fixos). Rotas por `financingBase(groupId)`, telas
   por `financingUrl`/`simulatorUrl`. **Nenhum cálculo no front**: parcelas, cenários, CET, renda, saldo, quitação e
   prévia da amortização vêm da API; o front só monta o pedido (`sim-form.ts`, campos como texto) e mostra. Simulação
   refeita com o formulário (debounce de 400 ms sobre o pedido em JSON, `keepPreviousData`); gasto editado vai em
@@ -165,10 +165,17 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Ações do cabeçalho**: muitas ações? Marque as menos usadas como `secondary` (vão para o ⋮ no desktop). Excluir
   leva `destructive` (vermelho no menu).
 - **Fixos**: vigência e valor do mês sempre por `features/finance/fixed.ts` (`isActiveIn`, `valueIn`).
-- **Importação por IA**: o formato `lifepedia/transactions@3` é um contrato com prompts que o usuário já copiou.
-  Mudou `import/prompt.ts`? Mantenha `import/parse.ts` compatível (ou crie `@4` aceitando todos; `@1` só tem
-  `description`, `@2` não tem `source`/`invoiceMonth`). Prompt único para extrato e fatura: cada linha tem `source`;
-  item de fatura conta no `invoiceMonth`. Trocar a origem na prévia sempre por `withSource` (recalcula o `month`). `descriptionOficial` → `originalDescription`: só leitura na revisão (`OriginalDescription`) e no
+- **Bancos**: catálogo em `lib/banks.ts` (espelha `Bank.java`; `matchBank` reconhece o banco em texto livre, como nomes
+  do Banco Central). Mostrar: `components/bank/BankLogo` (`BankLogo`; `BankBadge` com nome; `BankMark` só logo, em linha sem espaço; coluna *Banco* só em `xl`); escolher: `BankSelect` (só a lista) e
+  `BankField` (lista + conta ou cartão + nome em outro banco; `bankSchema` no Zod). Logos em `assets/banks/<code>.svg`,
+  empacotados pelo Vite (CSP), sempre com o nome em texto ao lado. Banco novo = código em `Bank.java`, entrada em
+  `BANKS` e o SVG (sem script e com `viewBox`). Filtro: `BankFilterSelect` + `toBankFilter` em `bank-filter.ts` (`chave` ou `chave|CARD`, na
+  URL como `?banco=`); lote: `useSelection` + `BankAssignBar`. Totais por banco só da API (`useBankOverview`,
+  `useSummary(month, filtro)`); gráfico `BankHistoryChart` com a cor presa à ordem das chaves, não ao valor.
+- **Importação por IA**: o formato `lifepedia/transactions@4` é um contrato com prompts que o usuário já copiou.
+  Mudou `import/prompt.ts`? Mantenha `import/parse.ts` compatível (ou crie `@5` aceitando todos; `@1` só tem
+  `description`, `@2` não tem `source`/`invoiceMonth`, `@3` não tem `bank`). Prompt único para extrato e fatura: cada linha tem `source`;
+  item de fatura conta no `invoiceMonth`. Conta ou cartão sai da origem (`rowBank`); trocar o banco na prévia sempre por `withBank`. Trocar a origem na prévia sempre por `withSource` (recalcula o `month`). `descriptionOficial` → `originalDescription`: só leitura na revisão (`OriginalDescription`) e no
   lançamento; só `descriptionNormal` (a `description`) é editável.
 - **Formulários**: React Hook Form + Zod; campos do form como string e conversão no submit
   (`parseAmount` aceita `1.234,56`). Use `Field`/`FieldLabel`/`FieldError` do shadcn.

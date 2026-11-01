@@ -1,6 +1,7 @@
 package com.lifepedia.api.finance.transaction;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.group.ShareMode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
@@ -33,6 +34,7 @@ public final class TransactionDtos {
             YearMonth month,
             @Size(max = 10000) String notes,
             @Size(max = 200) String originalDescription,
+            @Valid BankRef bank,
             @Size(max = 20) List<UUID> groupIds,
             ShareMode shareMode) {
 
@@ -58,11 +60,12 @@ public final class TransactionDtos {
             LocalDate date,
             YearMonth month,
             String notes,
-            String originalDescription) {
+            String originalDescription,
+            BankRef bank) {
 
         public static TransactionResponse from(Transaction t) {
             return new TransactionResponse(t.getId(), t.getDescription(), t.getType(), t.getCategoryId(),
-                    t.getAmount(), t.getDate(), t.getMonth(), t.getNotes(), t.getOriginalDescription());
+                    t.getAmount(), t.getDate(), t.getMonth(), t.getNotes(), t.getOriginalDescription(), t.getBank());
         }
     }
 }

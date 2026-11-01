@@ -1,7 +1,9 @@
 import { PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
+import { BankBadge, BankMark } from '@/components/bank/BankLogo'
 import { DataTablePagination } from '@/components/data-table/DataTablePagination'
 import { useClampPage, useListState, type ListState, type Page } from '@/components/data-table/list-state'
 import { SortableHead } from '@/components/data-table/SortableHead'
@@ -10,13 +12,16 @@ import { PageHeader } from '@/components/PageHeader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/lib/api'
 import { currentYearMonth, formatMonth } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
-import { useDeleteRecurringEntry, useRecurringPage, useSummary } from '../api'
+import { useBankOverview, useDeleteRecurringEntry, useRecurringPage, useSummary } from '../api'
+import { BankAssignBar } from '../components/BankAssignBar'
+import { BankFilterSelect } from '../components/BankFilterSelect'
 import { CategoryBadge } from '../components/CategoryBadge'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { EntryListItem } from '../components/EntryListItem'
@@ -24,8 +29,10 @@ import { Money } from '../components/Money'
 import { RecurringEntryDialog } from '../components/RecurringEntryDialog'
 import { TotalCard } from '../components/TotalCard'
 import { TypeIcon } from '../components/TypeIcon'
+import { toBankFilter } from '../bank-filter'
 import { isActiveIn, valueIn } from '../fixed'
 import type { EntryType, RecurringEntry } from '../types'
+import { useSelection } from '../use-selection'
 
 const isCurrent = (entry: RecurringEntry) => isActiveIn(entry, currentYearMonth())
 const currentValue = (entry: RecurringEntry) => valueIn(entry, currentYearMonth())
@@ -65,19 +72,26 @@ type EntryListProps = {
   onEdit: (entry: RecurringEntry) => void
   onDelete: (entry: RecurringEntry) => void
   onMore: (entry: RecurringEntry) => void
+  selection: ReturnType<typeof useSelection>
+  /** Lista filtrada por banco */
+  filtered: boolean
 }
 
-function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore }: EntryListProps) {
+function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore, selection, filtered }: EntryListProps) {
   const { formatCurrency } = useMoney()
   const entries = data?.items ?? []
   const noun = type === 'INCOME' ? 'ganho fixo' : 'despesa fixa'
   const totalLabel = total === undefined ? '—' : formatCurrency(total)
+  const pageIds = entries.map((e) => e.id)
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selection.selected.has(id))
 
   if (!data) return <Skeleton className="h-48" />
   if (!data.totalItems) {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center">
-        <p className="text-sm text-muted-foreground">Nenhum {noun} cadastrado ainda.</p>
+        <p className="text-sm text-muted-foreground">
+          {type === 'INCOME' ? 'Nenhum' : 'Nenhuma'} {noun} {filtered ? 'neste banco' : type === 'INCOME' ? 'cadastrado ainda' : 'cadastrada ainda'}.
+        </p>
         <Button onClick={onCreate}>
           <PlusIcon /> Cadastrar {noun}
         </Button>
@@ -98,6 +112,7 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
               muted={!isCurrent(entry)}
               details={
                 <>
+                  {entry.bank && <BankMark bank={entry.bank} />}
                   <CategoryBadge categoryId={entry.categoryId} />
                   {entry.dayOfMonth && <> · dia {entry.dayOfMonth}</>}
                   {!isCurrent(entry) && <> · {statusLabel(entry)}</>}
@@ -106,6 +121,8 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
               }
               amount={<Money value={entry.amount} type={entry.type} />}
               onMore={() => onMore(entry)}
+              selected={selection.selected.has(entry.id)}
+              onSelect={(checked) => selection.set([entry.id], checked)}
             />
           ))}
           <li className="flex justify-between py-3 text-sm">
@@ -118,8 +135,13 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
       <Table className="hidden md:table">
         <TableHeader>
           <TableRow>
+            <TableHead className="w-8">
+              <Checkbox aria-label="Selecionar todos da página" checked={allSelected}
+                onCheckedChange={(v) => selection.set(pageIds, v === true)} />
+            </TableHead>
             <SortableHead field="description" list={list}>Descrição</SortableHead>
             <SortableHead field="category" list={list}>Categoria</SortableHead>
+            <TableHead className="hidden xl:table-cell">Banco</TableHead>
             <SortableHead field="day" list={list}>Dia</SortableHead>
             <SortableHead field="start" list={list} firstDirection="desc" className="hidden lg:table-cell">Vigência</SortableHead>
             <TableHead>Status</TableHead>
@@ -131,12 +153,18 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
           {entries.map((entry) => (
             <TableRow key={entry.id} className={isCurrent(entry) ? undefined : 'text-muted-foreground'}>
               <TableCell>
+                <Checkbox aria-label={`Selecionar ${entry.description}`} checked={selection.selected.has(entry.id)}
+                  onCheckedChange={(v) => selection.set([entry.id], v === true)} />
+              </TableCell>
+              <TableCell>
                 <div className="flex items-center gap-2">
                   <TypeIcon type={entry.type} />
+                  {entry.bank && <BankMark bank={entry.bank} className="xl:hidden" />}
                   <span className="font-medium">{entry.description}</span>
                 </div>
               </TableCell>
               <TableCell><CategoryBadge categoryId={entry.categoryId} /></TableCell>
+              <TableCell className="hidden xl:table-cell"><BankBadge bank={entry.bank} /></TableCell>
               <TableCell>{entry.dayOfMonth ?? '—'}</TableCell>
               <TableCell className="hidden lg:table-cell">{period(entry)}</TableCell>
               <TableCell><StatusBadge entry={entry} /></TableCell>
@@ -161,8 +189,8 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
         </TableBody>
         <TableFooter>
           <TableRow>
-            <TableCell colSpan={2} className="font-medium">Total vigente neste mês</TableCell>
-            <TableCell colSpan={5} className="text-right font-semibold">{totalLabel}</TableCell>
+            <TableCell colSpan={3} className="font-medium">Total vigente neste mês</TableCell>
+            <TableCell colSpan={6} className="text-right font-semibold">{totalLabel}</TableCell>
           </TableRow>
         </TableFooter>
       </Table>
@@ -176,8 +204,13 @@ export function RecurringEntriesPage() {
   const { formatCurrency } = useMoney()
   const [tab, setTab] = useState<EntryType>('EXPENSE')
   const list = useListState({ field: 'amount', direction: 'desc' })
-  const { data } = useRecurringPage(tab, list.params)
+  const [params, setParams] = useSearchParams()
+  const bankValue = params.get('banco') ?? ''
+  const bankFilter = toBankFilter(bankValue)
+  const { data } = useRecurringPage(tab, list.params, bankFilter)
   useClampPage(data, list.setPage)
+  const banks = useBankOverview(currentYearMonth()).data?.banks
+  const selection = useSelection()
   const remove = useDeleteRecurringEntry()
   const [dialog, setDialog] = useState<{ open: boolean; entry?: RecurringEntry; type: EntryType }>({
     open: false,
@@ -185,11 +218,21 @@ export function RecurringEntriesPage() {
   })
   const [menu, setMenu] = useState<{ open: boolean; item?: RecurringEntry }>({ open: false })
   const [deleting, setDeleting] = useState<RecurringEntry | null>(null)
-  const fixedTotals = useSummary(currentYearMonth()).data?.fixed
+  const fixedTotals = useSummary(currentYearMonth(), bankFilter).data?.fixed
 
   const openCreate = (type: EntryType) => setDialog({ open: true, type })
   const openEdit = (entry: RecurringEntry) => setDialog({ open: true, entry, type: entry.type })
   const openMenu = (entry: RecurringEntry) => setMenu({ open: true, item: entry })
+  const setBank = (value: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (value) next.set('banco', value)
+      else next.delete('banco')
+      return next
+    }, { replace: true })
+    list.resetPage()
+    selection.clear()
+  }
 
   async function handleDelete(entry: RecurringEntry) {
     try {
@@ -220,15 +263,20 @@ export function RecurringEntriesPage() {
 
       <Card>
         <CardContent className="space-y-2">
-          <Tabs value={tab} onValueChange={(v) => {
-            setTab(v as EntryType)
-            list.resetPage()
-          }}>
-            <TabsList>
-              <TabsTrigger value="EXPENSE">Despesas</TabsTrigger>
-              <TabsTrigger value="INCOME">Ganhos</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Tabs value={tab} onValueChange={(v) => {
+              setTab(v as EntryType)
+              list.resetPage()
+              selection.clear()
+            }}>
+              <TabsList>
+                <TabsTrigger value="EXPENSE">Despesas</TabsTrigger>
+                <TabsTrigger value="INCOME">Ganhos</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <BankFilterSelect lines={banks} value={bankValue} onChange={setBank} />
+          </div>
+          <BankAssignBar ids={selection.ids} target="recurring" onClear={selection.clear} />
           <EntryList
             data={data?.items.every((e) => e.type === tab) ? data : undefined}
             list={list}
@@ -238,6 +286,8 @@ export function RecurringEntriesPage() {
             onEdit={openEdit}
             onDelete={setDeleting}
             onMore={openMenu}
+            selection={selection}
+            filtered={!!bankValue}
           />
         </CardContent>
       </Card>

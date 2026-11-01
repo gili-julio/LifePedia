@@ -2,10 +2,12 @@ package com.lifepedia.api.finance.group;
 
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.YearMonthConverter;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.recurring.RecurringEntry;
 import com.lifepedia.api.shared.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -62,6 +64,9 @@ public class GroupRecurringEntry extends BaseEntity {
     @Column(length = 10000)
     private String notes;
 
+    @Embedded
+    private BankRef bank;
+
     protected GroupRecurringEntry() {
     }
 
@@ -82,6 +87,15 @@ public class GroupRecurringEntry extends BaseEntity {
     public void copyFrom(RecurringEntry e) {
         set(e.getDescription(), e.getType(), e.getCategoryId(), e.getAmount(), e.getDayOfMonth(), e.getStartMonth(),
                 e.getEndMonth(), e.isActive(), e.getNotes());
+        bank = e.getBank();
+    }
+
+    public BankRef getBank() {
+        return bank;
+    }
+
+    public void setBank(BankRef bank) {
+        this.bank = bank;
     }
 
     public void set(String description, EntryType type, UUID categoryId, BigDecimal amount, Integer dayOfMonth,

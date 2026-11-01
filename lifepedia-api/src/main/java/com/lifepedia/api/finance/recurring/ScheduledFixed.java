@@ -1,6 +1,7 @@
 package com.lifepedia.api.finance.recurring;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.category.CategoryService;
 import com.lifepedia.api.finance.group.GroupFinanceService;
 import com.lifepedia.api.finance.group.GroupFinanceSync;
@@ -36,15 +37,19 @@ public class ScheduledFixed {
         this.groupSync = groupSync;
     }
 
-    /** @param groupId grupo para onde levar sincronizado (nulo = só pessoal) */
+    /**
+     * @param bank    banco do fixo (nulo = sem banco)
+     * @param groupId grupo para onde levar sincronizado (nulo = só pessoal)
+     */
     @Transactional
-    public UUID create(UUID userId, String description, UUID categoryId, int dayOfMonth, String notes,
+    public UUID create(UUID userId, String description, UUID categoryId, int dayOfMonth, String notes, BankRef bank,
                        SortedMap<YearMonth, BigDecimal> amounts, UUID groupId) {
         categories.requireUsable(userId, categoryId, EntryType.EXPENSE);
         RecurringEntry entry = new RecurringEntry(userId);
         entry.setType(EntryType.EXPENSE);
         entry.setCategoryId(categoryId);
         entry.setNotes(notes);
+        entry.setBank(bank);
         entry.setActive(true);
         fill(entry, description, dayOfMonth, amounts);
         entries.save(entry);
@@ -53,12 +58,14 @@ public class ScheduledFixed {
         return entry.getId();
     }
 
-    /** Atualiza nome, dia e valores; falso se o fixo não existe mais (a pessoa excluiu). */
+    /** Atualiza nome, dia, banco e valores; falso se o fixo não existe mais (a pessoa excluiu). */
     @Transactional
-    public boolean update(UUID userId, UUID id, String description, int dayOfMonth, SortedMap<YearMonth, BigDecimal> amounts) {
+    public boolean update(UUID userId, UUID id, String description, int dayOfMonth, BankRef bank,
+                          SortedMap<YearMonth, BigDecimal> amounts) {
         RecurringEntry entry = entries.findByIdAndUserId(id, userId).orElse(null);
         if (entry == null) return false;
         fill(entry, description, dayOfMonth, amounts);
+        entry.setBank(bank);
         adjustments.deleteByRecurringEntryId(id);
         writeAdjustments(entry, amounts);
         groupSync.recurringChanged(entry);

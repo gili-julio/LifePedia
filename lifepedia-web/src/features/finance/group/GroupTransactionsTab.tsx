@@ -2,6 +2,7 @@ import { CalendarClockIcon, PackagePlusIcon, PencilIcon, PlusIcon, UserMinusIcon
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
+import { BankBadge, BankMark } from '@/components/bank/BankLogo'
 import { DataTablePagination } from '@/components/data-table/DataTablePagination'
 import { useClampPage, useListState } from '@/components/data-table/list-state'
 import { SortableHead } from '@/components/data-table/SortableHead'
@@ -14,6 +15,8 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { ApiError } from '@/lib/api'
 import { defaultDateInMonth, formatDate, formatMonth, type YearMonth } from '@/lib/format'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
+import { BankFilterSelect } from '../components/BankFilterSelect'
+import { toBankFilter } from '../bank-filter'
 import { EntryListItem } from '../components/EntryListItem'
 import { Money } from '../components/Money'
 import { MoveInstallmentDialog } from '../components/MoveInstallmentDialog'
@@ -22,7 +25,7 @@ import { TypeIcon } from '../components/TypeIcon'
 import { parseInstallment } from '../installments'
 import type { EntryType, Transaction } from '../types'
 import {
-  useCreateGroupTransaction, useGroupTransactionsPage, useMoveGroupTransactionMonth, useRemoveGroupItem, useUpdateGroupTransaction,
+  useCreateGroupTransaction, useGroupBankOverview, useGroupTransactionsPage, useMoveGroupTransactionMonth, useRemoveGroupItem, useUpdateGroupTransaction,
 } from './api'
 import { CategoryLabel, ShareBadge } from './GroupItemParts'
 import type { GroupTransaction } from './types'
@@ -48,7 +51,7 @@ type Props = {
 function asTransaction(g: GroupTransaction): Transaction {
   return {
     id: g.id, description: g.description, type: g.type, categoryId: g.category.id, amount: g.amount,
-    date: g.date, month: g.month, notes: g.notes, originalDescription: null,
+    date: g.date, month: g.month, notes: g.notes, originalDescription: null, bank: g.bank,
   }
 }
 
@@ -56,7 +59,9 @@ function asTransaction(g: GroupTransaction): Transaction {
 export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props) {
   const [filter, setFilter] = useState<Filter>('ALL')
   const list = useListState({ field: 'date', direction: 'desc' })
-  const { data, isLoading } = useGroupTransactionsPage(groupId, month, filter === 'ALL' ? undefined : filter, list.params)
+  const [bank, setBank] = useState('')
+  const { data, isLoading } = useGroupTransactionsPage(groupId, month, filter === 'ALL' ? undefined : filter, list.params, toBankFilter(bank))
+  const banks = useGroupBankOverview(groupId, month).data?.banks
   useClampPage(data, list.setPage)
   const create = useCreateGroupTransaction()
   const update = useUpdateGroupTransaction()
@@ -98,6 +103,10 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
           <PlusIcon /> <span className="max-sm:sr-only">Novo lançamento</span>
         </Button>
       </div>
+      <BankFilterSelect lines={banks} value={bank} onChange={(value) => {
+        setBank(value)
+        list.resetPage()
+      }} />
 
       {isLoading ? (
         <Skeleton className="h-48" />
@@ -119,7 +128,7 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
                   key={t.id}
                   type={t.type}
                   title={t.description}
-                  details={<><span className="truncate">{t.member.name}</span> · <CategoryLabel category={t.category} /> · {formatDate(t.date).slice(0, 5)}</>}
+                  details={<>{t.bank && <BankMark bank={t.bank} />}<span className="truncate">{t.member.name}</span> · <CategoryLabel category={t.category} /> · {formatDate(t.date).slice(0, 5)}</>}
                   amount={<Money value={t.amount} type={t.type} />}
                   onMore={() => setMenu({ open: true, item: t })}
                 />
@@ -133,6 +142,7 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
                 <SortableHead field="date" list={list} firstDirection="desc" className="w-28">Data</SortableHead>
                 <SortableHead field="description" list={list}>Descrição</SortableHead>
                 <SortableHead field="category" list={list}>Categoria</SortableHead>
+                <TableHead className="hidden xl:table-cell">Banco</TableHead>
                 <SortableHead field="member" list={list}>Membro</SortableHead>
                 <SortableHead field="amount" list={list} firstDirection="desc" align="right">Valor</SortableHead>
                 <TableHead className="w-20" />
@@ -147,11 +157,15 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
                       <TypeIcon type={t.type} />
                       <div className="min-w-0 space-y-1">
                         <p className="truncate font-medium">{t.description}</p>
-                        <ShareBadge synced={t.synced} />
+                        <div className="flex items-center gap-1.5">
+                          {t.bank && <BankMark bank={t.bank} className="xl:hidden" />}
+                          <ShareBadge synced={t.synced} />
+                        </div>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell><CategoryLabel category={t.category} /></TableCell>
+                  <TableCell className="hidden xl:table-cell"><BankBadge bank={t.bank} /></TableCell>
                   <TableCell>
                     <div className="flex min-w-0 items-center gap-2">
                       <UserAvatar user={t.member} size="sm" />

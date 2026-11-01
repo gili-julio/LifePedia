@@ -3,6 +3,9 @@ package com.lifepedia.api.finance.group;
 import com.lifepedia.api.finance.Installments.MoveRequest;
 import com.lifepedia.api.finance.Installments.MoveResult;
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankDtos.BankOverview;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankKind;
 import com.lifepedia.api.finance.group.GroupFinanceDtos.GroupRecurringResponse;
 import com.lifepedia.api.finance.group.GroupFinanceDtos.GroupSummary;
 import com.lifepedia.api.finance.group.GroupFinanceDtos.GroupTransactionResponse;
@@ -66,11 +69,13 @@ public class GroupFinanceController {
     public PageResponse<GroupTransactionResponse> transactions(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId,
                                                                @RequestParam(required = false) YearMonth month,
                                                                @RequestParam(required = false) EntryType type,
+                                                               @RequestParam(required = false) String bank,
+                                                               @RequestParam(required = false) BankKind bankKind,
                                                                @RequestParam(defaultValue = "0") int page,
                                                                @RequestParam(defaultValue = "10") int size,
                                                                @RequestParam(required = false) String sort) {
         return service.transactions(CurrentUser.id(jwt), groupId, month != null ? month : YearMonth.now(), type,
-                page, size, sort);
+                BankFilter.of(bank, bankKind), page, size, sort);
     }
 
     /** Lançamento só do grupo (sem item pessoal), com a categoria de quem cadastra. */
@@ -104,10 +109,12 @@ public class GroupFinanceController {
     @GetMapping("/recurring")
     public PageResponse<GroupRecurringResponse> recurring(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId,
                                                           @RequestParam(required = false) EntryType type,
+                                                          @RequestParam(required = false) String bank,
+                                                          @RequestParam(required = false) BankKind bankKind,
                                                           @RequestParam(defaultValue = "0") int page,
                                                           @RequestParam(defaultValue = "10") int size,
                                                           @RequestParam(required = false) String sort) {
-        return service.recurring(CurrentUser.id(jwt), groupId, type, page, size, sort);
+        return service.recurring(CurrentUser.id(jwt), groupId, type, BankFilter.of(bank, bankKind), page, size, sort);
     }
 
     /** Fixo só do grupo (sem item pessoal). */
@@ -133,8 +140,22 @@ public class GroupFinanceController {
 
     @GetMapping("/summary")
     public GroupSummary summary(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId,
-                                @RequestParam(required = false) YearMonth month) {
-        return summaryService.summary(CurrentUser.id(jwt), groupId, month != null ? month : YearMonth.now());
+                                @RequestParam(required = false) YearMonth month,
+                                @RequestParam(required = false) String bank,
+                                @RequestParam(required = false) BankKind bankKind) {
+        return summaryService.summary(CurrentUser.id(jwt), groupId, month != null ? month : YearMonth.now(),
+                BankFilter.of(bank, bankKind));
+    }
+
+    /** Gastos por banco no mês e nos {@code months} meses até ele. */
+    @GetMapping("/summary/banks")
+    public BankOverview banks(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID groupId,
+                              @RequestParam(required = false) YearMonth month,
+                              @RequestParam(defaultValue = "6") int months) {
+        if (months < 1 || months > 24) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Informe entre 1 e 24 meses.");
+        }
+        return summaryService.banks(CurrentUser.id(jwt), groupId, month != null ? month : YearMonth.now(), months);
     }
 
     @GetMapping("/summary/history")

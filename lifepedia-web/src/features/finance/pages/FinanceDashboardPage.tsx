@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { currentYearMonth, defaultDateInMonth, formatMonth } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
-import { useHistory, useSummary } from '../api'
+import { useBankOverview, useHistory, useSummary } from '../api'
+import { BankList } from '../components/BankList'
 import { CategoryBreakdownList } from '../components/CategoryBreakdownList'
 import { FixedVsOccasionalChart, HistoryChart, InvestedChart } from '../components/charts'
 import { Money } from '../components/Money'
@@ -37,6 +38,7 @@ export function FinanceDashboardPage() {
   const summary = useSummary(month)
   const history = useHistory(month, 6)
   const invested = useHistory(month, 12)
+  const banks = useBankOverview(month).data
   const [transactionOpen, setTransactionOpen] = useState(false)
   const [params, setParams] = useSearchParams()
   const [recurring, setRecurring] = useState<{ open: boolean; type: EntryType }>({ open: false, type: 'EXPENSE' })
@@ -160,6 +162,21 @@ export function FinanceDashboardPage() {
               </Tabs>
             </CardContent>
           </Card>
+
+          {banks && banks.expense > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Por banco</CardTitle>
+                <CardDescription>De onde saíram as despesas do mês.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <BankList banks={banks.banks} total={banks.expense} limit={5} />
+                <Button variant="outline" size="sm" asChild>
+                  <Link to={month === currentYearMonth() ? '/financeiro/bancos' : `/financeiro/bancos?mes=${month}`}>Ver todos os bancos</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>

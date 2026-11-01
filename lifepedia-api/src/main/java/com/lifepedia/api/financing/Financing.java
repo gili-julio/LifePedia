@@ -82,6 +82,10 @@ public class Financing extends BaseEntity {
     @Column(length = 160)
     private String bank;
 
+    /** Código de {@code Bank}; nulo se o banco foi digitado antes do catálogo. */
+    @Column(name = "bank_code", length = 30)
+    private String bankCode;
+
     @Column(name = "reminder_days")
     private Integer reminderDays;
 
@@ -240,6 +244,14 @@ public class Financing extends BaseEntity {
 
     public String getBank() {
         return bank;
+    }
+
+    public String getBankCode() {
+        return bankCode;
+    }
+
+    public void setBankCode(String bankCode) {
+        this.bankCode = bankCode;
     }
 
     public void setBank(String bank) {

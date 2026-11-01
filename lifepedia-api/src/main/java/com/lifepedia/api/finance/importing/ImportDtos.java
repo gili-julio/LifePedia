@@ -1,5 +1,6 @@
 package com.lifepedia.api.finance.importing;
 
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
@@ -22,7 +23,9 @@ public final class ImportDtos {
             @Size(max = 500, message = "Importe no máximo 500 lançamentos por vez.")
             List<@Valid @NotNull TransactionRequest> transactions,
             @Size(max = 200, message = "Máximo de 200 ajustes por vez.")
-            List<@Valid @NotNull FixedAdjustment> fixedAdjustments) {
+            List<@Valid @NotNull FixedAdjustment> fixedAdjustments,
+            @Size(max = 200, message = "Máximo de 200 fixos por vez.")
+            List<@Valid @NotNull FixedBank> fixedBanks) {
 
         public List<TransactionRequest> transactionsOrEmpty() {
             return transactions == null ? List.of() : transactions;
@@ -31,6 +34,16 @@ public final class ImportDtos {
         public List<FixedAdjustment> fixedAdjustmentsOrEmpty() {
             return fixedAdjustments == null ? List.of() : fixedAdjustments;
         }
+
+        public List<FixedBank> fixedBanksOrEmpty() {
+            return fixedBanks == null ? List.of() : fixedBanks;
+        }
+    }
+
+    /** Banco que veio no documento para um fixo sem banco. */
+    public record FixedBank(
+            @NotNull(message = "Informe o fixo.") UUID recurringEntryId,
+            @NotNull(message = "Informe o banco.") @Valid BankRef bank) {
     }
 
     public record FixedAdjustment(

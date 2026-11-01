@@ -69,9 +69,10 @@ O site instala como app no celular e no desktop (Chrome, Edge, Android; no iPhon
 | `/notas/:id` · `/grupos/:id/notas/:noteId` | Nota: título, editor **Visual** (barra, menu "/", `[[` sugere notas, checklist, tabela, código com cores, foto colada ou enviada), **Markdown** e **Lado a lado** (≥ lg, checklist marca na prévia); salva sozinha (aviso de conflito com *Ver a versão nova* / *Manter a minha*); detalhes (ícone, cor, pasta, etiquetas, tarefa, compromisso), fixar, atividade, baixar `.md`, arquivar, lixeira; rodapé com palavras, tempo de leitura, links da nota e "Citada em" |
 | `/grupos/:id` | Grupo: visão geral (totais, investido no mês, reserva total, por membro, fixos x ocasionais, 6 meses, investido em 12 meses, categorias), **chat** (`?aba=chat`, estilo WhatsApp: responder, editar/apagar a própria mensagem, tempo real; contador de não lidas na aba), lançamentos (adiantar/adiar parcela), fixos, **planejamento**, **tarefas** (`?aba=tarefas&vista=`; responsáveis/todos/rodízio, "cada um conclui a sua", comentários, filtro por responsável; `&tarefa=<id>` abre a tarefa), **agenda** (`?aba=agenda`, a mesma grade, cor por responsável com legenda e fotos), **financiamentos** (`?aba=financiamentos`, com simulações do grupo), **notas** (`?aba=notas`) e membros; levar meus itens, novo lançamento/fixo direto no grupo (mesmos formulários do pessoal), convidar (admin). No celular as abas rolam na própria faixa |
 | `/grupos/convite/:token` | Entrar num grupo pelo link de convite (sem sessão: depois de entrar ou criar a conta, volta para o convite) |
-| `/financeiro` | Visão geral do mês (`?novo=1` abre o novo lançamento): totais, **investido** (fora das despesas, com % dos ganhos), % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, investido nos últimos 12 meses (se houver), categorias (expandem os itens agrupados pelo nome) |
-| `/financeiro/fixos` | Ganhos e despesas fixas (mensais), paginados |
-| `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; ação **Tornar fixo** em cada item e **Adiantar ou adiar parcela** nos que têm "(n/total)" no nome (só esta ou esta e as seguintes) |
+| `/financeiro` | Visão geral do mês (`?novo=1` abre o novo lançamento): totais, **investido** (fora das despesas, com % dos ganhos), % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, investido nos últimos 12 meses (se houver), categorias (expandem os itens agrupados pelo nome), maiores bancos |
+| `/financeiro/fixos` | Ganhos e despesas fixas (mensais), paginados; filtro por banco (`?banco=`) e seleção para definir o banco em lote |
+| `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; filtro por banco (`?banco=`), seleção para definir o banco em lote, ação **Tornar fixo** em cada item e **Adiantar ou adiar parcela** nos que têm "(n/total)" no nome (só esta ou esta e as seguintes) |
+| `/financeiro/bancos` | Gastos do mês por banco: maior banco, valor sem banco, lista com conta e cartão, comparação de 6 meses e um cartão por banco com as maiores categorias |
 | `/financeiro/importar` | Importar extratos e faturas com IA (juntos, um ou vários meses): copia o prompt (categorias + fixos + nomes já usados), cola a resposta do agente, revisa numa prévia editável e importa |
 | `/financeiro/categorias` | Categorias de despesa e ganho em cartões (lista completa): criar, editar (nome/cor), excluir movendo os lançamentos |
 
@@ -116,7 +117,7 @@ categorias, os fixos ativos ou encerrados há até 12 meses (com a vigência) e 
 
 ```json
 {
-  "format": "lifepedia/transactions@3",
+  "format": "lifepedia/transactions@4",
   "items": [
     { "source": "card", "date": "2026-09-05", "descriptionOficial": "PAG*SUPERM NORDESTAO NATAL", "descriptionNormal": "Supermercado Nordestão", "category": "Alimentação", "type": "EXPENSE", "amount": 245.9, "invoiceMonth": "2026-10" },
     { "source": "statement", "date": "2026-09-10", "descriptionOficial": "PIX ENVIADO JOAO S", "descriptionNormal": "João S.", "category": "Moradia", "type": "EXPENSE", "amount": 1800, "fixed": "Aluguel" }
@@ -225,7 +226,7 @@ src/
 │       ├── types.ts, api.ts          tipos e hooks React Query
 │       ├── categories.ts             ordenação/normalização de nomes
 │       ├── use-category-lookup.ts    categorias do usuário por id/tipo
-│       ├── import/prompt.ts          gera o prompt para o agente de IA (formato lifepedia/transactions@3)
+│       ├── import/prompt.ts          gera o prompt para o agente de IA (formato lifepedia/transactions@4)
 │       ├── import/parse.ts           lê a resposta do agente, casa categorias, detecta duplicados
 │       ├── fixed.ts                  vigência e valor do fixo no mês (valueIn)
 │       ├── installments.ts           parcela no nome ("(3/10)"), espelho de Installments.java

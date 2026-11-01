@@ -1,10 +1,12 @@
 import { InfoIcon, RotateCcwIcon, TriangleAlertIcon } from 'lucide-react'
 import { useState } from 'react'
+import { BankLogo } from '@/components/bank/BankLogo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { matchBank, OTHER_BANK } from '@/lib/banks'
 import { amountToInput, formatDate, parseAmount } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
@@ -314,6 +316,7 @@ export function BanksCard({ banks, system, months }: { banks: BankOption[]; syst
             return (
               <li key={b.bank} className={cn('flex items-center gap-3 p-3 text-sm', gap && 'border-t-4 border-t-muted')}>
                 <span className="w-6 shrink-0 text-xs text-muted-foreground tabular-nums">{sorted.indexOf(b) + 1}º</span>
+                <BankLogo code={matchBank(b.bank)?.code ?? OTHER_BANK} name={b.bank} />
                 <span className="min-w-0 flex-1 truncate" title={b.bank}>{b.bank}</span>
                 <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{formatRate(b.monthlyRate)} a.m.</span>
                 <span className="w-24 shrink-0 text-right font-medium tabular-nums">{formatCurrency(b.payment)}</span>

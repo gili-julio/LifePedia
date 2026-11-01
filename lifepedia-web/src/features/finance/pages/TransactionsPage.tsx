@@ -1,7 +1,9 @@
 import { CalendarClockIcon, PencilIcon, PlusIcon, RepeatIcon, SparklesIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
+import { BankBadge, BankMark } from '@/components/bank/BankLogo'
 import { DataTablePagination } from '@/components/data-table/DataTablePagination'
 import { useClampPage, useListState } from '@/components/data-table/list-state'
 import { SortableHead } from '@/components/data-table/SortableHead'
@@ -9,12 +11,15 @@ import { SortSelect } from '@/components/data-table/SortSelect'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/lib/api'
 import { defaultDateInMonth, formatDate, formatMonth, type YearMonth } from '@/lib/format'
-import { useDeleteTransaction, useMoveTransactionMonth, useSummary, useTransactionsPage } from '../api'
+import { useBankOverview, useDeleteTransaction, useMoveTransactionMonth, useSummary, useTransactionsPage } from '../api'
+import { BankAssignBar } from '../components/BankAssignBar'
+import { BankFilterSelect } from '../components/BankFilterSelect'
 import { CategoryBadge } from '../components/CategoryBadge'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { EntryListItem } from '../components/EntryListItem'
@@ -26,8 +31,10 @@ import { TotalCard } from '../components/TotalCard'
 import { TransactionDialog } from '../components/TransactionDialog'
 import { TypeIcon } from '../components/TypeIcon'
 import type { EntryType, Transaction } from '../types'
+import { toBankFilter } from '../bank-filter'
 import { parseInstallment } from '../installments'
 import { useMonthParam } from '../use-month-param'
+import { useSelection } from '../use-selection'
 
 type Filter = 'ALL' | EntryType
 
@@ -41,10 +48,15 @@ const SORT_OPTIONS = [
 export function TransactionsPage() {
   const [month, setMonthParam] = useMonthParam()
   const [filter, setFilter] = useState<Filter>('ALL')
+  const [params, setParams] = useSearchParams()
+  const bankValue = params.get('banco') ?? ''
+  const bankFilter = toBankFilter(bankValue)
   const list = useListState({ field: 'date', direction: 'desc' })
-  const { data, isLoading } = useTransactionsPage(month, filter === 'ALL' ? undefined : filter, list.params)
+  const { data, isLoading } = useTransactionsPage(month, filter === 'ALL' ? undefined : filter, list.params, bankFilter)
   useClampPage(data, list.setPage)
-  const totals = useSummary(month).data?.occasional
+  const totals = useSummary(month, bankFilter).data?.occasional
+  const banks = useBankOverview(month).data?.banks
+  const selection = useSelection()
   const remove = useDeleteTransaction()
   const [dialog, setDialog] = useState<{ open: boolean; transaction?: Transaction }>({ open: false })
   const [makeFixed, setMakeFixed] = useState<{ open: boolean; transaction?: Transaction }>({ open: false })
@@ -54,9 +66,22 @@ export function TransactionsPage() {
   const move = useMoveTransactionMonth()
 
   const items = data?.items ?? []
+  const pageIds = items.map((t) => t.id)
+  const allSelected = pageIds.length > 0 && pageIds.every((id) => selection.selected.has(id))
   const setMonth = (next: YearMonth) => {
     setMonthParam(next)
     list.resetPage()
+    selection.clear()
+  }
+  const setBank = (value: string) => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      if (value) next.set('banco', value)
+      else next.delete('banco')
+      return next
+    }, { replace: true })
+    list.resetPage()
+    selection.clear()
   }
   const openNew = () => setDialog({ open: true })
   const openEdit = (transaction: Transaction) => setDialog({ open: true, transaction })
@@ -92,23 +117,27 @@ export function TransactionsPage() {
 
       <Card>
         <CardContent className="space-y-4">
-          <Tabs value={filter} onValueChange={(v) => {
-            setFilter(v as Filter)
-            list.resetPage()
-          }}>
-            <TabsList>
-              <TabsTrigger value="ALL">Todos</TabsTrigger>
-              <TabsTrigger value="EXPENSE">Gastos</TabsTrigger>
-              <TabsTrigger value="INCOME">Ganhos</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <Tabs value={filter} onValueChange={(v) => {
+              setFilter(v as Filter)
+              list.resetPage()
+            }}>
+              <TabsList>
+                <TabsTrigger value="ALL">Todos</TabsTrigger>
+                <TabsTrigger value="EXPENSE">Gastos</TabsTrigger>
+                <TabsTrigger value="INCOME">Ganhos</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <BankFilterSelect lines={banks} value={bankValue} onChange={setBank} />
+          </div>
+          <BankAssignBar ids={selection.ids} target="transactions" onClear={selection.clear} />
 
           {isLoading ? (
             <Skeleton className="h-48" />
           ) : !items.length ? (
             <div className="flex flex-col items-center gap-3 py-12 text-center">
               <p className="text-sm text-muted-foreground">
-                Nenhum lançamento em {formatMonth(month).toLowerCase()}.
+                Nenhum lançamento{bankValue ? ' neste banco' : ''} em {formatMonth(month).toLowerCase()}.
               </p>
               <Button variant="outline" onClick={openNew}>
                 <PlusIcon /> Registrar lançamento
@@ -124,9 +153,11 @@ export function TransactionsPage() {
                       key={t.id}
                       type={t.type}
                       title={t.description}
-                      details={<><CategoryBadge categoryId={t.categoryId} /> · {formatDate(t.date).slice(0, 5)}</>}
+                      details={<>{t.bank && <BankMark bank={t.bank} />}<CategoryBadge categoryId={t.categoryId} /> · {formatDate(t.date).slice(0, 5)}</>}
                       amount={<Money value={t.amount} type={t.type} />}
                       onMore={() => setMenu({ open: true, item: t })}
+                      selected={selection.selected.has(t.id)}
+                      onSelect={(checked) => selection.set([t.id], checked)}
                     />
                   ))}
                 </ul>
@@ -135,9 +166,14 @@ export function TransactionsPage() {
               <Table className="hidden md:table">
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <Checkbox aria-label="Selecionar todos da página" checked={allSelected}
+                        onCheckedChange={(v) => selection.set(pageIds, v === true)} />
+                    </TableHead>
                     <SortableHead field="date" list={list} firstDirection="desc" className="w-28">Data</SortableHead>
                     <SortableHead field="description" list={list}>Descrição</SortableHead>
                     <SortableHead field="category" list={list}>Categoria</SortableHead>
+                    <TableHead className="hidden xl:table-cell">Banco</TableHead>
                     <SortableHead field="amount" list={list} firstDirection="desc" align="right">Valor</SortableHead>
                     <TableHead className="w-28" />
                   </TableRow>
@@ -145,10 +181,15 @@ export function TransactionsPage() {
                 <TableBody>
                   {items.map((t) => (
                     <TableRow key={t.id}>
+                      <TableCell>
+                        <Checkbox aria-label={`Selecionar ${t.description}`} checked={selection.selected.has(t.id)}
+                          onCheckedChange={(v) => selection.set([t.id], v === true)} />
+                      </TableCell>
                       <TableCell className="tabular-nums text-muted-foreground">{formatDate(t.date)}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <TypeIcon type={t.type} />
+                          {t.bank && <BankMark bank={t.bank} className="xl:hidden" />}
                           <div className="min-w-0">
                             <p className="truncate font-medium">{t.description}</p>
                             {t.notes && <p className="truncate text-xs text-muted-foreground">{t.notes}</p>}
@@ -156,6 +197,7 @@ export function TransactionsPage() {
                         </div>
                       </TableCell>
                       <TableCell><CategoryBadge categoryId={t.categoryId} /></TableCell>
+                      <TableCell className="hidden xl:table-cell"><BankBadge bank={t.bank} /></TableCell>
                       <TableCell className="text-right"><Money value={t.amount} type={t.type} /></TableCell>
                       <TableCell>
                         <div className="flex justify-end">

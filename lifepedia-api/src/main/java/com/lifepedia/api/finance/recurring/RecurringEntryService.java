@@ -1,6 +1,8 @@
 package com.lifepedia.api.finance.recurring;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.category.CategoryService;
 import com.lifepedia.api.finance.group.GroupFinanceService;
 import com.lifepedia.api.finance.group.GroupFinanceSync;
@@ -54,9 +56,10 @@ public class RecurringEntryService {
             "amount", "r.amount");
 
     @Transactional(readOnly = true)
-    public PageResponse<RecurringEntryResponse> page(UUID userId, EntryType type, int page, int size, String sort) {
+    public PageResponse<RecurringEntryResponse> page(UUID userId, EntryType type, BankFilter bank,
+                                                     int page, int size, String sort) {
         Pageable pageable = Paging.pageable(page, size, sort, SORT_FIELDS, "amount,desc", "r.id");
-        return PageResponse.of(repository.page(userId, type, pageable), entries -> {
+        return PageResponse.of(repository.page(userId, type, bank.code(), bank.name(), bank.kind(), bank.none(), pageable), entries -> {
             Map<UUID, List<RecurringAdjustment>> adjustments = adjustmentRepository
                     .findByRecurringEntryIdIn(entries.stream().map(RecurringEntry::getId).toList()).stream()
                     .collect(Collectors.groupingBy(RecurringAdjustment::getRecurringEntryId));
@@ -119,6 +122,15 @@ public class RecurringEntryService {
         return AdjustmentResponse.from(adjustmentRepository.save(adjustment));
     }
 
+    /** Banco que veio na importação: só preenche fixo que ainda não tem banco. */
+    @Transactional
+    public void fillBank(UUID userId, UUID id, BankRef bank) {
+        RecurringEntry entry = find(userId, id);
+        if (entry.getBank() != null || bank == null) return;
+        entry.setBank(bank);
+        groupSync.recurringChanged(entry);
+    }
+
     @Transactional
     public void removeAdjustment(UUID userId, UUID id, YearMonth month) {
         find(userId, id);
@@ -152,5 +164,6 @@ public class RecurringEntryService {
         entry.setEndMonth(request.endMonth());
         entry.setActive(request.active() == null || request.active());
         entry.setNotes(request.notes());
+        entry.setBank(BankRef.clean(request.bank()));
     }
 }

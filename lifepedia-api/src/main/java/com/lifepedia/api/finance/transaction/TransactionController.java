@@ -6,6 +6,8 @@ import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionBatchReq
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionResponse;
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankKind;
 import com.lifepedia.api.shared.CurrentUser;
 import com.lifepedia.api.shared.PageResponse;
 import jakarta.validation.Valid;
@@ -41,15 +43,19 @@ public class TransactionController {
      * Página do mês. {@code sort}: date, description, category ou amount, com {@code ,asc|desc}.
      *
      * @param month {@code yyyy-MM}; padrão: mês atual
+     * @param bank  chave do banco ({@code BankFilter}), {@code NONE} = sem banco
      */
     @GetMapping
     public PageResponse<TransactionResponse> list(@AuthenticationPrincipal Jwt jwt,
                                                   @RequestParam(required = false) YearMonth month,
                                                   @RequestParam(required = false) EntryType type,
+                                                  @RequestParam(required = false) String bank,
+                                                  @RequestParam(required = false) BankKind bankKind,
                                                   @RequestParam(defaultValue = "0") int page,
                                                   @RequestParam(defaultValue = "10") int size,
                                                   @RequestParam(required = false) String sort) {
-        return service.page(CurrentUser.id(jwt), month != null ? month : YearMonth.now(), type, page, size, sort);
+        return service.page(CurrentUser.id(jwt), month != null ? month : YearMonth.now(), type,
+                BankFilter.of(bank, bankKind), page, size, sort);
     }
 
     /** Todos do período, sem paginação (duplicados na importação, tornar fixo). {@code month} = from = to. */

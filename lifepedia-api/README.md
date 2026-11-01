@@ -368,21 +368,24 @@ intervalo de datas: a consulta ordenada leva mais de 10 s) e os índices (SGS 78
 | POST | `/api/finance/categories` | `{name, type, color: "#rrggbb"}` · `409` se nome repetido no tipo |
 | PUT | `/api/finance/categories/{id}` | Atualiza (tipo só muda se não houver lançamentos) |
 | DELETE | `/api/finance/categories/{id}?replaceWith={id}` | Exclui; se em uso, `replaceWith` (mesmo tipo) é obrigatório e recebe os lançamentos (`409` sem ele). Não exclui a última do tipo |
-| GET | `/api/finance/recurring?type=&page=&size=&sort=` | Página de fixos. `sort`: `amount` (padrão, desc), `description`, `category`, `day`, `start` |
+| GET | `/api/finance/recurring?type=&bank=&bankKind=&page=&size=&sort=` | Página de fixos; `bank` = chave do banco (`NUBANK`, `OTHER:nome`, `NONE`). `sort`: `amount` (padrão, desc), `description`, `category`, `day`, `start` |
 | GET | `/api/finance/recurring/all?type=` | Todos, sem paginação |
 | POST | `/api/finance/recurring` | Cria fixo; `removeTransactionIds` (opcional) exclui na mesma transação os ocasionais que ele substitui ("tornar fixo") |
 | PUT | `/api/finance/recurring/{id}` | Atualiza fixo |
 | DELETE | `/api/finance/recurring/{id}` | Exclui fixo |
 | PUT | `/api/finance/recurring/{id}/adjustments/{yyyy-MM}` | `{amount}` — valor real do fixo naquele mês (cria ou substitui; mês precisa estar na vigência) |
 | DELETE | `/api/finance/recurring/{id}/adjustments/{yyyy-MM}` | Volta o mês ao valor cadastrado |
-| GET | `/api/finance/transactions?month=&type=&page=&size=&sort=` | Página de ocasionais do mês (padrão: atual). `sort`: `date` (padrão, desc), `description`, `category`, `amount` |
+| GET | `/api/finance/transactions?month=&type=&bank=&bankKind=&page=&size=&sort=` | Página de ocasionais do mês (padrão: atual), com o filtro de banco dos fixos. `sort`: `date` (padrão, desc), `description`, `category`, `amount` |
 | GET | `/api/finance/transactions/all?month=` ou `?from=&to=&type=&description=` | Todos do período, sem paginação; `description` compara sem maiúsculas/espaços nas pontas |
 | GET | `/api/finance/transactions/descriptions` | Até 200 descrições dos últimos 12 meses, as mais usadas primeiro (padronização da importação) |
 | POST / PUT / DELETE | `/api/finance/transactions[/{id}]` | CRUD de ocasionais |
 | PUT | `/api/finance/transactions/{id}/month` | `{month, following?}` adianta/adia a parcela ("Loja (3/10)"); `following` move as seguintes da mesma compra com o mesmo deslocamento (sincronizadas nos grupos também) → `{moved}` · `400` antes do mês da compra ou `following` sem parcela no nome |
 | POST | `/api/finance/transactions/batch` | `{items: [...]}` (1 a 500) — lote de ocasionais, tudo ou nada; erro indica a linha |
-| POST | `/api/finance/import` | `{transactions: [...], fixedAdjustments: [{recurringEntryId, month, amount}]}` — importação de extrato/fatura, tudo ou nada |
-| GET | `/api/finance/summary?month=2026-09` | Comparativo do mês (fixos x ocasionais, % comprometido, `investedPercent`, categorias). `Totals` = `{income, expense, invested, balance}`: despesa em categoria "Investir"/"Investimento(s)" vai para `invested`, fica fora de `expense` e de `expensesByCategory` e desconta do `balance` |
+| POST | `/api/finance/import` | `{transactions: [...], fixedAdjustments: [{recurringEntryId, month, amount}], fixedBanks: [{recurringEntryId, bank}]}` — importação de extrato/fatura, tudo ou nada; `fixedBanks` só preenche fixo sem banco |
+| GET | `/api/finance/banks/last` | `{bank}`: banco do item com banco criado por último (nulo se nenhum), para o formulário abrir com ele |
+| PUT | `/api/finance/banks/assign` | `{transactionIds, recurringIds, bank}` — define o banco de até 500 itens de cada tipo, tudo ou nada; `bank` nulo tira; sincronizados acompanham · `404` se algum item não for do usuário |
+| GET | `/api/finance/summary/banks?month=&months=6` | Uma linha por banco (`key`, `code`, `name`, `income`, `expense`, `invested`, `fixed`, `occasional`, `account`, `card`, `categories`, `history`), sem banco por último. Mesma rota no grupo: `/api/groups/{id}/finance/summary/banks` |
+| GET | `/api/finance/summary?month=2026-09&bank=&bankKind=` | Comparativo do mês, opcionalmente só de um banco (fixos x ocasionais, % comprometido, `investedPercent`, categorias). `Totals` = `{income, expense, invested, balance}`: despesa em categoria "Investir"/"Investimento(s)" vai para `invested`, fica fora de `expense` e de `expensesByCategory` e desconta do `balance` |
 | GET | `/api/finance/summary/categories/{categoryId}?month=` | Itens da categoria no mês: fixos + ocasionais agrupados pela descrição (`{description, fixed, count, total}`) |
 | GET | `/api/finance/summary/history?until=2026-09&months=6` | Série mensal (1 a 24 meses), com `invested` por mês |
 
@@ -465,4 +468,5 @@ src/main/resources/
                     · V23 push · V24 aceite dos termos · V25 sono por dia na agenda
                     · V26 frequência · V27 lembrete até 30 dias · V28 notas
                     · V29 financiamentos (taxas, índices, simulações, contratos, partes, extras, gastos)
+                    · V30 banco nos ocasionais, fixos, itens de grupo e financiamentos
 ```

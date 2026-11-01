@@ -1,3 +1,4 @@
+import { matchBank, OTHER_BANK, type BankRef } from '@/lib/banks'
 import { amountToInput, currentYearMonth, parseAmount, type YearMonth } from '@/lib/format'
 import { normalizeName } from '../categories'
 import { isActiveIn, valueIn } from '../fixed'
@@ -27,6 +28,10 @@ export type ImportRow = {
   month: YearMonth
   /** Mês da fatura informado pelo agente ('' = não informado) */
   invoiceMonth: YearMonth
+  /** Código do banco ('' = sem banco) */
+  bankCode: string
+  /** Nome digitado, em outro banco */
+  bankName: string
   /** Não impedem importar */
   warnings: string[]
 }
@@ -107,8 +112,8 @@ function parseSource(raw: unknown): ImportSource | null {
 }
 
 /**
- * Resposta do agente → linhas da prévia. Aceita formatos BR e os formatos @1 (`description`) e @2 (sem
- * `source`/`invoiceMonth`). Cada item tem origem (extrato ou fatura); item de fatura conta no mês da fatura.
+ * Resposta do agente → linhas da prévia. Aceita formatos BR e os formatos @1 (`description`), @2 (sem
+ * `source`/`invoiceMonth`) e @3 (sem `bank`). Cada item tem origem (extrato ou fatura); item de fatura conta no mês da fatura.
  * Valor negativo vira positivo e mantém o tipo informado (sem tipo, o sinal decide conforme a origem). Nomes com as
  * mesmas palavras viram a grafia de `knownNames` (ou a primeira da resposta).
  */
@@ -194,6 +199,10 @@ export function parseAiOutput(
       else warnings.push(`Fixo "${item.fixed}" não encontrado; tratado como ocasional.`)
     }
 
+    const informedBank = asText(item.bank).slice(0, 60)
+    const bank = informedBank ? matchBank(informedBank) : null
+    if (informedBank && !bank) warnings.push(`Banco "${informedBank}" não está na lista; ficou como outro banco.`)
+
     const original = (asText(item.descriptionOficial) || asText(item.description)).slice(0, 200)
     let description = (asText(item.descriptionNormal) || asText(item.description) || original).slice(0, 120)
     const key = nameKey(description)
@@ -216,9 +225,26 @@ export function parseAiOutput(
       source,
       month: source === 'card' ? invoiceMonth : '',
       invoiceMonth,
+      bankCode: bank?.code ?? (informedBank ? OTHER_BANK : ''),
+      bankName: bank ? '' : informedBank,
       warnings,
     }
   })
+}
+
+/** Banco da linha: fatura é cartão; extrato é conta. */
+export function rowBank(row: ImportRow): BankRef | null {
+  if (!row.bankCode || (row.bankCode === OTHER_BANK && !row.bankName.trim())) return null
+  return {
+    code: row.bankCode,
+    name: row.bankCode === OTHER_BANK ? row.bankName.trim() : null,
+    kind: row.source === 'card' ? 'CARD' : 'ACCOUNT',
+  }
+}
+
+/** Troca o banco da linha; o aviso de banco deduzido não vale mais. */
+export function withBank(row: ImportRow, bankCode: string, bankName = ''): Pick<ImportRow, 'bankCode' | 'bankName' | 'warnings'> {
+  return { bankCode, bankName, warnings: row.warnings.filter((w) => !w.startsWith('Banco')) }
 }
 
 /** Troca a origem da linha e recalcula o mês em que ela conta (fatura: o da fatura; extrato: o da data). */

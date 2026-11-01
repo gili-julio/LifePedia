@@ -179,6 +179,7 @@ public final class FinancingDtos {
             @DecimalMin(value = "0", message = "Tarifa inválida.") @Digits(integer = 12, fraction = 2) BigDecimal monthlyFee,
             CorrectionIndex index,
             @Size(max = 160, message = "Nome do banco muito longo.") String bank,
+            @Size(max = 30, message = "Banco inválido.") String bankCode,
             @Min(value = 0, message = "Aviso inválido.") @Max(value = 15, message = "Avise até 15 dias antes.") Integer reminderDays,
             @Size(max = 2000, message = "Observação muito longa.") String notes,
             @Size(max = 50) List<@NotNull @Valid ShareRequest> shares) {
@@ -245,14 +246,14 @@ public final class FinancingDtos {
                                     BigDecimal monthlyRate, BigDecimal yearlyRate, AmortizationSystem system,
                                     int months, YearMonth firstMonth, int dueDay, BigDecimal insuranceRate,
                                     BigDecimal monthlyFee, CorrectionIndex index, BigDecimal indexProjection,
-                                    String bank, Integer reminderDays, String notes, Progress progress,
+                                    String bank, String bankCode, Integer reminderDays, String notes, Progress progress,
                                     List<Member> members, List<ExtraPayment> extras, List<Cost> costs,
                                     List<Row> schedule, UserSummary createdBy, boolean canDelete) {
     }
 
     /** @param myShare parte da pessoa (%); @param groupName nulo = pessoal */
     public record FinancingSummary(UUID id, UUID groupId, String groupName, String name, FinancingKind kind,
-                                   BigDecimal financed, Progress progress, BigDecimal myShare) {
+                                   String bank, String bankCode, BigDecimal financed, Progress progress, BigDecimal myShare) {
     }
 
     /** Registro no arquivo da conta (não é importado). */

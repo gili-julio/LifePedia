@@ -1,6 +1,32 @@
+import type { BankKind, BankRef } from '@/lib/banks'
 import type { YearMonth } from '@/lib/format'
 
 export type EntryType = 'INCOME' | 'EXPENSE'
+
+/** `bank`: chave de `BankLine`; 'NONE' = sem banco. */
+export type BankFilter = { bank?: string; bankKind?: BankKind }
+
+export type BankCategory = { name: string; color: string; total: number }
+
+/** Um banco no mês; despesas sem os investimentos, como no resumo. */
+export type BankLine = {
+  key: string
+  /** Nulo = sem banco */
+  code: string | null
+  name: string
+  income: number
+  expense: number
+  invested: number
+  fixed: number
+  occasional: number
+  account: number
+  card: number
+  categories: BankCategory[]
+  /** Despesas em cada mês de `BankOverview.months` */
+  history: number[]
+}
+
+export type BankOverview = { month: YearMonth; months: YearMonth[]; expense: number; banks: BankLine[] }
 
 /** Categoria do usuário. */
 export type Category = {
@@ -27,6 +53,7 @@ export type RecurringEntry = {
   endMonth: YearMonth | null
   active: boolean
   notes: string | null
+  bank: BankRef | null
   /** Valor real em meses específicos */
   adjustments: FixedAdjustment[]
 }
@@ -52,6 +79,7 @@ export type Transaction = {
   notes: string | null
   /** Descrição como veio no documento importado (não muda) */
   originalDescription: string | null
+  bank: BankRef | null
 }
 
 /** Sem `month`, conta no mês da data. `originalDescription` só vale na criação. */
@@ -102,6 +130,8 @@ export type MonthPoint = {
 export type ImportRequest = {
   transactions: TransactionRequest[]
   fixedAdjustments: (FixedAdjustment & { recurringEntryId: string })[]
+  /** Banco para fixos que ainda não têm */
+  fixedBanks: { recurringEntryId: string; bank: BankRef }[]
 }
 
 export type ImportResponse = { transactions: number; fixedAdjustments: number }

@@ -1,6 +1,8 @@
 package com.lifepedia.api.finance.importing;
 
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.importing.ImportDtos.FixedAdjustment;
+import com.lifepedia.api.finance.importing.ImportDtos.FixedBank;
 import com.lifepedia.api.finance.importing.ImportDtos.ImportRequest;
 import com.lifepedia.api.finance.importing.ImportDtos.ImportResponse;
 import com.lifepedia.api.finance.recurring.RecurringEntryService;
@@ -31,7 +33,8 @@ public class ImportService {
     public ImportResponse importAll(UUID userId, ImportRequest request) {
         List<TransactionRequest> transactions = request.transactionsOrEmpty();
         List<FixedAdjustment> adjustments = request.fixedAdjustmentsOrEmpty();
-        if (transactions.isEmpty() && adjustments.isEmpty()) {
+        List<FixedBank> banks = request.fixedBanksOrEmpty();
+        if (transactions.isEmpty() && adjustments.isEmpty() && banks.isEmpty()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Nada para importar.");
         }
         if (!transactions.isEmpty()) {
@@ -44,6 +47,9 @@ public class ImportService {
             } catch (BusinessException | NotFoundException e) {
                 throw new BusinessException(HttpStatus.BAD_REQUEST, "Ajuste de fixo " + (i + 1) + ": " + e.getMessage());
             }
+        }
+        for (FixedBank fixed : banks) {
+            recurringEntryService.fillBank(userId, fixed.recurringEntryId(), BankRef.clean(fixed.bank()));
         }
         return new ImportResponse(transactions.size(), adjustments.size());
     }

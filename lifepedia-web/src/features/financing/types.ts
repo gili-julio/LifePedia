@@ -162,6 +162,7 @@ export type Financing = {
   index: CorrectionIndex
   indexProjection: number | null
   bank: string | null
+  bankCode: string | null
   reminderDays: number | null
   notes: string | null
   progress: Progress
@@ -179,6 +180,8 @@ export type FinancingSummary = {
   groupName: string | null
   name: string
   kind: FinancingKind
+  bank: string | null
+  bankCode: string | null
   financed: number
   progress: Progress
   myShare: number | null
@@ -201,6 +204,7 @@ export type FinancingRequest = {
   monthlyFee: number | null
   index: CorrectionIndex
   bank: string | null
+  bankCode: string | null
   reminderDays: number | null
   notes: string | null
   shares: { userId: string; share: number }[] | null

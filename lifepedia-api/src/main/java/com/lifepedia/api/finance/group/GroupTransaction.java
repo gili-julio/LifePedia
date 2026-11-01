@@ -2,10 +2,12 @@ package com.lifepedia.api.finance.group;
 
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.YearMonthConverter;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.transaction.Transaction;
 import com.lifepedia.api.shared.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -57,6 +59,9 @@ public class GroupTransaction extends BaseEntity {
     @Column(length = 10000)
     private String notes;
 
+    @Embedded
+    private BankRef bank;
+
     protected GroupTransaction() {
     }
 
@@ -76,6 +81,15 @@ public class GroupTransaction extends BaseEntity {
 
     public void copyFrom(Transaction t) {
         set(t.getDescription(), t.getType(), t.getCategoryId(), t.getAmount(), t.getDate(), t.getMonth(), t.getNotes());
+        bank = t.getBank();
+    }
+
+    public BankRef getBank() {
+        return bank;
+    }
+
+    public void setBank(BankRef bank) {
+        this.bank = bank;
     }
 
     public void set(String description, EntryType type, UUID categoryId, BigDecimal amount, LocalDate date,

@@ -3,6 +3,7 @@ import { AlertTriangleIcon, CheckIcon, ClipboardCopyIcon, Loader2Icon, ShieldChe
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
+import { BankSelect } from '@/components/bank/BankSelect'
 import { DatePicker } from '@/components/DatePicker'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api'
+import { OTHER_BANK } from '@/lib/banks'
 import { currentYearMonth, parseAmount } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
@@ -27,8 +29,10 @@ import {
   markDuplicates,
   monthsOf,
   parseAiOutput,
+  rowBank,
   rowErrors,
   rowMonth,
+  withBank,
   withSource,
   type ImportRow,
 } from '../import/parse'
@@ -73,6 +77,7 @@ export function ImportPage() {
   const [parseError, setParseError] = useState<string | null>(null)
   const [rows, setRows] = useState<ImportRow[] | null>(null)
   const [editor, setEditor] = useState<{ open: boolean; key?: string; seq: number }>({ open: false, seq: 0 })
+  const [batchBank, setBatchBank] = useState('')
 
   const prompt = useMemo(
     () => buildImportPrompt(categories, fixedEntries, knownNames),
@@ -114,12 +119,18 @@ export function ImportPage() {
   const errorsOf = (row: ImportRow) => (row.include ? rowErrors(row, byId, fixedById) : [])
   const invalidCount = selected.filter((r) => errorsOf(r).length > 0).length
   const plan = buildPlan(selected, fixedById)
-  const hasWork = plan.request.transactions.length + plan.request.fixedAdjustments.length > 0
+  const hasWork = plan.request.transactions.length + plan.request.fixedAdjustments.length + plan.request.fixedBanks.length > 0
+
+  /** Mesmo banco em todas as linhas selecionadas. */
+  function applyBank() {
+    setRows((current) => current?.map((r) => (r.include ? { ...r, ...withBank(r, batchBank) } : r)) ?? null)
+  }
 
   async function save() {
     try {
       const saved = await importMutation.mutateAsync(plan.request)
-      toast.success(`${saved.transactions} lançamento(s) importado(s) · ${saved.fixedAdjustments} fixo(s) atualizado(s).`)
+      const banks = plan.request.fixedBanks.length
+      toast.success(`${saved.transactions} lançamento(s) importado(s) · ${saved.fixedAdjustments} fixo(s) atualizado(s)${banks ? ` · ${banks} fixo(s) com banco definido` : ''}.`)
       const month = monthsOf(selected).sort().at(-1) ?? currentYearMonth()
       navigate(month === currentYearMonth() ? '/financeiro/lancamentos' : `/financeiro/lancamentos?mes=${month}`)
     } catch (error) {
@@ -169,6 +180,11 @@ export function ImportPage() {
 
       {rows && (
         <Step n={3} title="Revise e importe" description={`Itens de fatura contam no mês da fatura em que vieram (sem ele, no mês da compra); itens de extrato, no mês da data. A descrição pode ser ajustada; a do documento fica guardada como veio. Itens de fixos não viram lançamento: atualizam o valor real do fixo no mês. Nada é salvo antes de confirmar.`}>
+          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted p-2">
+            <span className="px-1 text-sm">Banco das linhas selecionadas:</span>
+            <div className="w-full sm:w-52"><BankSelect size="sm" value={batchBank} onChange={setBatchBank} /></div>
+            <Button size="sm" variant="outline" disabled={batchBank === OTHER_BANK} onClick={applyBank}>Aplicar</Button>
+          </div>
           <div className="md:hidden">
             <label className="flex items-center gap-3 border-b pb-3 text-sm">
               <Checkbox checked={selected.length === rows.length}
@@ -203,7 +219,7 @@ export function ImportPage() {
                   </TableHead>
                   <TableHead className="w-36">Data</TableHead>
                   <TableHead>Descrição</TableHead>
-                  <TableHead className="w-32">Tipo e origem</TableHead>
+                  <TableHead className="w-40">Tipo, origem e banco</TableHead>
                   <TableHead className="w-52">Lançar como</TableHead>
                   <TableHead className="w-44">Categoria</TableHead>
                   <TableHead className="w-28 text-right">Valor (R$)</TableHead>
@@ -260,6 +276,14 @@ export function ImportPage() {
                             ))}
                           </SelectContent>
                         </Select>
+                        <div className="mt-1">
+                          <BankSelect size="sm" value={row.bankCode}
+                            onChange={(code) => updateRow(row.key, withBank(row, code, row.bankName))} />
+                        </div>
+                        {row.bankCode === OTHER_BANK && (
+                          <Input className="mt-1 h-7" aria-label="Nome do banco" placeholder="Nome do banco" maxLength={60}
+                            value={row.bankName} onChange={(e) => updateRow(row.key, { bankName: e.target.value })} />
+                        )}
                       </TableCell>
                       <TableCell className="align-top">
                         <FixedSelect size="sm" type={row.type} month={rowMonth(row)} value={row.fixedEntryId}
@@ -323,14 +347,17 @@ export function ImportPage() {
 
 /** Separa as linhas selecionadas em ocasionais novos, ajustes de fixos e itens já cobertos. */
 function buildPlan(selected: ImportRow[], fixedById: Map<string, RecurringEntry>) {
-  const request: ImportRequest = { transactions: [], fixedAdjustments: [] }
+  const request: ImportRequest = { transactions: [], fixedAdjustments: [], fixedBanks: [] }
   const adjustments = new Map<string, ImportRequest['fixedAdjustments'][number]>()
+  const banks = new Map<string, ImportRequest['fixedBanks'][number]>()
   let covered = 0
   let expense = 0
   let income = 0
   for (const row of selected) {
     const fixed = fixedById.get(row.fixedEntryId)
+    const bank = rowBank(row)
     if (fixed) {
+      if (bank && !fixed.bank) banks.set(fixed.id, { recurringEntryId: fixed.id, bank })
       const outcome = fixedOutcome(row, fixed)
       if (outcome.changes) {
         adjustments.set(`${fixed.id}|${outcome.month}`, { recurringEntryId: fixed.id, month: outcome.month, amount: outcome.amount })
@@ -348,9 +375,11 @@ function buildPlan(selected: ImportRow[], fixedById: Map<string, RecurringEntry>
       amount,
       notes: row.notes.trim() || null,
       originalDescription: row.originalDescription || null,
+      bank,
       ...(row.month && { month: row.month }),
     })
   }
   request.fixedAdjustments = [...adjustments.values()]
+  request.fixedBanks = [...banks.values()]
   return { request, covered, expense, income }
 }

@@ -58,7 +58,7 @@ compartilham usuário, autenticação, design e padrões.
   cabeçalho para ordenar). Os totais do topo sempre consideram todos os itens do mês.
 - **Importar com IA**: a tela *Importar* gera um **prompt pronto** que serve para **extratos bancários** e **faturas do
   cartão** (juntos ou separados, de um ou vários meses), com as categorias, os fixos e os nomes que você já usa nos lançamentos. Você cola o prompt num agente de IA (ChatGPT,
-  Claude, Gemini...) junto com o documento; o agente devolve um JSON no modelo `lifepedia/transactions@3`; você cola a
+  Claude, Gemini...) junto com o documento; o agente devolve um JSON no modelo `lifepedia/transactions@4` (com o banco de cada item); você cola a
   resposta, revisa numa prévia editável e importa tudo de uma vez. O LifePedia não envia o documento a lugar nenhum.
   - O agente marca a **origem** de cada item (extrato ou fatura) e tira as datas do documento: item de extrato conta
     no mês da data; compra no cartão conta no mês de vencimento da sua fatura. Na prévia dá para conferir e trocar a
@@ -137,6 +137,11 @@ compartilham usuário, autenticação, design e padrões.
   - **Convite direto**: busca por nome ou @username; a pessoa recebe a notificação e aceita ou recusa em
     *Grupos → Solicitações (n)*.
   - **Link de convite**: vale 7 dias; gerar outro invalida o anterior; dá para desativar. Quem abre logado entra direto.
+- **Bancos**: cada ocasional e fixo guarda o banco (logo, nome e se foi conta ou cartão), escolhido na mão, vindo da
+  importação ou definido em lote nos itens antigos. A tela *Bancos* soma os gastos por banco, compara os últimos 6 meses
+  e leva às listas filtradas; o que não tem banco aparece como *Sem banco*. Banco fora da lista: *Outro banco*, com o
+  nome digitado. Logos embutidos no build (a CSP não aceita imagem externa), adaptados do repositório público
+  [Bancos em SVG](https://github.com/Tgentil/Bancos-em-SVG), que não declara licença; as marcas são dos bancos.
 - **Finanças em grupo**: cada membro **leva** para o grupo os fixos e ocasionais que quiser — pelo seletor
   *Levar meus itens* do grupo ou pela seção *Levar para grupos* ao cadastrar um fixo/ocasional (um ou vários grupos).
   - **Sincronizado**: espelho do item pessoal (editar ou excluir o pessoal reflete no grupo).

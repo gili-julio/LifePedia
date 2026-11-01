@@ -3,7 +3,7 @@ import type { Page } from '@/components/data-table/list-state'
 import { api } from '@/lib/api'
 import type { YearMonth } from '@/lib/format'
 import type { PageParams } from '../api'
-import type { CategoryItem, EntryType, MonthPoint, RecurringEntryRequest, TransactionRequest } from '../types'
+import type { BankFilter, BankOverview, CategoryItem, EntryType, MonthPoint, RecurringEntryRequest, TransactionRequest } from '../types'
 import type { GroupFinanceSummary, GroupRecurringEntry, GroupTransaction, Origins, ShareRequest } from './types'
 
 /** Sob ['finance', 'groups']: mutações do financeiro pessoal (invalidam 'finance') também atualizam os grupos. */
@@ -14,10 +14,11 @@ const keys = {
   history: (groupId: string, until: YearMonth, months: number) => ['finance', 'groups', groupId, 'history', until, months] as const,
   categoryItems: (groupId: string, month: YearMonth, category: string) =>
     ['finance', 'groups', groupId, 'summary', month, 'category', category] as const,
-  transactions: (groupId: string, month: YearMonth, type: EntryType | undefined, params: PageParams) =>
-    ['finance', 'groups', groupId, 'transactions', month, type, params] as const,
-  recurring: (groupId: string, type: EntryType, params: PageParams) =>
-    ['finance', 'groups', groupId, 'recurring', type, params] as const,
+  banks: (groupId: string, month: YearMonth, months: number) => ['finance', 'groups', groupId, 'banks', month, months] as const,
+  transactions: (groupId: string, month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter) =>
+    ['finance', 'groups', groupId, 'transactions', month, type, params, filter] as const,
+  recurring: (groupId: string, type: EntryType, params: PageParams, filter: BankFilter) =>
+    ['finance', 'groups', groupId, 'recurring', type, params, filter] as const,
   origins: (groupId: string) => ['finance', 'groups', groupId, 'origins'] as const,
 }
 
@@ -27,6 +28,15 @@ export function useGroupSummary(groupId: string, month: YearMonth) {
   return useQuery({
     queryKey: keys.summary(groupId, month),
     queryFn: () => api<GroupFinanceSummary>(`${base(groupId)}/summary`, { query: { month } }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** Gastos por banco no mês e nos `months` meses até ele. */
+export function useGroupBankOverview(groupId: string, month: YearMonth, months = 6) {
+  return useQuery({
+    queryKey: keys.banks(groupId, month, months),
+    queryFn: () => api<BankOverview>(`${base(groupId)}/summary/banks`, { query: { month, months } }),
     placeholderData: keepPreviousData,
   })
 }
@@ -45,18 +55,18 @@ export function useGroupCategoryItems(groupId: string, month: YearMonth, categor
   })
 }
 
-export function useGroupTransactionsPage(groupId: string, month: YearMonth, type: EntryType | undefined, params: PageParams) {
+export function useGroupTransactionsPage(groupId: string, month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter = {}) {
   return useQuery({
-    queryKey: keys.transactions(groupId, month, type, params),
-    queryFn: () => api<Page<GroupTransaction>>(`${base(groupId)}/transactions`, { query: { month, type, ...params } }),
+    queryKey: keys.transactions(groupId, month, type, params, filter),
+    queryFn: () => api<Page<GroupTransaction>>(`${base(groupId)}/transactions`, { query: { month, type, ...params, ...filter } }),
     placeholderData: keepPreviousData,
   })
 }
 
-export function useGroupRecurringPage(groupId: string, type: EntryType, params: PageParams) {
+export function useGroupRecurringPage(groupId: string, type: EntryType, params: PageParams, filter: BankFilter = {}) {
   return useQuery({
-    queryKey: keys.recurring(groupId, type, params),
-    queryFn: () => api<Page<GroupRecurringEntry>>(`${base(groupId)}/recurring`, { query: { type, ...params } }),
+    queryKey: keys.recurring(groupId, type, params, filter),
+    queryFn: () => api<Page<GroupRecurringEntry>>(`${base(groupId)}/recurring`, { query: { type, ...params, ...filter } }),
     placeholderData: keepPreviousData,
   })
 }

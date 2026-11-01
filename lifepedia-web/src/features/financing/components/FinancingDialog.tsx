@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { BankSelect } from '@/components/bank/BankSelect'
 import { DialogBody, DialogScrollContent } from '@/components/DialogLayout'
 import { MonthField } from '@/components/MonthField'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -15,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { useGroup } from '@/features/groups/api'
 import { ApiError } from '@/lib/api'
+import { matchBank, OTHER_BANK } from '@/lib/banks'
 import { addMonths, amountToInput, currentYearMonth, parseAmount } from '@/lib/format'
 import { useRateSuggestion, useSaveFinancing } from '../api'
 import { conditionLabel, formatRate, INDEX_LABEL, isHousing, KINDS, MONTHS_LIMIT, monthlyFromYearly } from '../labels'
@@ -50,7 +52,8 @@ const schema = z.object({
   insurance: z.string().refine((v) => !v.trim() || /^\d+([.,]\d{1,5})?$/.test(v.trim()), 'Seguro inválido.'),
   monthlyFee: optionalAmount,
   index: z.enum(['NONE', 'TR', 'IPCA', 'INCC']),
-  bank: z.string().max(160, 'Nome muito longo.'),
+  bank: z.string().max(60, 'Nome muito longo.'),
+  bankCode: z.string(),
   reminder: z.string(),
   notes: z.string().max(2000, 'Máximo de 2000 caracteres.'),
 })
@@ -80,6 +83,7 @@ function toForm(f: Partial<FinancingRequest> | Financing | undefined): FormValue
     monthlyFee: f?.monthlyFee ? money(f.monthlyFee) : '',
     index: f?.index ?? (isHousing(kind) ? 'TR' : 'NONE'),
     bank: f?.bank ?? '',
+    bankCode: f?.bankCode ?? (f?.bank ? matchBank(f.bank)?.code ?? OTHER_BANK : ''),
     reminder: f?.reminderDays === null || f?.reminderDays === undefined ? 'none' : String(f.reminderDays),
     notes: f?.notes ?? '',
   }
@@ -124,7 +128,7 @@ function FinancingForm({ groupId, financing, initial, onDone, onCancel }: {
   const save = useSaveFinancing(groupId)
   const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: toForm(financing ?? initial) })
   const { errors, isSubmitting } = form.formState
-  const [kind, rateUnit] = useWatch({ control: form.control, name: ['kind', 'rateUnit'] })
+  const [kind, rateUnit, bankCode] = useWatch({ control: form.control, name: ['kind', 'rateUnit', 'bankCode'] })
   const suggestion = useRateSuggestion(groupId, kind).data
   const members = useGroup(groupId ?? '').data?.members ?? []
   const [shares, setShares] = useState<Record<string, string>>(() =>
@@ -180,6 +184,7 @@ function FinancingForm({ groupId, financing, initial, onDone, onCancel }: {
       monthlyFee: optional(v.monthlyFee),
       index: v.index as CorrectionIndex,
       bank: v.bank.trim() || null,
+      bankCode: v.bankCode || null,
       reminderDays: v.reminder === 'none' ? null : Number(v.reminder),
       notes: v.notes.trim() || null,
       shares: groupId && members.length ? members.map((m) => ({ userId: m.user.id, share: decimal(shareOf(m.user.id)) || 0 })) : null,
@@ -353,7 +358,14 @@ function FinancingForm({ groupId, financing, initial, onDone, onCancel }: {
             </div>
             <Field>
               <FieldLabel htmlFor="fin-bank">Banco</FieldLabel>
-              <Input id="fin-bank" placeholder="Opcional" className="text-base md:text-sm" {...form.register('bank')} />
+              <Controller control={form.control} name="bankCode" render={({ field }) => (
+                <BankSelect id="fin-bank" value={field.value} onChange={field.onChange} noneLabel="Não informar" />
+              )} />
+              {bankCode === OTHER_BANK && (
+                <Input aria-label="Nome do banco" placeholder="Nome do banco" maxLength={60} className="text-base md:text-sm"
+                  {...form.register('bank')} />
+              )}
+              <FieldDescription>A parcela ligada às finanças fica com este banco, na conta.</FieldDescription>
             </Field>
             {groupId && members.length > 0 && (
               <Field>

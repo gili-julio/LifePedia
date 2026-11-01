@@ -1,7 +1,8 @@
 import { CalendarClockIcon, CircleDollarSignIcon, Loader2Icon, PencilIcon, PercentIcon, PiggyBankIcon, PlusIcon, Trash2Icon, XIcon } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
+import { BankLogo } from '@/components/bank/BankLogo'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { PageHeader } from '@/components/PageHeader'
 import { StatCard } from '@/components/StatCard'
@@ -16,6 +17,7 @@ import { CategorySelect } from '@/features/finance/components/CategorySelect'
 import { useCategoryLookup } from '@/features/finance/use-category-lookup'
 import { ApiError } from '@/lib/api'
 import { formatDate, formatMonth } from '@/lib/format'
+import { OTHER_BANK } from '@/lib/banks'
 import { useMoney } from '@/lib/hide-values'
 import { useDeleteFinancing, useFinancing, useMyFixed, useRemoveCost, useRemoveExtra } from '../api'
 import { CostDialog, ExtraDialog } from '../components/ExtraCostDialogs'
@@ -168,13 +170,15 @@ function FinancingView({ financing: f }: { financing: Financing }) {
 
 function ContractCard({ financing: f }: { financing: Financing }) {
   const { formatCurrency } = useMoney()
-  const rows: [string, string][] = [
+  const rows: [string, ReactNode][] = [
     ['Taxa', `${formatRate(f.monthlyRate)} ao mês (${formatRate(f.yearlyRate)} ao ano)`],
     ['Sistema', `${SYSTEM_LABEL[f.system]}, ${formatMonths(f.months)}`],
     ['1ª parcela', `${formatMonth(f.firstMonth, 'short')}, dia ${f.dueDay}`],
     ['Correção', f.index === 'NONE' ? 'Sem correção'
       : `${INDEX_LABEL[f.index]}${f.indexProjection !== null ? ` (média recente ${formatRate(f.indexProjection)} ao mês)` : ''}`],
   ]
+  const bank = <span className="inline-flex items-center gap-2"><BankLogo code={f.bankCode ?? OTHER_BANK} name={f.bank} /> {f.bank}</span>
+  if (f.bank) rows.unshift(['Banco', bank])
   if (f.price) rows.push(['Preço do bem', formatCurrency(f.price)])
   if (f.downPayment) rows.push(['Entrada', formatCurrency(f.downPayment)])
   if (f.fgts) rows.push(['FGTS', formatCurrency(f.fgts)])

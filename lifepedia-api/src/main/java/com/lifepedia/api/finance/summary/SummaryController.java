@@ -1,5 +1,8 @@
 package com.lifepedia.api.finance.summary;
 
+import com.lifepedia.api.finance.bank.BankDtos.BankOverview;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankKind;
 import com.lifepedia.api.finance.summary.SummaryDtos.CategoryItem;
 import com.lifepedia.api.finance.summary.SummaryDtos.MonthPoint;
 import com.lifepedia.api.finance.summary.SummaryDtos.MonthlySummary;
@@ -30,11 +33,24 @@ public class SummaryController {
         this.service = service;
     }
 
-    /** @param month {@code yyyy-MM}; padrão: mês atual */
+    /**
+     * @param month {@code yyyy-MM}; padrão: mês atual
+     * @param bank  só os itens do banco ({@code BankFilter})
+     */
     @GetMapping
     public MonthlySummary monthly(@AuthenticationPrincipal Jwt jwt,
-                                  @RequestParam(required = false) YearMonth month) {
-        return service.monthly(CurrentUser.id(jwt), month != null ? month : YearMonth.now());
+                                  @RequestParam(required = false) YearMonth month,
+                                  @RequestParam(required = false) String bank,
+                                  @RequestParam(required = false) BankKind bankKind) {
+        return service.monthly(CurrentUser.id(jwt), month != null ? month : YearMonth.now(), BankFilter.of(bank, bankKind));
+    }
+
+    /** Gastos por banco no mês e nos {@code months} meses até ele. */
+    @GetMapping("/banks")
+    public BankOverview banks(@AuthenticationPrincipal Jwt jwt,
+                              @RequestParam(required = false) YearMonth month,
+                              @RequestParam(defaultValue = "6") @Min(1) @Max(24) int months) {
+        return service.banks(CurrentUser.id(jwt), month != null ? month : YearMonth.now(), months);
     }
 
     /** Itens da categoria no mês, agrupados pela descrição. */

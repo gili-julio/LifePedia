@@ -5,6 +5,8 @@ import com.lifepedia.api.finance.Installments.Installment;
 import com.lifepedia.api.finance.Installments.MoveRequest;
 import com.lifepedia.api.finance.Installments.MoveResult;
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryRepository;
 import com.lifepedia.api.finance.category.CategoryService;
@@ -163,29 +165,30 @@ public class GroupFinanceService {
 
     @Transactional(readOnly = true)
     public PageResponse<GroupTransactionResponse> transactions(UUID userId, UUID groupId, YearMonth month, EntryType type,
-                                                               int page, int size, String sort) {
+                                                               BankFilter bank, int page, int size, String sort) {
         access.requireMember(groupId, userId);
         var pageable = Paging.pageable(page, size, sort, TRANSACTION_SORT, "date,desc", "g.createdAt", "g.id");
-        return PageResponse.of(groupTransactions.page(groupId, month, type, pageable), items -> {
+        var found = groupTransactions.page(groupId, month, type, bank.code(), bank.name(), bank.kind(), bank.none(), pageable);
+        return PageResponse.of(found, items -> {
             Refs refs = refs(items.stream().map(GroupTransaction::getCategoryId).toList(),
                     items.stream().map(GroupTransaction::getUserId).toList());
             return items.stream().map(g -> new GroupTransactionResponse(g.getId(), g.getDescription(), g.getType(),
-                    g.getAmount(), g.getDate(), g.getMonth(), g.getNotes(), refs.category(g.getCategoryId()),
+                    g.getAmount(), g.getDate(), g.getMonth(), g.getNotes(), refs.category(g.getCategoryId()), g.getBank(),
                     refs.user(g.getUserId()), g.isSynced(), g.getUserId().equals(userId))).toList();
         });
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<GroupRecurringResponse> recurring(UUID userId, UUID groupId, EntryType type,
+    public PageResponse<GroupRecurringResponse> recurring(UUID userId, UUID groupId, EntryType type, BankFilter bank,
                                                           int page, int size, String sort) {
         access.requireMember(groupId, userId);
         var pageable = Paging.pageable(page, size, sort, RECURRING_SORT, "amount,desc", "r.id");
-        return PageResponse.of(groupRecurring.page(groupId, type, pageable), items -> {
+        return PageResponse.of(groupRecurring.page(groupId, type, bank.code(), bank.name(), bank.kind(), bank.none(), pageable), items -> {
             Refs refs = refs(items.stream().map(GroupRecurringEntry::getCategoryId).toList(),
                     items.stream().map(GroupRecurringEntry::getUserId).toList());
             return items.stream().map(r -> new GroupRecurringResponse(r.getId(), r.getDescription(), r.getType(),
                     r.getAmount(), r.getDayOfMonth(), r.getStartMonth(), r.getEndMonth(), r.isActive(), r.getNotes(),
-                    refs.category(r.getCategoryId()), refs.user(r.getUserId()), r.isSynced(),
+                    refs.category(r.getCategoryId()), r.getBank(), refs.user(r.getUserId()), r.isSynced(),
                     r.getUserId().equals(userId))).toList();
         });
     }
@@ -199,7 +202,7 @@ public class GroupFinanceService {
         groupTransactions.save(g);
         Refs refs = refs(List.of(g.getCategoryId()), List.of(userId));
         return new GroupTransactionResponse(g.getId(), g.getDescription(), g.getType(), g.getAmount(), g.getDate(),
-                g.getMonth(), g.getNotes(), refs.category(g.getCategoryId()), refs.user(userId), false, true);
+                g.getMonth(), g.getNotes(), refs.category(g.getCategoryId()), g.getBank(), refs.user(userId), false, true);
     }
 
     @Transactional
@@ -211,7 +214,7 @@ public class GroupFinanceService {
         Refs refs = refs(List.of(r.getCategoryId()), List.of(userId));
         return new GroupRecurringResponse(r.getId(), r.getDescription(), r.getType(), r.getAmount(), r.getDayOfMonth(),
                 r.getStartMonth(), r.getEndMonth(), r.isActive(), r.getNotes(), refs.category(r.getCategoryId()),
-                refs.user(userId), false, true);
+                r.getBank(), refs.user(userId), false, true);
     }
 
     /** Edita uma cópia (só quem levou; sincronizado se edita no pessoal). */
@@ -260,6 +263,7 @@ public class GroupFinanceService {
         }
         item.set(request.description().trim(), request.type(), request.categoryId(), request.amount(), request.date(),
                 request.effectiveMonth(), request.notes());
+        item.setBank(BankRef.clean(request.bank()));
     }
 
     /** @param defaultStart início quando o pedido não traz {@code startMonth} */
@@ -272,6 +276,7 @@ public class GroupFinanceService {
         item.set(request.description().trim(), request.type(), request.categoryId(), request.amount(),
                 request.dayOfMonth(), start, request.endMonth(), request.active() == null || request.active(),
                 request.notes());
+        item.setBank(BankRef.clean(request.bank()));
     }
 
     /** Tira do grupo (quem levou ou admin). Não mexe no item pessoal. */

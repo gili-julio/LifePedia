@@ -41,6 +41,9 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 
 - Estilo verificado pelo Checkstyle (ver Testes). Comentários: regra da raiz (só o essencial, Javadoc de uma linha). Não edite migrations já aplicadas, nem para
   mudar comentário — o Flyway valida o checksum e a API não sobe.
+- **Banco** (`finance/bank`): `BankRef` é `@Embedded` em ocasionais, fixos e itens de grupo; valide com `BankRef.clean`
+  antes de gravar e passe nos `sync` do `GroupFinanceSync`. Soma por banco só em `BankReport`, nunca em SQL solto.
+  Banco novo no catálogo = valor em `Bank` + entrada e logo no web (`src/lib/banks.ts`).
 - **Pacote por módulo** (`auth`, `user`, `finance/...`), não por camada. Cada feature tem entity, repository,
   service, controller e `*Dtos` (records aninhados) juntos.
 - Entidades estendem `shared.BaseEntity` (UUID + `created_at`/`updated_at`). Sem Lombok; getters/setters explícitos.

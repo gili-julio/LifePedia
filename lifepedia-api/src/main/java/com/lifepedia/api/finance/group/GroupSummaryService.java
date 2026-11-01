@@ -1,6 +1,10 @@
 package com.lifepedia.api.finance.group;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankDtos.BankOverview;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankReport;
+import com.lifepedia.api.finance.bank.BankReport.Item;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryRepository;
 import com.lifepedia.api.finance.category.InvestmentCategories;
@@ -69,11 +73,12 @@ public class GroupSummaryService {
     }
 
     @Transactional(readOnly = true)
-    public GroupSummary summary(UUID userId, UUID groupId, YearMonth month) {
+    public GroupSummary summary(UUID userId, UUID groupId, YearMonth month, BankFilter bank) {
         access.requireMember(groupId, userId);
-        List<GroupRecurringEntry> allFixed = recurring.findByGroupId(groupId);
-        List<GroupRecurringEntry> fixed = allFixed.stream().filter(e -> e.appliesTo(month)).toList();
-        List<GroupTransaction> occasional = transactions.findByGroupIdAndMonth(groupId, month);
+        List<GroupRecurringEntry> fixed = recurring.findByGroupId(groupId).stream()
+                .filter(e -> e.appliesTo(month) && bank.matches(e.getBank())).toList();
+        List<GroupTransaction> occasional = transactions.findByGroupIdAndMonth(groupId, month).stream()
+                .filter(t -> bank.matches(t.getBank())).toList();
         Function<GroupRecurringEntry, BigDecimal> fixedAmount = amountIn(month, adjustmentsOf(fixed));
         Map<UUID, Category> categoryById = categoriesOf(fixed, occasional);
         Predicate<Object> investing = investing(categoryById);
@@ -97,6 +102,34 @@ public class GroupSummaryService {
     public List<MonthPoint> history(UUID userId, UUID groupId, YearMonth until, int months) {
         access.requireMember(groupId, userId);
         return points(groupId, until.minusMonths(months - 1L), until);
+    }
+
+    /** Gastos por banco no mês e nos {@code months} meses até ele; categorias somadas pelo nome. */
+    @Transactional(readOnly = true)
+    public BankOverview banks(UUID userId, UUID groupId, YearMonth month, int months) {
+        access.requireMember(groupId, userId);
+        YearMonth from = month.minusMonths(months - 1L);
+        List<GroupRecurringEntry> fixed = recurring.findByGroupId(groupId);
+        List<GroupTransaction> occasional = transactions.findByGroupIdAndMonthBetween(groupId, from, month);
+        Map<UUID, Map<YearMonth, BigDecimal>> adjusted = adjustmentsOf(fixed);
+        Map<UUID, Category> categoryById = categoriesOf(fixed, occasional);
+        Predicate<Object> investing = investing(categoryById);
+
+        List<Item> items = new ArrayList<>();
+        for (GroupTransaction t : occasional) {
+            Category c = categoryById.get(t.getCategoryId());
+            items.add(new Item(t.getBank(), t.getMonth(), t.getType(), investing.test(t), false, c.getName(), c.getColor(), t.getAmount()));
+        }
+        for (YearMonth m = from; !m.isAfter(month); m = m.plusMonths(1)) {
+            YearMonth current = m;
+            Function<GroupRecurringEntry, BigDecimal> amount = amountIn(current, adjusted);
+            for (GroupRecurringEntry e : fixed) {
+                if (!e.appliesTo(current)) continue;
+                Category c = categoryById.get(e.getCategoryId());
+                items.add(new Item(e.getBank(), current, e.getType(), investing.test(e), true, c.getName(), c.getColor(), amount.apply(e)));
+            }
+        }
+        return BankReport.build(month, months, items);
     }
 
     /** Série mês a mês de {@code from} até {@code until}. Sem checagem de acesso: quem chama já validou o membro. */

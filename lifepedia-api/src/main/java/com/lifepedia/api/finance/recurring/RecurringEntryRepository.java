@@ -1,6 +1,7 @@
 package com.lifepedia.api.finance.recurring;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankKind;
 import com.lifepedia.api.finance.category.CategoryUsage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,9 +26,18 @@ public interface RecurringEntryRepository extends JpaRepository<RecurringEntry, 
 
     /** Ordenação por expressões com {@code r} (fixo) e {@code c} (categoria). */
     @Query(value = "select r from RecurringEntry r join Category c on c.id = r.categoryId "
-            + "where r.userId = :userId and (:type is null or r.type = :type)",
-            countQuery = "select count(r) from RecurringEntry r where r.userId = :userId and (:type is null or r.type = :type)")
-    Page<RecurringEntry> page(UUID userId, EntryType type, Pageable pageable);
+            + "where r.userId = :userId and (:type is null or r.type = :type) "
+            + "and (:bankCode is null or r.bank.code = :bankCode) and (:bankName is null or lower(r.bank.name) = :bankName) "
+            + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null)",
+            countQuery = "select count(r) from RecurringEntry r where r.userId = :userId and (:type is null or r.type = :type) "
+                    + "and (:bankCode is null or r.bank.code = :bankCode) and (:bankName is null or lower(r.bank.name) = :bankName) "
+                    + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null)")
+    Page<RecurringEntry> page(UUID userId, EntryType type, String bankCode, String bankName, BankKind bankKind,
+                              boolean noBank, Pageable pageable);
+
+    /** Itens com banco, do mais novo ao mais antigo. */
+    @Query("select r from RecurringEntry r where r.userId = :userId and r.bank.code is not null order by r.createdAt desc")
+    List<RecurringEntry> withBank(UUID userId, Pageable pageable);
 
     @Query("select r.categoryId as categoryId, count(r) as total from RecurringEntry r "
             + "where r.userId = :userId group by r.categoryId")

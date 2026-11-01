@@ -2,6 +2,7 @@ import { PackagePlusIcon, PencilIcon, PlusIcon, UserMinusIcon } from 'lucide-rea
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
+import { BankBadge, BankMark } from '@/components/bank/BankLogo'
 import { DataTablePagination } from '@/components/data-table/DataTablePagination'
 import { useClampPage, useListState } from '@/components/data-table/list-state'
 import { SortableHead } from '@/components/data-table/SortableHead'
@@ -13,13 +14,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { UserAvatar } from '@/components/UserAvatar'
 import { ApiError } from '@/lib/api'
-import { formatMonth } from '@/lib/format'
+import { currentYearMonth, formatMonth } from '@/lib/format'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
+import { BankFilterSelect } from '../components/BankFilterSelect'
+import { toBankFilter } from '../bank-filter'
 import { EntryListItem } from '../components/EntryListItem'
 import { Money } from '../components/Money'
 import { RecurringEntryDialog } from '../components/RecurringEntryDialog'
 import type { EntryType, RecurringEntry } from '../types'
-import { useCreateGroupRecurring, useGroupRecurringPage, useRemoveGroupItem, useUpdateGroupRecurring } from './api'
+import { useCreateGroupRecurring, useGroupBankOverview, useGroupRecurringPage, useRemoveGroupItem, useUpdateGroupRecurring } from './api'
 import { CategoryLabel, ShareBadge } from './GroupItemParts'
 import type { GroupRecurringEntry } from './types'
 
@@ -41,7 +44,7 @@ function asEntry(g: GroupRecurringEntry): RecurringEntry {
   return {
     id: g.id, description: g.description, type: g.type, categoryId: g.category.id, amount: g.amount,
     dayOfMonth: g.dayOfMonth, startMonth: g.startMonth, endMonth: g.endMonth, active: g.active, notes: g.notes,
-    adjustments: [],
+    bank: g.bank, adjustments: [],
   }
 }
 
@@ -54,7 +57,9 @@ function period(g: GroupRecurringEntry) {
 export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
   const [type, setType] = useState<EntryType>('EXPENSE')
   const list = useListState({ field: 'amount', direction: 'desc' })
-  const { data, isLoading } = useGroupRecurringPage(groupId, type, list.params)
+  const [bank, setBank] = useState('')
+  const { data, isLoading } = useGroupRecurringPage(groupId, type, list.params, toBankFilter(bank))
+  const banks = useGroupBankOverview(groupId, currentYearMonth()).data?.banks
   useClampPage(data, list.setPage)
   const create = useCreateGroupRecurring()
   const update = useUpdateGroupRecurring()
@@ -92,6 +97,10 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
           <PlusIcon /> <span className="max-sm:sr-only">Novo fixo</span>
         </Button>
       </div>
+      <BankFilterSelect lines={banks} value={bank} onChange={(value) => {
+        setBank(value)
+        list.resetPage()
+      }} />
 
       {isLoading ? (
         <Skeleton className="h-48" />
@@ -114,7 +123,7 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
                   type={r.type}
                   title={r.description}
                   muted={!r.active}
-                  details={<><span className="truncate">{r.member.name}</span> · <CategoryLabel category={r.category} />{r.dayOfMonth ? ` · dia ${r.dayOfMonth}` : ''}</>}
+                  details={<>{r.bank && <BankMark bank={r.bank} />}<span className="truncate">{r.member.name}</span> · <CategoryLabel category={r.category} />{r.dayOfMonth ? ` · dia ${r.dayOfMonth}` : ''}</>}
                   amount={<Money value={r.amount} type={r.type} />}
                   onMore={() => setMenu({ open: true, item: r })}
                 />
@@ -127,6 +136,7 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
               <TableRow>
                 <SortableHead field="description" list={list}>Descrição</SortableHead>
                 <SortableHead field="category" list={list}>Categoria</SortableHead>
+                <TableHead className="hidden xl:table-cell">Banco</TableHead>
                 <SortableHead field="member" list={list}>Membro</SortableHead>
                 <SortableHead field="day" list={list} className="w-16">Dia</SortableHead>
                 <SortableHead field="amount" list={list} firstDirection="desc" align="right">Valor</SortableHead>
@@ -138,7 +148,10 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
                 <TableRow key={r.id} className={r.active ? undefined : 'text-muted-foreground'}>
                   <TableCell>
                     <div className="min-w-0 space-y-1">
-                      <p className="truncate font-medium">{r.description}</p>
+                      <p className="flex items-center gap-2 truncate font-medium">
+                        {r.bank && <BankMark bank={r.bank} className="xl:hidden" />}
+                        {r.description}
+                      </p>
                       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                         <ShareBadge synced={r.synced} />
                         {!r.active && <Badge variant="secondary">Pausado</Badge>}
@@ -147,6 +160,7 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
                     </div>
                   </TableCell>
                   <TableCell><CategoryLabel category={r.category} /></TableCell>
+                  <TableCell className="hidden xl:table-cell"><BankBadge bank={r.bank} /></TableCell>
                   <TableCell>
                     <div className="flex min-w-0 items-center gap-2">
                       <UserAvatar user={r.member} size="sm" />

@@ -1,6 +1,8 @@
 package com.lifepedia.api.finance.recurring;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankKind;
 import com.lifepedia.api.finance.recurring.RecurringEntryDtos.AdjustmentRequest;
 import com.lifepedia.api.finance.recurring.RecurringEntryDtos.AdjustmentResponse;
 import com.lifepedia.api.finance.recurring.RecurringEntryDtos.RecurringEntryRequest;
@@ -40,10 +42,12 @@ public class RecurringEntryController {
     @GetMapping
     public PageResponse<RecurringEntryResponse> list(@AuthenticationPrincipal Jwt jwt,
                                                      @RequestParam(required = false) EntryType type,
+                                                     @RequestParam(required = false) String bank,
+                                                     @RequestParam(required = false) BankKind bankKind,
                                                      @RequestParam(defaultValue = "0") int page,
                                                      @RequestParam(defaultValue = "10") int size,
                                                      @RequestParam(required = false) String sort) {
-        return service.page(CurrentUser.id(jwt), type, page, size, sort);
+        return service.page(CurrentUser.id(jwt), type, BankFilter.of(bank, bankKind), page, size, sort);
     }
 
     /** Todos, sem paginação (seleção e importação). */

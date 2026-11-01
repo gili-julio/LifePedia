@@ -2,9 +2,11 @@ package com.lifepedia.api.finance.transaction;
 
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.YearMonthConverter;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.shared.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -50,6 +52,9 @@ public class Transaction extends BaseEntity {
     /** Descrição como veio no documento importado; não muda depois de criada. */
     @Column(name = "original_description", length = 200, updatable = false)
     private String originalDescription;
+
+    @Embedded
+    private BankRef bank;
 
     protected Transaction() {
     }
@@ -124,5 +129,13 @@ public class Transaction extends BaseEntity {
 
     public void setOriginalDescription(String originalDescription) {
         this.originalDescription = originalDescription;
+    }
+
+    public BankRef getBank() {
+        return bank;
+    }
+
+    public void setBank(BankRef bank) {
+        this.bank = bank;
     }
 }

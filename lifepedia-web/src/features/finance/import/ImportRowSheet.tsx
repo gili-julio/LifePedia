@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { BankSelect } from '@/components/bank/BankSelect'
 import { DatePicker } from '@/components/DatePicker'
 import { Button } from '@/components/ui/button'
 import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from '@/components/ui/drawer'
@@ -6,6 +7,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { OTHER_BANK } from '@/lib/banks'
 import { formatMonth } from '@/lib/format'
 import { CategorySelect } from '../components/CategorySelect'
 import { TypeToggle } from '../components/TypeToggle'
@@ -13,7 +15,7 @@ import type { Category, RecurringEntry } from '../types'
 import { FixedOutcomeNote } from './FixedOutcomeNote'
 import { FixedSelect } from './FixedSelect'
 import { CountsIn } from './ImportRowItem'
-import { rowErrors, rowMonth, withSource, type ImportRow } from './parse'
+import { rowErrors, rowMonth, withBank, withSource, type ImportRow } from './parse'
 import { SOURCE_LABEL, type ImportSource } from './prompt'
 
 type Props = {
@@ -68,6 +70,14 @@ export function ImportRowSheet({ open, onOpenChange, row, categoriesById, fixedE
                   ))}
                 </SelectContent>
               </Select>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="imp-bank">Banco</FieldLabel>
+              <BankSelect id="imp-bank" value={draft.bankCode} onChange={(code) => set(withBank(draft, code, draft.bankName))} />
+              {draft.bankCode === OTHER_BANK && (
+                <Input aria-label="Nome do banco" placeholder="Nome do banco" maxLength={60} value={draft.bankName}
+                  onChange={(e) => set({ bankName: e.target.value })} />
+              )}
             </Field>
             <Field data-invalid={errors.includes('fixo')}>
               <FieldLabel htmlFor="imp-fixed">Lançar como</FieldLabel>

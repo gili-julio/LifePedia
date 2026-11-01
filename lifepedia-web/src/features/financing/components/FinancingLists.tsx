@@ -2,12 +2,14 @@ import { CalculatorIcon, FilePlus2Icon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { toast } from 'sonner'
+import { BankLogo } from '@/components/bank/BankLogo'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api'
+import { OTHER_BANK } from '@/lib/banks'
 import { formatDate, formatInstantDate, formatMonth } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
 import { financingUrl, simulatorUrl, useDeleteSimulation, useSavedSimulations } from '../api'
@@ -35,6 +37,7 @@ export function FinancingCard({ item }: { item: FinancingSummary }) {
               </p>
             </div>
             {!p.next && <Badge variant="secondary">Quitado</Badge>}
+            {item.bank && <BankLogo code={item.bankCode ?? OTHER_BANK} name={item.bank} />}
           </div>
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-muted-foreground">

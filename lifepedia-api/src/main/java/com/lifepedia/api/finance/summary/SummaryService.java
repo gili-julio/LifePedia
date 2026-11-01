@@ -1,6 +1,10 @@
 package com.lifepedia.api.finance.summary;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankDtos.BankOverview;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankReport;
+import com.lifepedia.api.finance.bank.BankReport.Item;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryService;
 import com.lifepedia.api.finance.category.InvestmentCategories;
@@ -52,11 +56,13 @@ public class SummaryService {
     }
 
     @Transactional(readOnly = true)
-    public MonthlySummary monthly(UUID userId, YearMonth month) {
+    public MonthlySummary monthly(UUID userId, YearMonth month, BankFilter bank) {
         List<RecurringEntry> fixed = recurringRepository.findByUserIdOrderByTypeAscAmountDesc(userId).stream()
-                .filter(e -> e.appliesTo(month))
+                .filter(e -> e.appliesTo(month) && bank.matches(e.getBank()))
                 .toList();
-        List<Transaction> occasional = transactionRepository.findByUserIdAndMonthOrderByDateDescCreatedAtDesc(userId, month);
+        List<Transaction> occasional = transactionRepository.findByUserIdAndMonthOrderByDateDescCreatedAtDesc(userId, month).stream()
+                .filter(t -> bank.matches(t.getBank()))
+                .toList();
         Function<RecurringEntry, BigDecimal> fixedAmount = amountIn(month, adjustments(userId));
         Map<UUID, Category> categories = categoryService.mapByIdFor(userId);
         Set<UUID> investing = InvestmentCategories.ids(categories.values());
@@ -114,6 +120,34 @@ public class SummaryService {
             points.add(new MonthPoint(current, f.income(), f.expense(), o.income(), o.expense(), all.invested(), all.balance()));
         }
         return points;
+    }
+
+    /** Gastos por banco no mês e nos {@code months} meses até ele. */
+    @Transactional(readOnly = true)
+    public BankOverview banks(UUID userId, YearMonth month, int months) {
+        YearMonth from = month.minusMonths(months - 1L);
+        List<RecurringEntry> fixed = recurringRepository.findByUserIdOrderByTypeAscAmountDesc(userId);
+        Map<UUID, Map<YearMonth, BigDecimal>> adjustments = adjustments(userId);
+        Map<UUID, Category> categories = categoryService.mapByIdFor(userId);
+        Set<UUID> investing = InvestmentCategories.ids(categories.values());
+
+        List<Item> items = new ArrayList<>();
+        for (Transaction t : transactionRepository.findByUserIdAndMonthBetween(userId, from, month)) {
+            Category c = categories.get(t.getCategoryId());
+            items.add(new Item(t.getBank(), t.getMonth(), t.getType(), investing.contains(c.getId()), false,
+                    c.getName(), c.getColor(), t.getAmount()));
+        }
+        for (YearMonth m = from; !m.isAfter(month); m = m.plusMonths(1)) {
+            YearMonth current = m;
+            Function<RecurringEntry, BigDecimal> amount = amountIn(current, adjustments);
+            for (RecurringEntry e : fixed) {
+                if (!e.appliesTo(current)) continue;
+                Category c = categories.get(e.getCategoryId());
+                items.add(new Item(e.getBank(), current, e.getType(), investing.contains(c.getId()), true,
+                        c.getName(), c.getColor(), amount.apply(e)));
+            }
+        }
+        return BankReport.build(month, months, items);
     }
 
     /** Valor ajustado por fixo e mês. */

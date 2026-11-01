@@ -28,6 +28,22 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'bancos',
+    date: '2026-11-01',
+    title: 'Bancos: saiba de onde saiu cada gasto',
+    modules: ['Finanças', 'Financiamentos', 'Grupos'],
+    details: [
+      'Lançamentos e fixos agora guardam o banco, com o logo, e se foi na conta ou no cartão.',
+      'Nova tela Bancos em Finanças: quanto saiu de cada banco no mês, as maiores categorias de cada um e a comparação dos últimos 6 meses.',
+      'Filtre lançamentos e fixos por banco; os totais da tela acompanham o filtro.',
+      'Na importação com IA, o banco vem do próprio extrato ou fatura. Dá para corrigir linha por linha ou aplicar o mesmo banco a todas.',
+      'Um fixo sem banco passa a usar o banco do extrato ou da fatura que trouxe o pagamento dele.',
+      'Tem itens antigos? Selecione vários na lista e defina o banco de uma vez. O que não tiver banco aparece como Sem banco.',
+      'Grupos mostram o banco dos itens e os gastos por banco. No financiamento, o banco escolhido vai para a parcela ligada às finanças.',
+      'Novo lançamento já abre com o último banco que você usou.',
+    ],
+  },
+  {
     id: 'financiamentos',
     date: '2026-10-30',
     title: 'Financiamentos: simule antes de comprar e acompanhe os que estão em andamento',

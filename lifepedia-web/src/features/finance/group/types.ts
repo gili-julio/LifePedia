@@ -1,5 +1,6 @@
 import type { YearMonth } from '@/lib/format'
 import type { UserSummary } from '@/features/groups/types'
+import type { BankRef } from '@/lib/banks'
 import type { EntryType, MonthlySummary } from '../types'
 
 /** SYNC: acompanha o item pessoal. COPY: cópia independente, editável no grupo por quem levou. */
@@ -15,6 +16,7 @@ type GroupItemBase = {
   notes: string | null
   /** Categoria de quem levou */
   category: CategoryRef
+  bank: BankRef | null
   member: UserSummary
   synced: boolean
   /** Levado pelo usuário atual */

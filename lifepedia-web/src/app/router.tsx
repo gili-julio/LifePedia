@@ -45,6 +45,10 @@ export const router = createBrowserRouter([
             }),
           },
           {
+            path: '/financeiro/bancos',
+            lazy: async () => ({ Component: (await import('@/features/finance/pages/BanksPage')).BanksPage }),
+          },
+          {
             path: '/financeiro/importar',
             lazy: async () => ({
               Component: (await import('@/features/finance/pages/ImportPage')).ImportPage,

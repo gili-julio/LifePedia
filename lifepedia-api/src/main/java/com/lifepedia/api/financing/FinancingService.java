@@ -1,5 +1,8 @@
 package com.lifepedia.api.financing;
 
+import com.lifepedia.api.finance.bank.Bank;
+import com.lifepedia.api.finance.bank.BankKind;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.recurring.ScheduledFixed;
 import com.lifepedia.api.financing.FinancingCost.Frequency;
 import com.lifepedia.api.financing.FinancingDtos.Cost;
@@ -239,7 +242,7 @@ public class FinancingService {
                 UUID groupId = financing.getGroupId() != null && Boolean.TRUE.equals(request.shareToGroup())
                         ? financing.getGroupId() : null;
                 me.setRecurringEntryId(fixed.create(scope.userId(), financing.getName(), request.categoryId(),
-                        financing.getDueDay(), FIXED_NOTE, amounts, groupId));
+                        financing.getDueDay(), FIXED_NOTE, bankOf(financing), amounts, groupId));
             }
         } else if (me.getRecurringEntryId() != null) {
             fixed.delete(scope.userId(), me.getRecurringEntryId());
@@ -367,7 +370,7 @@ public class FinancingService {
                 FinancingMath.percent(FinancingMath.yearly(f.getMonthlyRate().doubleValue() / 100)), f.getSystem(),
                 f.getMonths(), f.getFirstMonth(), f.getDueDay(), f.getInsuranceRate(), f.getMonthlyFee(), f.getIndex(),
                 f.getIndex() == CorrectionIndex.NONE ? null : FinancingMath.percent(rates.projection(f.getIndex())),
-                f.getBank(), f.getReminderDays(), f.getNotes(), progress, memberList,
+                f.getBank(), f.getBankCode(), f.getReminderDays(), f.getNotes(), progress, memberList,
                 saved.stream().map(FinancingService::extra).toList(),
                 costs.findByFinancingIdOrderByCreatedAtAsc(f.getId()).stream().map(c -> cost(c, today)).toList(),
                 rows, creator == null ? null : UserSummary.from(creator), scope.canDelete(f.getCreatedBy()));
@@ -389,7 +392,8 @@ public class FinancingService {
             List<FinancingExtraPayment> saved = extrasById.getOrDefault(f.getId(), List.of()).stream()
                     .sorted(Comparator.comparing(FinancingExtraPayment::getMonth)).toList();
             return new FinancingSummary(f.getId(), f.getGroupId(), groupNames.get(f.getGroupId()), f.getName(),
-                    f.getKind(), f.getFinanced(), progress(f, schedule(f, saved), today), myShare.get(f.getId()));
+                    f.getKind(), f.getBank(), f.getBankCode(), f.getFinanced(), progress(f, schedule(f, saved), today),
+                    myShare.get(f.getId()));
         }).toList();
     }
 
@@ -409,9 +413,18 @@ public class FinancingService {
         f.setInsuranceRate(r.insuranceRate() == null ? BigDecimal.ZERO : r.insuranceRate());
         f.setMonthlyFee(r.monthlyFee() == null ? BigDecimal.ZERO : r.monthlyFee());
         f.setIndex(r.index() == null ? CorrectionIndex.NONE : r.index());
-        f.setBank(r.bank() == null || r.bank().isBlank() ? null : r.bank().trim());
+        BankRef bank = BankRef.clean(new BankRef(r.bankCode(), r.bank(), null));
+        f.setBankCode(bank == null ? null : bank.code());
+        f.setBank(bank != null ? bank.label() : r.bank() == null || r.bank().isBlank() ? null : r.bank().trim());
         f.setReminderDays(r.reminderDays());
         f.setNotes(r.notes() == null || r.notes().isBlank() ? null : r.notes().trim());
+    }
+
+    /** Banco do fixo ligado: a parcela sai da conta; nome digitado antes do catálogo vira "outro banco". */
+    private static BankRef bankOf(Financing f) {
+        if (f.getBank() == null) return null;
+        String name = f.getBank().length() > 60 ? f.getBank().substring(0, 60) : f.getBank();
+        return BankRef.clean(new BankRef(f.getBankCode() == null ? Bank.OTHER.name() : f.getBankCode(), name, BankKind.ACCOUNT));
     }
 
     private static void applyCost(FinancingCost cost, CostRequest r) {
@@ -472,7 +485,7 @@ public class FinancingService {
             if (amounts.isEmpty()) {
                 fixed.delete(m.getUserId(), m.getRecurringEntryId());
                 m.setRecurringEntryId(null);
-            } else if (!fixed.update(m.getUserId(), m.getRecurringEntryId(), f.getName(), f.getDueDay(), amounts)) {
+            } else if (!fixed.update(m.getUserId(), m.getRecurringEntryId(), f.getName(), f.getDueDay(), bankOf(f), amounts)) {
                 m.setRecurringEntryId(null);
             }
         }

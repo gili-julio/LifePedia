@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react'
-import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, LabelList, Line, LineChart, XAxis, YAxis } from 'recharts'
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, type ChartConfig } from '@/components/ui/chart'
 import { formatMonth } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
-import type { MonthlySummary, MonthPoint } from '../types'
+import type { BankLine, BankOverview, MonthlySummary, MonthPoint } from '../types'
 
 /** Ganhos (azul) x despesas (laranja): par validado para daltonismo. */
 const config = {
@@ -106,6 +106,70 @@ export function InvestedChart({ points }: { points: MonthPoint[] }) {
         />
         <Bar dataKey="invested" fill="var(--color-invested)" radius={[4, 4, 0, 0]} maxBarSize={32} />
       </BarChart>
+    </ChartContainer>
+  )
+}
+
+/** Paleta categórica validada para daltonismo; a ordem é a das chaves, não a dos valores, para a cor seguir o banco. */
+const BANK_COLORS = [
+  { light: '#2a78d6', dark: '#3987e5' },
+  { light: '#eb6834', dark: '#d95926' },
+  { light: '#1baf7a', dark: '#199e70' },
+  { light: '#eda100', dark: '#c98500' },
+  { light: '#e87ba4', dark: '#d55181' },
+]
+const REST_COLOR = 'var(--muted-foreground)'
+
+/** Gastos por mês nos 5 bancos com mais gastos; o resto soma em "Outros". */
+export function BankHistoryChart({ overview }: { overview: BankOverview }) {
+  const { formatCompactCurrency } = useMoney()
+  const sum = (line: BankLine) => line.history.reduce((a, b) => a + b, 0)
+  const lines = overview.banks.filter((b) => sum(b) > 0)
+  if (!lines.length) return <p className="py-6 text-center text-sm text-muted-foreground">Nenhum gasto nestes meses.</p>
+
+  const top = lines.filter((b) => b.code).sort((a, b) => sum(b) - sum(a)).slice(0, BANK_COLORS.length)
+    .sort((a, b) => a.key.localeCompare(b.key))
+  const rest = lines.filter((b) => !top.includes(b))
+  const chartConfig: ChartConfig = Object.fromEntries(top.map((b, i) => [`s${i}`, { label: b.name, theme: BANK_COLORS[i] }]))
+  if (rest.length) chartConfig.rest = { label: 'Outros', color: REST_COLOR }
+  const data = overview.months.map((month, m) => ({
+    month,
+    label: formatMonth(month, 'short'),
+    ...Object.fromEntries(top.map((b, i) => [`s${i}`, b.history[m]])),
+    ...(rest.length && { rest: rest.reduce((total, b) => total + b.history[m], 0) }),
+  }))
+  const series = Object.keys(chartConfig)
+
+  return (
+    <ChartContainer config={chartConfig} className="aspect-auto h-64 w-full">
+      <LineChart data={data} margin={{ top: 8, left: 4, right: 8 }}>
+        <CartesianGrid vertical={false} strokeDasharray="3 3" />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} />
+        <YAxis tickLine={false} axisLine={false} width={64} tickFormatter={(v: number) => formatCompactCurrency(v)} />
+        <ChartTooltip
+          content={(props) => {
+            const { active, payload } = props as TooltipProps
+            if (!active || !payload?.length) return null
+            const row = payload[0].payload as Record<string, number | string>
+            const rows = series
+              .map((key) => ({ key, value: Number(row[key] ?? 0) }))
+              .sort((a, b) => b.value - a.value)
+            return (
+              <TooltipBox title={formatMonth(String(row.month))}>
+                {rows.map(({ key, value }) => (
+                  <TooltipLine key={key} color={key === 'rest' ? REST_COLOR : `var(--color-${key})`}
+                    label={String(chartConfig[key].label)} value={value} />
+                ))}
+              </TooltipBox>
+            )
+          }}
+        />
+        <ChartLegend content={<ChartLegendContent className="flex-wrap" />} />
+        {series.map((key) => (
+          <Line key={key} dataKey={key} type="monotone" stroke={`var(--color-${key})`} strokeWidth={2}
+            strokeDasharray={key === 'rest' ? '4 3' : undefined} dot={{ r: 4, fill: `var(--color-${key})`, strokeWidth: 0 }} activeDot={{ r: 5 }} isAnimationActive={false} />
+        ))}
+      </LineChart>
     </ChartContainer>
   )
 }

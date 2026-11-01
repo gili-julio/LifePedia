@@ -1,4 +1,5 @@
 import { AlertTriangleIcon, ChevronRightIcon } from 'lucide-react'
+import { BankLogo } from '@/components/bank/BankLogo'
 import { Checkbox } from '@/components/ui/checkbox'
 import { formatDate, formatMonth, parseAmount } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -44,6 +45,7 @@ export function ImportRowItem({ row, errors, category, fixed, onToggle, onOpen }
           </div>
           <OriginalDescription original={row.originalDescription} description={row.description} />
           <p className="flex items-center gap-1.5 truncate text-xs text-muted-foreground">
+            {row.bankCode && <BankLogo code={row.bankCode} name={row.bankName} size="xs" />}
             {fixed ? (
               <>Fixo: {fixed.description} · {date} · {SOURCE_LABEL[row.source]}</>
             ) : (

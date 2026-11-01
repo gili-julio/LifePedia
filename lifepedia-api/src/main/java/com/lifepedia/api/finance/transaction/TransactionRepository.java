@@ -1,6 +1,7 @@
 package com.lifepedia.api.finance.transaction;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankKind;
 import com.lifepedia.api.finance.category.CategoryUsage;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,10 +21,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
 
     /** Ordenação por expressões com {@code t} (lançamento) e {@code c} (categoria). */
     @Query(value = "select t from Transaction t join Category c on c.id = t.categoryId "
-            + "where t.userId = :userId and t.month = :month and (:type is null or t.type = :type)",
+            + "where t.userId = :userId and t.month = :month and (:type is null or t.type = :type) "
+            + "and (:bankCode is null or t.bank.code = :bankCode) and (:bankName is null or lower(t.bank.name) = :bankName) "
+            + "and (:bankKind is null or t.bank.kind = :bankKind) and (:noBank = false or t.bank.code is null)",
             countQuery = "select count(t) from Transaction t "
-                    + "where t.userId = :userId and t.month = :month and (:type is null or t.type = :type)")
-    Page<Transaction> page(UUID userId, YearMonth month, EntryType type, Pageable pageable);
+                    + "where t.userId = :userId and t.month = :month and (:type is null or t.type = :type) "
+                    + "and (:bankCode is null or t.bank.code = :bankCode) and (:bankName is null or lower(t.bank.name) = :bankName) "
+                    + "and (:bankKind is null or t.bank.kind = :bankKind) and (:noBank = false or t.bank.code is null)")
+    Page<Transaction> page(UUID userId, YearMonth month, EntryType type, String bankCode, String bankName,
+                           BankKind bankKind, boolean noBank, Pageable pageable);
+
+    /** Itens com banco, do mais novo ao mais antigo. */
+    @Query("select t from Transaction t where t.userId = :userId and t.bank.code is not null order by t.createdAt desc")
+    List<Transaction> withBank(UUID userId, Pageable pageable);
 
     /** @param description já normalizada (minúsculas, sem espaços nas pontas) */
     @Query("select t from Transaction t where t.userId = :userId and t.month >= :from and t.month <= :to "

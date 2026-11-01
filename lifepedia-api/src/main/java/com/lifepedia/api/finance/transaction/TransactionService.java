@@ -3,6 +3,8 @@ package com.lifepedia.api.finance.transaction;
 import com.lifepedia.api.achievement.Achievement;
 import com.lifepedia.api.achievement.AchievementProgress;
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankFilter;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.category.Category;
 import com.lifepedia.api.finance.category.CategoryService;
 import com.lifepedia.api.finance.group.GroupFinanceService;
@@ -62,10 +64,10 @@ public class TransactionService {
             "amount", "t.amount");
 
     @Transactional(readOnly = true)
-    public PageResponse<TransactionResponse> page(UUID userId, YearMonth month, EntryType type,
+    public PageResponse<TransactionResponse> page(UUID userId, YearMonth month, EntryType type, BankFilter bank,
                                                   int page, int size, String sort) {
         Pageable pageable = Paging.pageable(page, size, sort, SORT_FIELDS, "date,desc", "t.createdAt", "t.id");
-        return PageResponse.of(repository.page(userId, month, type, pageable),
+        return PageResponse.of(repository.page(userId, month, type, bank.code(), bank.name(), bank.kind(), bank.none(), pageable),
                 items -> items.stream().map(TransactionResponse::from).toList());
     }
 
@@ -124,10 +126,10 @@ public class TransactionService {
                 }
                 CategoryService.requireMatchingType(category, request.type());
                 requireValidMonth(request);
+                transactions.add(newTransaction(userId, request));
             } catch (BusinessException e) {
                 throw new BusinessException(e.getStatus(), "Linha " + (i + 1) + ": " + e.getMessage());
             }
-            transactions.add(newTransaction(userId, request));
         }
         events.publishEvent(new AchievementProgress(userId, EnumSet.of(Achievement.TRANSACTIONS)));
         return repository.saveAll(transactions).stream().map(TransactionResponse::from).toList();
@@ -194,5 +196,6 @@ public class TransactionService {
         transaction.setDate(request.date());
         transaction.setMonth(request.effectiveMonth());
         transaction.setNotes(request.notes());
+        transaction.setBank(BankRef.clean(request.bank()));
     }
 }

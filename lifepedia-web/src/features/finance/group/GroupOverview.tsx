@@ -8,10 +8,11 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { type YearMonth } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
 import { CategoryBreakdownList, CategoryItemList } from '../components/CategoryBreakdownList'
-import { FixedVsOccasionalChart, HistoryChart, InvestedChart } from '../components/charts'
+import { BankList } from '../components/BankList'
+import { BankHistoryChart, FixedVsOccasionalChart, HistoryChart, InvestedChart } from '../components/charts'
 import { Money } from '../components/Money'
 import { TotalCard } from '../components/TotalCard'
-import { useGroupCategoryItems, useGroupHistory, useGroupSummary } from './api'
+import { useGroupBankOverview, useGroupCategoryItems, useGroupHistory, useGroupSummary } from './api'
 import type { MemberTotals } from './types'
 
 type Props = {
@@ -67,6 +68,7 @@ export function GroupOverview({ groupId, month, onBring }: Props) {
   const summary = useGroupSummary(groupId, month)
   const history = useGroupHistory(groupId, month, 6)
   const invested = useGroupHistory(groupId, month, 12)
+  const banks = useGroupBankOverview(groupId, month).data
   const data = summary.data
 
   if (!data) {
@@ -189,6 +191,25 @@ export function GroupOverview({ groupId, month, onBring }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      {banks && banks.banks.some((b) => b.history.some((v) => v > 0)) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Por banco</CardTitle>
+              <CardDescription>De onde saíram as despesas do grupo no mês.</CardDescription>
+            </CardHeader>
+            <CardContent><BankList banks={banks.banks} total={banks.expense} /></CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Bancos mês a mês</CardTitle>
+              <CardDescription>Gastos dos últimos 6 meses nos bancos que mais aparecem.</CardDescription>
+            </CardHeader>
+            <CardContent><BankHistoryChart overview={banks} /></CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   )
 }

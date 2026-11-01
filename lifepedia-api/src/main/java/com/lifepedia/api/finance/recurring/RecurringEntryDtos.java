@@ -1,7 +1,9 @@
 package com.lifepedia.api.finance.recurring;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.group.ShareMode;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
@@ -39,6 +41,7 @@ public final class RecurringEntryDtos {
             YearMonth endMonth,
             Boolean active,
             @Size(max = 10000) String notes,
+            @Valid BankRef bank,
             @Size(max = 500) List<UUID> removeTransactionIds,
             @Size(max = 20) List<UUID> groupIds,
             ShareMode shareMode) {
@@ -55,11 +58,13 @@ public final class RecurringEntryDtos {
             YearMonth endMonth,
             boolean active,
             String notes,
+            BankRef bank,
             List<AdjustmentResponse> adjustments) {
 
         public static RecurringEntryResponse from(RecurringEntry e, List<RecurringAdjustment> adjustments) {
             return new RecurringEntryResponse(e.getId(), e.getDescription(), e.getType(), e.getCategoryId(),
                     e.getAmount(), e.getDayOfMonth(), e.getStartMonth(), e.getEndMonth(), e.isActive(), e.getNotes(),
+                    e.getBank(),
                     adjustments.stream()
                             .sorted(Comparator.comparing(RecurringAdjustment::getMonth).reversed())
                             .map(AdjustmentResponse::from)

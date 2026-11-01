@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { BankField } from '@/components/bank/BankSelect'
 import { MonthField } from '@/components/MonthField'
 import { Button } from '@/components/ui/button'
 import { DialogBody, DialogScrollContent } from '@/components/DialogLayout'
@@ -13,9 +14,10 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api'
+import { bankSchema, type BankRef } from '@/lib/banks'
 import { amountToInput, currentYearMonth, parseAmount } from '@/lib/format'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
-import { useSaveRecurringEntry, useTransactionsSearch } from '../api'
+import { useLastBank, useSaveRecurringEntry, useTransactionsSearch } from '../api'
 import type { EntryType, RecurringEntry, RecurringEntryRequest, Transaction } from '../types'
 import { ShareFields } from '../group/GroupShareSection'
 import { useCategoryLookup } from '../use-category-lookup'
@@ -37,6 +39,7 @@ const schema = z
     endMonth: z.string(),
     active: z.boolean(),
     notes: z.string().max(10000, 'Máximo de 10000 caracteres.'),
+    bank: bankSchema,
     /** Ocasionais desmarcados (não serão removidos) */
     keep: z.array(z.string()),
     groupIds: z.array(z.string()),
@@ -49,7 +52,7 @@ const schema = z
 
 type FormValues = z.infer<typeof schema>
 
-function toForm(entry: RecurringEntry | undefined, type: EntryType, from?: Transaction): FormValues {
+function toForm(entry: RecurringEntry | undefined, type: EntryType, from: Transaction | undefined, lastBank: BankRef | null): FormValues {
   if (!entry && from) {
     return {
       description: from.description,
@@ -61,6 +64,7 @@ function toForm(entry: RecurringEntry | undefined, type: EntryType, from?: Trans
       endMonth: '',
       active: true,
       notes: from.notes ?? '',
+      bank: from.bank,
       keep: [],
       groupIds: [],
       shareMode: 'SYNC',
@@ -76,6 +80,7 @@ function toForm(entry: RecurringEntry | undefined, type: EntryType, from?: Trans
     endMonth: entry?.endMonth ?? '',
     active: entry?.active ?? true,
     notes: entry?.notes ?? '',
+    bank: entry ? entry.bank : lastBank,
     keep: [],
     groupIds: [],
     shareMode: 'SYNC',
@@ -96,7 +101,8 @@ type Props = {
 
 export function RecurringEntryDialog({ open, onOpenChange, entry, defaultType = 'EXPENSE', fromTransaction, onSave }: Props) {
   const save = useSaveRecurringEntry()
-  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: toForm(entry, defaultType, fromTransaction) })
+  const lastBank = useLastBank().data ?? null
+  const form = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: toForm(entry, defaultType, fromTransaction, lastBank) })
   const { errors, isSubmitting } = form.formState
   const { byId } = useCategoryLookup()
   const [type, description, startMonth, endMonth, keep] = useWatch({
@@ -113,8 +119,8 @@ export function RecurringEntryDialog({ open, onOpenChange, entry, defaultType = 
   const toRemove = replacing && validSearch ? (matches.data ?? []).filter((t) => !excluded.has(t.id)) : []
 
   useEffect(() => {
-    if (open) form.reset(toForm(entry, defaultType, fromTransaction))
-  }, [open, entry, defaultType, fromTransaction, form])
+    if (open) form.reset(toForm(entry, defaultType, fromTransaction, lastBank))
+  }, [open, entry, defaultType, fromTransaction, lastBank, form])
 
   async function onSubmit(values: FormValues) {
     const data: RecurringEntryRequest = {
@@ -127,6 +133,7 @@ export function RecurringEntryDialog({ open, onOpenChange, entry, defaultType = 
       endMonth: values.endMonth || null,
       active: values.active,
       notes: values.notes.trim() || null,
+      bank: values.bank,
       ...(toRemove.length && { removeTransactionIds: toRemove.map((t) => t.id) }),
       ...(canShare && values.groupIds.length && { groupIds: values.groupIds, shareMode: values.shareMode }),
     }
@@ -227,6 +234,13 @@ export function RecurringEntryDialog({ open, onOpenChange, entry, defaultType = 
                   <FieldError errors={[errors.endMonth]} />
                 </Field>
               </div>
+              <Field data-invalid={!!errors.bank}>
+                <FieldLabel htmlFor="rec-bank">Banco</FieldLabel>
+                <Controller control={form.control} name="bank" render={({ field }) => (
+                  <BankField id="rec-bank" value={field.value} onChange={field.onChange} invalid={!!errors.bank} />
+                )} />
+                <FieldError errors={[errors.bank]} />
+              </Field>
               <Field data-invalid={!!errors.notes}>
                 <FieldLabel htmlFor="rec-notes">Observações</FieldLabel>
                 <Textarea id="rec-notes" rows={2} {...form.register('notes')} />

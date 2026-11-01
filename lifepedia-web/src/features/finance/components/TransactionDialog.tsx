@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { BankField } from '@/components/bank/BankSelect'
 import { DatePicker } from '@/components/DatePicker'
 import { MonthField } from '@/components/MonthField'
 import { Button } from '@/components/ui/button'
@@ -13,8 +14,9 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/c
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api'
+import { bankSchema, type BankRef } from '@/lib/banks'
 import { amountToInput, parseAmount, todayIso } from '@/lib/format'
-import { useSaveTransaction } from '../api'
+import { useLastBank, useSaveTransaction } from '../api'
 import { ShareFields } from '../group/GroupShareSection'
 import type { EntryType, Transaction, TransactionRequest } from '../types'
 import { useCategoryLookup } from '../use-category-lookup'
@@ -29,13 +31,14 @@ const schema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data.'),
   month: z.string(),
   notes: z.string().max(10000, 'Máximo de 10000 caracteres.'),
+  bank: bankSchema,
   groupIds: z.array(z.string()),
   shareMode: z.enum(['SYNC', 'COPY']),
 }).refine((v) => v.month >= v.date.slice(0, 7), { path: ['month'], message: 'Não pode ser antes do mês da data.' })
 
 type FormValues = z.infer<typeof schema>
 
-function toForm(transaction: Transaction | undefined, type: EntryType, date: string): FormValues {
+function toForm(transaction: Transaction | undefined, type: EntryType, date: string, lastBank: BankRef | null): FormValues {
   return {
     description: transaction?.description ?? '',
     type: transaction?.type ?? type,
@@ -44,6 +47,7 @@ function toForm(transaction: Transaction | undefined, type: EntryType, date: str
     date: transaction?.date ?? date,
     month: transaction?.month ?? date.slice(0, 7),
     notes: transaction?.notes ?? '',
+    bank: transaction ? transaction.bank : lastBank,
     groupIds: [],
     shareMode: 'SYNC',
   }
@@ -62,10 +66,11 @@ type Props = {
 
 export function TransactionDialog({ open, onOpenChange, transaction, defaultType = 'EXPENSE', defaultDate, onSave }: Props) {
   const save = useSaveTransaction()
+  const lastBank = useLastBank().data ?? null
   const initialDate = defaultDate ?? todayIso()
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: toForm(transaction, defaultType, initialDate),
+    defaultValues: toForm(transaction, defaultType, initialDate, lastBank),
   })
   const { errors, isSubmitting } = form.formState
   const { byId } = useCategoryLookup()
@@ -73,8 +78,8 @@ export function TransactionDialog({ open, onOpenChange, transaction, defaultType
   const canShare = !transaction && !onSave
 
   useEffect(() => {
-    if (open) form.reset(toForm(transaction, defaultType, initialDate))
-  }, [open, transaction, defaultType, initialDate, form])
+    if (open) form.reset(toForm(transaction, defaultType, initialDate, lastBank))
+  }, [open, transaction, defaultType, initialDate, lastBank, form])
 
   async function onSubmit(values: FormValues) {
     const data: TransactionRequest = {
@@ -85,6 +90,7 @@ export function TransactionDialog({ open, onOpenChange, transaction, defaultType
       date: values.date,
       month: values.month,
       notes: values.notes.trim() || null,
+      bank: values.bank,
       ...(canShare && values.groupIds.length && { groupIds: values.groupIds, shareMode: values.shareMode }),
     }
     try {
@@ -176,6 +182,13 @@ export function TransactionDialog({ open, onOpenChange, transaction, defaultType
                 />
                 <FieldDescription>Compra no cartão? Use o mês da fatura.</FieldDescription>
                 <FieldError errors={[errors.month]} />
+              </Field>
+              <Field data-invalid={!!errors.bank}>
+                <FieldLabel htmlFor="tx-bank">Banco</FieldLabel>
+                <Controller control={form.control} name="bank" render={({ field }) => (
+                  <BankField id="tx-bank" value={field.value} onChange={field.onChange} invalid={!!errors.bank} />
+                )} />
+                <FieldError errors={[errors.bank]} />
               </Field>
               <Field data-invalid={!!errors.notes}>
                 <FieldLabel htmlFor="tx-notes">Observações</FieldLabel>

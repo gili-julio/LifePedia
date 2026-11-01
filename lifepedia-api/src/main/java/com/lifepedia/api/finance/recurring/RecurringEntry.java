@@ -2,9 +2,11 @@ package com.lifepedia.api.finance.recurring;
 
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.YearMonthConverter;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.shared.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -52,11 +54,22 @@ public class RecurringEntry extends BaseEntity {
     @Column(length = 10000)
     private String notes;
 
+    @Embedded
+    private BankRef bank;
+
     protected RecurringEntry() {
     }
 
     public RecurringEntry(UUID userId) {
         this.userId = userId;
+    }
+
+    public BankRef getBank() {
+        return bank;
+    }
+
+    public void setBank(BankRef bank) {
+        this.bank = bank;
     }
 
     public boolean appliesTo(YearMonth month) {

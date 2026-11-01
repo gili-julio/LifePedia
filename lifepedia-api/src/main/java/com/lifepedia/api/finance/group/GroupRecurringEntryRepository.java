@@ -1,6 +1,7 @@
 package com.lifepedia.api.finance.group;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankKind;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
 import java.time.YearMonth;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -17,9 +19,14 @@ public interface GroupRecurringEntryRepository extends JpaRepository<GroupRecurr
 
     /** Ordenação por expressões com {@code r} (item), {@code c} (categoria) e {@code u} (quem levou). */
     @Query(value = "select r from GroupRecurringEntry r join Category c on c.id = r.categoryId join User u on u.id = r.userId "
-            + "where r.groupId = :groupId and (:type is null or r.type = :type)",
-            countQuery = "select count(r) from GroupRecurringEntry r where r.groupId = :groupId and (:type is null or r.type = :type)")
-    Page<GroupRecurringEntry> page(UUID groupId, EntryType type, Pageable pageable);
+            + "where r.groupId = :groupId and (:type is null or r.type = :type) "
+            + "and (:bankCode is null or r.bank.code = :bankCode) and (:bankName is null or lower(r.bank.name) = :bankName) "
+            + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null)",
+            countQuery = "select count(r) from GroupRecurringEntry r where r.groupId = :groupId and (:type is null or r.type = :type) "
+                    + "and (:bankCode is null or r.bank.code = :bankCode) and (:bankName is null or lower(r.bank.name) = :bankName) "
+                    + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null)")
+    Page<GroupRecurringEntry> page(UUID groupId, EntryType type, String bankCode, String bankName, BankKind bankKind,
+                                   boolean noBank, Pageable pageable);
 
     Optional<GroupRecurringEntry> findByIdAndGroupId(UUID id, UUID groupId);
 
@@ -34,9 +41,16 @@ public interface GroupRecurringEntryRepository extends JpaRepository<GroupRecurr
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("update GroupRecurringEntry r set r.description = :description, r.type = :type, r.categoryId = :categoryId, "
             + "r.amount = :amount, r.dayOfMonth = :dayOfMonth, r.startMonth = :startMonth, r.endMonth = :endMonth, "
-            + "r.active = :active, r.notes = :notes where r.sourceId = :sourceId")
+            + "r.active = :active, r.notes = :notes, r.bank.code = :bankCode, r.bank.name = :bankName, "
+            + "r.bank.kind = :bankKind where r.sourceId = :sourceId")
     int sync(UUID sourceId, String description, EntryType type, UUID categoryId, BigDecimal amount, Integer dayOfMonth,
-             YearMonth startMonth, YearMonth endMonth, boolean active, String notes);
+             YearMonth startMonth, YearMonth endMonth, boolean active, String notes, String bankCode, String bankName,
+             BankKind bankKind);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("update GroupRecurringEntry r set r.bank.code = :bankCode, r.bank.name = :bankName, r.bank.kind = :bankKind "
+            + "where r.sourceId in :sourceIds")
+    int syncBank(Collection<UUID> sourceIds, String bankCode, String bankName, BankKind bankKind);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from GroupRecurringEntry r where r.groupId = :groupId and r.userId = :userId")

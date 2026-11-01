@@ -115,6 +115,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Tarefas: `Priority`, `Recurrence.Unit/MonthMode`, `TaskOccurrence.Status`, `TaskDtos.Sort/Scope` ↔ `features/tasks/types.ts`
   - Frequência: `AttendanceDtos.DayStatus`, `CommitmentMark.Mark` ↔ `features/attendance/types.ts`
   - Notas: `NoteDtos.Status`, `NoteActivity.Action` ↔ `features/notes/types.ts`
+  - Bancos: `finance/bank/Bank` (códigos e nomes), `BankKind` ↔ `src/lib/banks.ts` (+ logo em `src/assets/banks/<code>.svg`)
   - Financiamentos: `FinancingKind` (e prazos padrão/máximo), `ItemCondition`, `CorrectionIndex`,
     `FinancingMath.AmortizationSystem/ExtraMode`, `FinancingDtos.Scenario/CostWhen`, `FinancingCost.Frequency` ↔
     `features/financing/types.ts` (+ `MONTHS_LIMIT` em `labels.ts`)
@@ -241,15 +242,25 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   pessoal = dono 100%; grupo = soma 100 (igual ao criar). O fixo da parte (`ScheduledFixed`, fachada do financeiro)
   tem o valor do 1º mês e um ajuste em cada mês diferente; é refeito a cada mudança do financiamento. Aviso
   (`reminderDays`) às 8h pelo `FinancingReminderJob` (`FINANCING_DUE`, `FINANCING_COST_DUE`).
-- **Importação por IA**: `POST /api/finance/import` grava ocasionais + ajustes de fixos (tudo ou nada). O modelo de
-  resposta é `lifepedia/transactions@3`: `descriptionOficial` (como no documento, só leitura, gravada em
+- **Bancos**: ocasionais, fixos e os itens de grupo têm `bank` (`{code, name, kind}`, `BankRef`, embutido na entidade;
+  nulo = sem banco). `code` é do catálogo `Bank` ou `OTHER` (só aí `name`, digitado); `kind` `ACCOUNT`/`CARD` (padrão
+  conta). Tudo que vem de fora passa por `BankRef.clean`. Filtro nas listas e no `/summary`: `bank` (chave da linha:
+  código, `OTHER:<nome em minúsculas>` ou `NONE`) + `bankKind`. `GET /api/finance/summary/banks?month&months=6` e
+  `/api/groups/{id}/finance/summary/banks` devolvem uma linha por banco (mês + `history`), sempre calculadas na API
+  (`BankReport`, despesas sem investimento, sem banco por último). `GET /api/finance/banks/last` (banco do item com banco
+  criado por último) e `PUT /api/finance/banks/assign {transactionIds, recurringIds, bank}` (lote, tudo ou nada; `bank`
+  nulo tira; sincronizados acompanham). Financiamento guarda `bank` (nome) + `bankCode`; o fixo ligado herda o banco como
+  conta (nome digitado antes do catálogo vira `OTHER`). O banco **não** entra no arquivo da conta.
+- **Importação por IA**: `POST /api/finance/import` grava ocasionais + ajustes de fixos + banco de fixos sem banco
+  (`fixedBanks`, nunca troca banco já definido; tudo ou nada). O modelo de resposta é `lifepedia/transactions@4`: `descriptionOficial` (como no documento, só leitura, gravada em
   `original_description` e nunca alterada depois) e `descriptionNormal` (nome padronizado, editável, vira
-  `description`); campo `source` (`statement` | `card`, origem do item) e
+  `description`); campos `source` (`statement` | `card`, origem do item: fatura vira cartão, extrato vira conta) e `bank`
+  (nome do catálogo ou outro; fora da lista vira `OTHER`, com aviso) e
   opcionais `fixed` = nome do fixo e `invoiceMonth` = mês de vencimento da fatura (item `card`; vira o `month` do
   ocasional) (prompt único para extrato e fatura em
-  `lifepedia-web/src/features/finance/import/prompt.ts`, parser em `import/parse.ts`). Mudou o formato? Crie `@4`
-  e mantenha o parser aceitando os anteriores (`@1` usa só `description`, `@2` não tem `source`/`invoiceMonth`; usuários podem
-  ter prompts antigos salvos).
+  `lifepedia-web/src/features/finance/import/prompt.ts`, parser em `import/parse.ts`). Mudou o formato? Crie `@5`
+  e mantenha o parser aceitando os anteriores (`@1` usa só `description`, `@2` não tem `source`/`invoiceMonth`, `@3` não tem
+  `bank`; usuários podem ter prompts antigos salvos).
 
 ## Checklist: novo módulo
 

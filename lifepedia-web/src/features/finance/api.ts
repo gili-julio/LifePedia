@@ -1,8 +1,11 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import type { Page } from '@/components/data-table/list-state'
 import { api } from '@/lib/api'
+import type { BankRef } from '@/lib/banks'
 import type { YearMonth } from '@/lib/format'
 import type {
+  BankFilter,
+  BankOverview,
   Category,
   CategoryItem,
   CategoryRequest,
@@ -24,15 +27,17 @@ export type PageParams = { page: number; size: number; sort: string }
 /** Chaves sob 'finance': toda mutação invalida o módulo inteiro. */
 const keys = {
   all: ['finance'] as const,
-  summary: (month: YearMonth) => ['finance', 'summary', month] as const,
+  summary: (month: YearMonth, filter: BankFilter) => ['finance', 'summary', month, filter] as const,
+  banks: (month: YearMonth, months: number) => ['finance', 'banks', month, months] as const,
+  lastBank: ['finance', 'banks', 'last'] as const,
   history: (until: YearMonth, months: number) => ['finance', 'history', until, months] as const,
   categoryItems: (month: YearMonth, categoryId: string) => ['finance', 'summary', month, 'category', categoryId] as const,
   categories: ['finance', 'categories'] as const,
   recurring: ['finance', 'recurring'] as const,
-  recurringPage: (type: EntryType, params: PageParams) => ['finance', 'recurring', 'page', type, params] as const,
+  recurringPage: (type: EntryType, params: PageParams, filter: BankFilter) => ['finance', 'recurring', 'page', type, params, filter] as const,
   transactions: (month: YearMonth) => ['finance', 'transactions', month] as const,
-  transactionsPage: (month: YearMonth, type: EntryType | undefined, params: PageParams) =>
-    ['finance', 'transactions', 'page', month, type, params] as const,
+  transactionsPage: (month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter) =>
+    ['finance', 'transactions', 'page', month, type, params, filter] as const,
   transactionsSearch: (filter: TransactionSearch) => ['finance', 'transactions', 'search', filter] as const,
   descriptions: ['finance', 'transactions', 'descriptions'] as const,
 }
@@ -40,11 +45,29 @@ const keys = {
 /** Filtro de `/transactions/all` (descrição sem diferenciar maiúsculas). */
 export type TransactionSearch = { from: YearMonth; to?: YearMonth; type?: EntryType; description?: string }
 
-export function useSummary(month: YearMonth) {
+export function useSummary(month: YearMonth, filter: BankFilter = {}) {
   return useQuery({
-    queryKey: keys.summary(month),
-    queryFn: () => api<MonthlySummary>('/api/finance/summary', { query: { month } }),
+    queryKey: keys.summary(month, filter),
+    queryFn: () => api<MonthlySummary>('/api/finance/summary', { query: { month, ...filter } }),
     placeholderData: keepPreviousData,
+  })
+}
+
+/** Gastos por banco no mês e nos `months` meses até ele. */
+export function useBankOverview(month: YearMonth, months = 6) {
+  return useQuery({
+    queryKey: keys.banks(month, months),
+    queryFn: () => api<BankOverview>('/api/finance/summary/banks', { query: { month, months } }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/** Último banco usado, para o formulário já abrir com ele. */
+export function useLastBank() {
+  return useQuery({
+    queryKey: keys.lastBank,
+    queryFn: () => api<{ bank: BankRef | null }>('/api/finance/banks/last'),
+    select: (data) => data.bank,
   })
 }
 
@@ -81,10 +104,10 @@ export function useRecurringEntries() {
   })
 }
 
-export function useRecurringPage(type: EntryType, params: PageParams) {
+export function useRecurringPage(type: EntryType, params: PageParams, filter: BankFilter = {}) {
   return useQuery({
-    queryKey: keys.recurringPage(type, params),
-    queryFn: () => api<Page<RecurringEntry>>('/api/finance/recurring', { query: { type, ...params } }),
+    queryKey: keys.recurringPage(type, params, filter),
+    queryFn: () => api<Page<RecurringEntry>>('/api/finance/recurring', { query: { type, ...params, ...filter } }),
     placeholderData: keepPreviousData,
   })
 }
@@ -97,10 +120,10 @@ export function fetchTransactions(queryClient: QueryClient, month: YearMonth) {
   })
 }
 
-export function useTransactionsPage(month: YearMonth, type: EntryType | undefined, params: PageParams) {
+export function useTransactionsPage(month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter = {}) {
   return useQuery({
-    queryKey: keys.transactionsPage(month, type, params),
-    queryFn: () => api<Page<Transaction>>('/api/finance/transactions', { query: { month, type, ...params } }),
+    queryKey: keys.transactionsPage(month, type, params, filter),
+    queryFn: () => api<Page<Transaction>>('/api/finance/transactions', { query: { month, type, ...params, ...filter } }),
     placeholderData: keepPreviousData,
   })
 }
@@ -179,6 +202,13 @@ export function useDeleteCategory() {
 export function useImport() {
   return useFinanceMutation((request: ImportRequest) =>
     api<ImportResponse>('/api/finance/import', { method: 'POST', body: request }),
+  )
+}
+
+/** Define (ou tira, com `bank` nulo) o banco de vários itens pessoais. */
+export function useAssignBank() {
+  return useFinanceMutation((data: { transactionIds?: string[]; recurringIds?: string[]; bank: BankRef | null }) =>
+    api<{ updated: number }>('/api/finance/banks/assign', { method: 'PUT', body: data }),
   )
 }
 

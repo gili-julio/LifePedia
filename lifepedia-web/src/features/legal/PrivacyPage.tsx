@@ -32,8 +32,9 @@ export function PrivacyPage() {
         </List>
         <p><strong>O que você registra no app</strong></p>
         <List>
-          <li>Finanças: ganhos e despesas fixas, lançamentos, categorias, ajustes do mês, investimentos e os dados que
-            você importa de extratos e faturas (inclusive a descrição original de cada lançamento).</li>
+          <li>Finanças: ganhos e despesas fixas, lançamentos, categorias, banco de cada item (conta ou cartão), ajustes do
+            mês, investimentos e os dados que você importa de extratos e faturas (inclusive a descrição original de cada
+            lançamento).</li>
           <li>Tarefas, hábitos, agenda (inclusive as horas de sono que você informa), listas, etiquetas, lembretes e comentários.</li>
           <li>Frequência: compromissos que você cadastra (dias, horário, período, limite de faltas) e as presenças e faltas marcadas.</li>
           <li>Notas: o texto, as fotos que você coloca nelas, pastas, etiquetas, modelos e o histórico de quem criou,

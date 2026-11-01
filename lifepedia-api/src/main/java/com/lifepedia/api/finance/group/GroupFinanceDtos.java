@@ -1,6 +1,7 @@
 package com.lifepedia.api.finance.group;
 
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.summary.SummaryDtos.Totals;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import jakarta.validation.constraints.NotNull;
@@ -50,13 +51,13 @@ public final class GroupFinanceDtos {
     /** @param mine levado pelo usuário atual; @param synced espelho do item pessoal (edição só no pessoal) */
     public record GroupTransactionResponse(UUID id, String description, EntryType type, BigDecimal amount,
                                            LocalDate date, YearMonth month, String notes, CategoryRef category,
-                                           UserSummary member, boolean synced, boolean mine) {
+                                           BankRef bank, UserSummary member, boolean synced, boolean mine) {
     }
 
     public record GroupRecurringResponse(UUID id, String description, EntryType type, BigDecimal amount,
                                          Integer dayOfMonth, YearMonth startMonth, YearMonth endMonth, boolean active,
-                                         String notes, CategoryRef category, UserSummary member, boolean synced,
-                                         boolean mine) {
+                                         String notes, CategoryRef category, BankRef bank, UserSummary member,
+                                         boolean synced, boolean mine) {
     }
 
     /** Categorias somadas pelo nome (cada membro tem as suas); {@code categoryId} é a chave do nome. */

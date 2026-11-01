@@ -1,9 +1,10 @@
+import { BANKS } from '@/lib/banks'
 import { addMonths, currentYearMonth, formatCurrency, todayIso } from '@/lib/format'
 import { sortCategories } from '../categories'
 import type { Category, RecurringEntry } from '../types'
 
 /** Versão do formato; ao mudar, o parser deve continuar aceitando as anteriores. */
-export const IMPORT_FORMAT = 'lifepedia/transactions@3'
+export const IMPORT_FORMAT = 'lifepedia/transactions@4'
 
 /** De onde veio o item: extrato bancário ou fatura do cartão. */
 export type ImportSource = 'statement' | 'card'
@@ -41,6 +42,7 @@ export function buildImportPrompt(
   const rules = [
     'Um item para cada lançamento. Não agrupe, não some e não invente lançamentos.',
     '"source": de onde o item veio — "statement" para extrato bancário (conta corrente, poupança, conta digital) e "card" para fatura de cartão de crédito. Identifique pelo documento; com vários documentos anexados, cada item leva o do seu.',
+    `"bank": banco ou instituição do documento de onde o item veio, escrito EXATAMENTE como um destes nomes: ${BANKS.map((b) => b.label).join(', ')}. Se for outro banco, escreva o nome curto dele. Com vários documentos anexados, cada item leva o do seu. Não inclua agência nem número de conta.`,
     '"category": use EXATAMENTE um dos nomes das listas acima (mesma grafia), da lista do tipo correspondente. Se nenhuma servir, use "Outros".',
     '"type": "EXPENSE" para saídas (compras, contas, tarifas, juros, IOF). "INCOME" para entradas (salário, estornos, reembolsos, cashback, créditos).',
     '"amount": número positivo, com ponto decimal e sem símbolo de moeda (ex.: 1234.56).',
@@ -74,7 +76,7 @@ Se o item for do mesmo estabelecimento ou pessoa de um desses nomes, use EXATAME
 
   const fixedExample = exampleFixed
     ? `,
-    { "source": "statement", "date": "${exampleMonth}-${String(exampleFixed.dayOfMonth ?? 10).padStart(2, '0')}", "descriptionOficial": "PIX ENVIADO EXEMPLO", "descriptionNormal": "Exemplo de fixo", "category": "${nameOf.get(exampleFixed.categoryId) ?? 'Outros'}", "type": "${exampleFixed.type}", "amount": ${exampleFixed.amount}, "fixed": "${exampleFixed.description}" }`
+    { "source": "statement", "bank": "Itaú", "date": "${exampleMonth}-${String(exampleFixed.dayOfMonth ?? 10).padStart(2, '0')}", "descriptionOficial": "PIX ENVIADO EXEMPLO", "descriptionNormal": "Exemplo de fixo", "category": "${nameOf.get(exampleFixed.categoryId) ?? 'Outros'}", "type": "${exampleFixed.type}", "amount": ${exampleFixed.amount}, "fixed": "${exampleFixed.description}" }`
     : ''
 
   return `Você é um assistente que organiza finanças pessoais. Em anexo estão um ou mais documentos: extratos bancários e/ou faturas de cartão de crédito, de um ou mais meses. Extraia TODOS os lançamentos e classifique cada um em uma das minhas categorias.
@@ -95,7 +97,7 @@ Responda SOMENTE com um bloco de código JSON válido, sem nenhum texto antes ou
 {
   "format": "${IMPORT_FORMAT}",
   "items": [
-    { "source": "card", "date": "${exampleMonth}-05", "descriptionOficial": "PAG*SUPERM EXEMPLO NATAL", "descriptionNormal": "Supermercado Exemplo", "category": "${exampleExpense}", "type": "EXPENSE", "amount": 245.9, "invoiceMonth": "${currentYearMonth()}" }${fixedExample}
+    { "source": "card", "bank": "Nubank", "date": "${exampleMonth}-05", "descriptionOficial": "PAG*SUPERM EXEMPLO NATAL", "descriptionNormal": "Supermercado Exemplo", "category": "${exampleExpense}", "type": "EXPENSE", "amount": 245.9, "invoiceMonth": "${currentYearMonth()}" }${fixedExample}
   ]
 }
 \`\`\``
