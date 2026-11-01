@@ -2,8 +2,11 @@ package com.lifepedia.api.notification.push;
 
 import com.lifepedia.api.notification.NotificationType;
 
+import java.math.BigDecimal;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.text.NumberFormat;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -20,7 +23,7 @@ public final class PushTexts {
         String title = group == null ? APP : group;
         String actor = data.getOrDefault("actorName", "");
         String task = data.getOrDefault("taskTitle", "");
-        String tag = type.name() + ":" + data.getOrDefault("taskId", data.getOrDefault("requestId", ""));
+        String tag = type.name() + ":" + data.getOrDefault("taskId", data.getOrDefault("requestId", data.getOrDefault("financingId", "")));
         return switch (type) {
             case TASK_ASSIGNED -> new PushMessage(title, actor + " te deixou responsável por " + task + onDay(data),
                     taskLink(data, groupId), tag, false);
@@ -39,6 +42,11 @@ public final class PushTexts {
                     groupId == null ? "/grupos" : "/grupos/" + groupId, tag, false);
             case FRIEND_REQUEST -> new PushMessage(APP, actor + " quer ser seu amigo", "/amigos?aba=pedidos", tag, false);
             case FRIEND_ACCEPTED -> new PushMessage(APP, actor + " aceitou seu pedido de amizade", "/amigos", tag, false);
+            case FINANCING_DUE -> new PushMessage(title, "Parcela de " + data.getOrDefault("financingName", "")
+                    + " vence" + onDay(data) + ": " + money(data), financingLink(data, groupId), tag, false);
+            case FINANCING_COST_DUE -> new PushMessage(title, data.getOrDefault("costName", "") + " de "
+                    + data.getOrDefault("financingName", "") + " vence" + onDay(data) + ": " + money(data),
+                    financingLink(data, groupId), tag + ":" + data.getOrDefault("costName", ""), false);
         };
     }
 
@@ -51,6 +59,20 @@ public final class PushTexts {
     private static String taskLink(Map<String, String> data, UUID groupId) {
         String id = URLEncoder.encode(data.getOrDefault("taskId", ""), StandardCharsets.UTF_8);
         return groupId == null ? "/tarefas?tarefa=" + id : "/grupos/" + groupId + "?aba=tarefas&tarefa=" + id;
+    }
+
+    private static String financingLink(Map<String, String> data, UUID groupId) {
+        String id = URLEncoder.encode(data.getOrDefault("financingId", ""), StandardCharsets.UTF_8);
+        return groupId == null ? "/financiamentos/" + id : "/grupos/" + groupId + "/financiamentos/" + id;
+    }
+
+    private static String money(Map<String, String> data) {
+        try {
+            return NumberFormat.getCurrencyInstance(Locale.of("pt", "BR")).format(new BigDecimal(data.getOrDefault("amount", "0")))
+                    .replace('\u00a0', ' ');
+        } catch (NumberFormatException e) {
+            return "";
+        }
     }
 
     private static String onDay(Map<String, String> data) {

@@ -21,5 +21,9 @@ public enum NotificationType {
     /** data: actorName, actorUsername, requestId */
     FRIEND_REQUEST,
     /** Pedido aceito. data: actorName, actorUsername */
-    FRIEND_ACCEPTED
+    FRIEND_ACCEPTED,
+    /** Parcela de financiamento perto do vencimento. data: financingId, financingName, amount (parte da pessoa), date, groupName (grupo) */
+    FINANCING_DUE,
+    /** Gasto do bem perto do vencimento. data: financingId, financingName, costName, amount, date, groupName (grupo) */
+    FINANCING_COST_DUE
 }

@@ -115,6 +115,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Tarefas: `Priority`, `Recurrence.Unit/MonthMode`, `TaskOccurrence.Status`, `TaskDtos.Sort/Scope` ↔ `features/tasks/types.ts`
   - Frequência: `AttendanceDtos.DayStatus`, `CommitmentMark.Mark` ↔ `features/attendance/types.ts`
   - Notas: `NoteDtos.Status`, `NoteActivity.Action` ↔ `features/notes/types.ts`
+  - Financiamentos: `FinancingKind` (e prazos padrão/máximo), `ItemCondition`, `CorrectionIndex`,
+    `FinancingMath.AmortizationSystem/ExtraMode`, `FinancingDtos.Scenario/CostWhen`, `FinancingCost.Frequency` ↔
+    `features/financing/types.ts` (+ `MONTHS_LIMIT` em `labels.ts`)
   - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
@@ -174,11 +177,11 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@4`, anexo; importa `@1`, `@2`, `@3` e `@4`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@5`, anexo; importa `@1` a `@5`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
-  `profile`, `groups`, `commitments` (frequência, desde o `@3`) e `notes` (desde o `@4`) são só registro. Mudou o formato? Crie `@5` e mantenha a importação dos anteriores (usuários guardam
+  `profile`, `groups`, `commitments` (frequência, desde o `@3`), `notes` (desde o `@4`), `financings` e `financingSimulations` (desde o `@5`) são só registro. Mudou o formato? Crie `@6` e mantenha a importação dos anteriores (usuários guardam
   arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -223,6 +226,21 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   e `GET /link-options`. Modelo (`template`) só pessoal; compromisso só em nota pessoal; tarefa do mesmo dono (pela
   fachada `TaskLinks`). Lixeira: só criador ou admin; `NoteTrashJob` apaga de vez depois de 30 dias. Foto fora do
   texto há mais de 1 h é apagada ao salvar.
+- **Financiamentos** (`/api/financings` e `/api/groups/{id}/financings`, mesmas rotas): dono é o usuário ou o grupo
+  (`FinancingOwner`). **Todo cálculo é da API** (`FinancingMath`: SAC/Price, seguro sobre o saldo, tarifa fixa,
+  correção por índice, amortizações extras e CET); o front só mostra. `POST /simulate` (nada é salvo; sem
+  `customRate` usa os quartis das taxas dos bancos: `LOW`/`MEDIAN`/`HIGH`; `costs` = valor editado de cada gasto padrão
+  pela chave; `scenario`/`system` escolhem a tabela devolvida), `GET /rates?kind=` (médias para preencher o contrato),
+  `GET/POST /simulations` e `DELETE /simulations/{id}` (guarda só o pedido), `GET` (lista do dono), `GET /overview`
+  (pessoal: todos de que a pessoa participa, inclusive de grupos), `GET/POST/PUT/DELETE /{id}`, `POST
+  /{id}/extras/preview` e `/{id}/extras`, `DELETE /{id}/extras/{extraId}`, `POST/PUT/DELETE /{id}/costs[/{costId}]` e
+  `PUT /{id}/my-fixed {enabled, categoryId, shareToGroup}`. Parcelas calculadas na leitura (paga = vencimento antes de
+  hoje). Taxas e índices vêm do Banco Central (`BcbClient`: Olinda `ConsultaUnificada` por intervalo de datas, SGS
+  7811/433/7456), guardados em `financing_rates`/`financing_index_values` pelo `FinancingRateJob` (6 h) ou na hora se
+  vazio (no máximo 1 tentativa por hora); sem dados, taxa padrão de `Modality` e aviso. Partes (`financing_members`):
+  pessoal = dono 100%; grupo = soma 100 (igual ao criar). O fixo da parte (`ScheduledFixed`, fachada do financeiro)
+  tem o valor do 1º mês e um ajuste em cada mês diferente; é refeito a cada mudança do financiamento. Aviso
+  (`reminderDays`) às 8h pelo `FinancingReminderJob` (`FINANCING_DUE`, `FINANCING_COST_DUE`).
 - **Importação por IA**: `POST /api/finance/import` grava ocasionais + ajustes de fixos (tudo ou nada). O modelo de
   resposta é `lifepedia/transactions@3`: `descriptionOficial` (como no documento, só leitura, gravada em
   `original_description` e nunca alterada depois) e `descriptionNormal` (nome padronizado, editável, vira

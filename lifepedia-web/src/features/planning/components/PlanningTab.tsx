@@ -3,6 +3,7 @@ import {
   ChevronDownIcon,
   CircleCheckBigIcon,
   FlaskConicalIcon,
+  LandmarkIcon,
   PencilIcon,
   PlusIcon,
   SlidersHorizontalIcon,
@@ -11,6 +12,7 @@ import {
   XIcon,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
 import { ActionSheet } from '@/components/ActionSheet'
 import { SortableItems } from '@/components/SortableItems'
@@ -61,6 +63,7 @@ const toNumber = (raw: string) => {
 
 /** Planejamento do grupo: itens com prazo, simulação mês a mês, cenários e "e se". */
 export function PlanningTab({ groupId }: { groupId: string }) {
+  const navigate = useNavigate()
   const [viewing, setViewing] = useState<string | null>(null)
   const [extraIncome, setExtraIncome] = useState('')
   const [extraExpense, setExtraExpense] = useState('')
@@ -132,6 +135,11 @@ export function PlanningTab({ groupId }: { groupId: string }) {
         icon: CircleCheckBigIcon,
         onSelect: () => setDialog({ kind: 'acquire', item }),
       },
+      ...(item.kind === 'PURCHASE' ? [{
+        label: 'Simular financiamento',
+        icon: LandmarkIcon,
+        onSelect: () => navigate(`/financiamentos/simular?${new URLSearchParams({ grupo: groupId, preco: String(item.amount), nome: item.name })}`),
+      }] : []),
       { label: 'Excluir', icon: Trash2Icon, destructive: true, onSelect: () => setDialog({ kind: 'delete', item }) },
     ]
   }

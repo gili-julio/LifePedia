@@ -57,6 +57,18 @@ export const router = createBrowserRouter([
             }),
           },
           {
+            path: '/financiamentos',
+            lazy: async () => ({ Component: (await import('@/features/financing/pages/FinancingsPage')).FinancingsPage }),
+          },
+          {
+            path: '/financiamentos/simular',
+            lazy: async () => ({ Component: (await import('@/features/financing/pages/SimulatorPage')).SimulatorPage }),
+          },
+          {
+            path: '/financiamentos/:financingId',
+            lazy: async () => ({ Component: (await import('@/features/financing/pages/FinancingPage')).FinancingPage }),
+          },
+          {
             path: '/tarefas',
             lazy: async () => ({ Component: (await import('@/features/tasks/pages/TasksPage')).TasksPage }),
           },
@@ -91,6 +103,10 @@ export const router = createBrowserRouter([
           {
             path: '/grupos/:groupId/notas/:noteId',
             lazy: async () => ({ Component: (await import('@/features/notes/pages/NotePage')).NotePage }),
+          },
+          {
+            path: '/grupos/:groupId/financiamentos/:financingId',
+            lazy: async () => ({ Component: (await import('@/features/financing/pages/FinancingPage')).FinancingPage }),
           },
           {
             path: '/amigos',

@@ -2,6 +2,7 @@
 export type ChangeModule =
   | 'Geral'
   | 'Finanças'
+  | 'Financiamentos'
   | 'Tarefas'
   | 'Agenda'
   | 'Frequência'
@@ -26,6 +27,23 @@ export type Change = {
 
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
+  {
+    id: 'financiamentos',
+    date: '2026-10-30',
+    title: 'Financiamentos: simule antes de comprar e acompanhe os que estão em andamento',
+    modules: ['Financiamentos', 'Finanças', 'Grupos', 'Notificações'],
+    details: [
+      'Nova área Financiamentos em Finanças: escolha casa, apartamento, carro, moto ou outro bem, novo ou usado, e informe preço, entrada e prazo.',
+      'Sem precisar saber os juros: mostramos a parcela com taxas boas, médias e altas, tiradas das médias que os bancos informam ao Banco Central, e a lista de bancos do mais barato ao mais caro.',
+      'Compare SAC e Price, veja vários prazos lado a lado, o custo efetivo total e se a parcela cabe na sua renda.',
+      'Gastos comuns já entram na conta (ITBI, cartório, seguros, IOF, tarifas, IPVA, seguro e revisões) e você pode ajustar cada valor; no imóvel dá para usar o FGTS.',
+      'Salve simulações para comparar depois ou transforme uma em financiamento.',
+      'No financiamento em andamento: saldo devedor, quanto já foi quitado, próxima parcela, quanto custa quitar hoje e a tabela de parcelas para baixar.',
+      'Simule e registre amortizações extras para reduzir o prazo ou a parcela, e cadastre os gastos do bem com aviso antes de vencer.',
+      'Ligue as parcelas às suas finanças: viram uma despesa fixa com o valor certo de cada mês.',
+      'Nos grupos, dividam o financiamento com a parte de cada um; no planejamento, um item pode ir direto para o simulador.',
+    ],
+  },
   {
     id: 'notas',
     date: '2026-10-29',

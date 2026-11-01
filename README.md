@@ -20,6 +20,7 @@ compartilham usuário, autenticação, design e padrões.
 | **Grupos** | ✅ v1.3 | Grupos com nome e **imagem** (recorte antes de salvar), convites diretos (aceitar/recusar) ou por **link**, admins e membros, **chat** em tempo real (responder, editar, apagar, não lidas na sidebar), **atalhos na sidebar** (até 3 fixados ou com atividade recente) e **planejamento** (compras e investimentos com prazo, simulação, cenários e "e se") |
 | **Amigos** | ✅ v1.0 | Pedidos de amizade por nome ou @username (aceitar/recusar/cancelar), perfil do amigo e **conquistas** com níveis (tarefas, hábitos, amigos, grupos, lançamentos) |
 | **Financeiro** | ✅ v1.3 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **investimentos** (fora das despesas, somam na reserva do grupo), **adiantar/adiar parcelas**, **importação de extrato/fatura via agente de IA** e **finanças em grupo** |
+| **Financiamentos** | ✅ v1.0 | **Simulador** sem pedir juros (casa, apartamento, carro, moto ou outro bem, novo ou usado): cenários com as **taxas médias dos bancos** do Banco Central, **ranking por banco**, **SAC x Price**, prazos lado a lado, **gastos padrão** editáveis (ITBI, cartório, seguros, IOF, tarifas, IPVA...), **CET**, **FGTS**, **cabe na renda**, gráfico e tabela de parcelas (CSV); **simulações salvas**; **financiamentos em andamento** com saldo, % quitado, **quitar hoje**, **amortização extra** (prévia e registro), **correção por índice** (TR/IPCA/INCC), **gastos do bem** com aviso, **parcelas nos fixos** (valor de cada mês), **financiamento do grupo** com a parte de cada um, atalho no **planejamento** e card no **Início** |
 | **Tarefas** | ✅ v1.1 | Tarefas pessoais e **em grupo** para hoje, outros dias ou sem data, **atrasadas**, **repetição** (a cada N dias/semanas/meses/anos, dias da semana, dia do mês, a partir da conclusão), prioridade, horário e duração, **subtarefas**, **listas** e **etiquetas**; **agenda** em grade de horários (dia/semana, pessoal e no grupo); no grupo, **vários responsáveis** ou **todos**, "basta um" ou "cada um conclui a sua", **rodízio**, **comentários** e avisos; **levar tarefa pessoal para um grupo**; **semana** (arrastar muda o dia), **hábitos** (sequência e % do mês), **lembretes** e **ligação com fixos do financeiro** |
 | **Notas** | ✅ v1.0 | Anotações em **markdown** com editor visual (barra, menu "/", checklist, tabela, código com cores, fotos), modo **markdown** e **lado a lado**, salvar automático, **pastas**, **etiquetas**, cor/ícone, **fixar**, **arquivar**, **lixeira** (30 dias), **modelos**, links `[[Nome]]` entre notas, ligação com **tarefa** ou **compromisso**, **notas do grupo** com atividade, baixar `.md` e card no **Início** |
 | **Frequência** | ✅ v1.0 | Compromissos fixos (ex.: matérias) com dias da semana, horário, período e **limite de faltas**; marcar presença, falta ou sem aula em cada dia; **tarefa ligada** concluída conta presença; aparece na **agenda** e no **Início**; **importar do SIGAA** (UFRN) colando a página de frequência |
@@ -100,10 +101,10 @@ compartilham usuário, autenticação, design e padrões.
   novidades mais recentes (título, áreas afetadas em badges, "Novo" por 7 dias; tocar abre o detalhe em linguagem
   simples) e *Ver todas* (`/novidades`).
 - **Meus dados** (em *Meu perfil*):
-  - **Exportar (.json)**: arquivo `lifepedia/account@4` com perfil, categorias, fixos (com os valores de cada mês),
+  - **Exportar (.json)**: arquivo `lifepedia/account@5` com perfil, categorias, fixos (com os valores de cada mês),
     lançamentos e **tarefas pessoais** (com listas, etiquetas e o que foi feito em cada ocorrência) — é o que dá para
-    importar; arquivos `@1`, `@2` e `@3` antigos continuam aceitos e o `@1` não mexe nas tarefas — e, só como registro, os seus itens em cada grupo (lançamentos, fixos,
-    planejamento), a **frequência** (compromissos com as marcações) e as **notas** pessoais (com pasta e etiquetas). **Planilha (.xlsx)**: as mesmas informações em abas, para ver no Excel/Google Planilhas.
+    importar; arquivos `@1` a `@4` antigos continuam aceitos e o `@1` não mexe nas tarefas — e, só como registro, os seus itens em cada grupo (lançamentos, fixos,
+    planejamento), a **frequência** (compromissos com as marcações) as **notas** pessoais (com pasta e etiquetas) e os **financiamentos** e **simulações** pessoais. **Planilha (.xlsx)**: as mesmas informações em abas, para ver no Excel/Google Planilhas.
   - **Importar** (nesta ou em outra conta): mostra antes o que vai acontecer. *Somar* junta ao que já existe
     (categoria com mesmo tipo e nome é reaproveitada; lançamento/fixo igual não duplica). *Substituir* apaga os
     lançamentos e fixos pessoais antes (e as tarefas pessoais, se o arquivo tiver tarefas; pede confirmação); categorias sem uso saem, e itens **sincronizados** em grupos
@@ -263,6 +264,39 @@ compartilham usuário, autenticação, design e padrões.
   72 × 25% = 18 aulas ÷ 2 = 9 dias). Marca *Presente*, *Falta* (`N Falta(s)`) e, se quiser, *Sem aula* nos dias avisados
   nas notícias ("Não haverá aula...") e nos dias de aula que não aparecem no Mapa (feriados); "Não Registrada" fica
   pendente. Tudo aparece para conferir antes de salvar. Importar de novo na mesma matéria só atualiza as marcações.
+
+### Financiamentos - conceitos
+
+- **Simulador** (*Finanças → Financiamentos → Simular*, ou *Simular financiamento* num item de compra do
+  planejamento): tipo do bem, novo/usado, preço, entrada, FGTS (imóvel), mês da entrada (1ª parcela no mês seguinte),
+  prazo e renda (opcional). A taxa **não** é pedida: a API usa as taxas médias que cada banco informa ao Banco Central
+  (dados abertos, modalidade "Aquisição de veículos", "Financiamento imobiliário com taxas de mercado" ou "Aquisição de
+  outros bens", pessoa física) e monta três cenários pelos quartis da lista (**boa**, **média**, **alta**). Uma proposta
+  do banco entra em *Avançado* (% ao mês ou ao ano) como quarto cenário. Imóvel corrige o saldo pela **TR** (média dos
+  últimos 12 meses).
+- **Resultado**: SAC x Price (1ª e última parcela, total pago, juros, **CET** = taxa que iguala o valor recebido às
+  parcelas, com seguros e tarifas do banco), prazos lado a lado, bancos do mais barato ao mais caro com a parcela de
+  cada um, se a parcela cabe em 30% da renda e o preço máximo, gráfico juros x amortização por ano e a tabela de
+  parcelas (CSV). Avisos: entrada abaixo de 20% no imóvel, parcela acima de 30% da renda, sem dados do Banco Central.
+- **Gastos padrão** (estimativas, editáveis; 0 tira da conta): imóvel = ITBI 3%, registro 1%, avaliação, seguros MIP
+  (0,025% do saldo ao mês) e DFI (0,007% do valor), taxa de administração, IPTU e condomínio (apartamento); veículo =
+  IOF, tarifa de cadastro, gravame (financiados), emplacamento (0 km) ou transferência e vistoria (usado), IPVA,
+  seguro, licenciamento e revisões; outro bem = IOF e tarifa.
+- **Simulações salvas** (pessoais ou do grupo): guardam só o que foi preenchido; ao abrir, refazem com as taxas do dia.
+- **Financiamento em andamento**: dados do contrato (valor financiado, taxa, SAC/Price, prazo, 1ª parcela e dia,
+  seguro sobre o saldo, valores fixos da parcela, índice de correção, banco). Sem a taxa, botões com as médias dos
+  bancos. As parcelas são calculadas na hora: parcela paga = vencimento já passou. Mostra saldo devedor, % quitado,
+  próxima parcela, fim, juros pagos e a pagar e **quitar hoje** (saldo devedor; economia = parcelas que faltam menos o
+  saldo). Índice: meses já divulgados usam o valor real (SGS do Banco Central), os outros a média de 12 meses.
+- **Amortização extra**: prévia (prazo e parcela antes e depois, juros economizados) e registro; *reduzir o prazo*
+  mantém a parcela, *reduzir a parcela* mantém o prazo.
+- **Gastos do bem** (IPVA, seguro, revisão, IPTU, condomínio): mensais ou anuais (mês e dia). Com o **aviso** ligado
+  (no dia ou até 15 dias antes), cada participante recebe notificação da parcela (com a sua parte) e dos gastos, às 8h.
+- **Nas suas finanças**: liga a parcela (ou a sua parte) a uma despesa fixa pessoal com o valor de cada mês (ajustes
+  mensais), atualizada sozinha quando o financiamento muda; no grupo, pode ir sincronizada para os fixos do grupo.
+  Excluir o financiamento apaga esses fixos.
+- **Grupo** (aba *Financiamentos*): todos veem e editam; a parte de cada membro (%, soma 100, igual ao criar); excluir
+  só quem cadastrou ou admin. Quem sai do grupo deixa de ter parte.
 
 ### Notas - conceitos
 
@@ -454,6 +488,7 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Uploads | Só JPEG/PNG até 1 MB (o front já envia recortado em 512 px); a API confere o tipo pelos bytes e as dimensões antes de decodificar e **regrava** um JPEG novo (sem metadados do arquivo). Servido só a membros/convidados |
 | Prévia de links | A API busca a página do link (proteção contra **SSRF**): só http(s) nas portas 80/443, só **IPs públicos** (checado na conexão, sem brecha de DNS rebinding), sem proxy/cookies, redirecionamentos revalidados, 12 s e 3 MB no máximo, 20 buscas por usuário a cada 10 min (inclui a busca de produto parecido no Buscapé). A foto é baixada, validada e **regravada** pela API (o navegador nunca carrega imagem de fora). Links só abrem em http(s), em outra aba, sem `Referer` |
 | Notas | Nota pessoal só do dono e nota de grupo só dos membros (**404** para os outros); lixeira só de quem criou ou do admin (**403**). O conteúdo é markdown puro: o editor não aceita HTML solto, links só `http(s)`/`mailto` (outra aba, sem `Referer`) e imagem só se for foto enviada pela API para aquela nota (endereço de fora não carrega). Fotos validadas e regravadas em JPEG pela API e servidas só a quem pode ver a nota |
+| Financiamentos | Pessoal só do dono e do grupo só dos membros (**404** para os outros); excluir só quem cadastrou ou admin (**403**); partes só para membros do grupo. A busca de taxas e índices é feita pela API (`SafeHttpClient`) nos dados abertos do Banco Central, sem dado do usuário, e guardada no banco (atualiza a cada 6 h; sem resposta, usa taxa padrão e avisa) |
 | Busca de usuários | Convite de grupo (só admins) e adicionar amigo: mín. 2 caracteres, até 10 resultados, devolve apenas nome, @username e foto (nunca e-mail) |
 | Chat do grupo | Só membros leem, escrevem e recebem o stream (não membro → **404**); editar/apagar só a própria mensagem (403). O stream SSE é por usuário logado e só recebe mensagens de grupos de que ele é membro no envio. Texto puro (sem HTML), até 2.000 caracteres, 30 mensagens/min por pessoa |
 | Amigos | Perfil e conquistas de alguém só para quem é amigo (senão **404**); conquistas financeiras nunca aparecem para amigos (só contagem, nunca valores). Pedidos: 30/h por usuário, até 50 sem resposta; aceitar só quem recebeu |
@@ -475,6 +510,9 @@ Pontos em aberto / recomendações:
   do produto (tirado do link ou digitado) vai para a busca do Buscapé quando a loja não libera os dados.
 - **Preço de referência** é de um produto **parecido**, não necessariamente o mesmo (cor/versão podem mudar); a tela
   sempre avisa. Depende do formato da página de busca do Buscapé — se mudar, a referência só deixa de aparecer.
+- **Taxas dos financiamentos**: são médias informadas pelos bancos ao Banco Central (com atraso de semanas) e os
+  gastos padrão são estimativas; a tela avisa que a proposta real pode mudar. Depende do formato das APIs de dados
+  abertos do Banco Central (Olinda e SGS): se mudar, a simulação cai na taxa padrão e mostra o aviso.
 - **Textos legais**: escritos a partir do que o sistema faz hoje; não substituem revisão de um advogado. Mudou algo
   que trata dados (novo serviço externo, novo dado, retenção de logs)? Atualize a política e a versão.
 - **Logs do servidor** (nginx/Traefik): têm IP e páginas acessadas; configure a retenção no Coolify/Docker (a política

@@ -10,6 +10,8 @@ export type NotificationType =
   | 'TASK_REMINDER'
   | 'FRIEND_REQUEST'
   | 'FRIEND_ACCEPTED'
+  | 'FINANCING_DUE'
+  | 'FINANCING_COST_DUE'
 
 export type AppNotification = {
   id: string

@@ -136,13 +136,21 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   preferência de tela). Foto: `shrinkImage` (1600 px, JPEG até 1 MB) e `uploadNoteImage`. Estilo do conteúdo em
   `.note-content` (`index.css`). Modelos prontos em `templates.ts` (item de lista com texto: markdown não guarda item
   vazio). Outras telas só levam para a lista por URL (`/notas?tarefa=` / `?compromisso=`), sem importar o módulo.
+- **Financiamentos** (`features/financing`): chaves `['financing', 'me' | groupId, ...]` e `['financing', 'overview']`;
+  mutações invalidam o módulo e `['finance']` (o fixo ligado muda os fixos). Rotas por `financingBase(groupId)`, telas
+  por `financingUrl`/`simulatorUrl`. **Nenhum cálculo no front**: parcelas, cenários, CET, renda, saldo, quitação e
+  prévia da amortização vêm da API; o front só monta o pedido (`sim-form.ts`, campos como texto) e mostra. Simulação
+  refeita com o formulário (debounce de 400 ms sobre o pedido em JSON, `keepPreviousData`); gasto editado vai em
+  `costs` pela chave (0 tira da conta). Simulação salva abre o simulador com `state: {input, name}`. Planejamento e
+  Início só levam por URL ou leem `useFinancingOverview`. Dinheiro sempre por `useMoney` e `hideValues` nas telas.
+  Layout do simulador: 2 colunas só em `xl`; os resultados usam container queries (`@container`, `@2xl:`).
 - **Amigos** (`features/friends`): chaves `['friends', ...]`; mutações invalidam o módulo e as notificações.
   Conquistas: nível (nunca cai), meta, valor e `unlockedAt` sempre da API; o front só tem texto/ícone por código (`achievements.ts`, espelha
   `Achievement`). Perfil de não amigo → 404 (tela com volta para Amigos).
 - **Instante x dia**: `yyyy-MM-dd` → `formatDate` (texto, sem fuso); instante ISO (`createdAt`, `since`) →
   `formatInstantDate`/`formatRelative` (fuso do navegador). Nunca `slice(0, 10)` num instante (vira o dia em UTC).
 - **Início** (`features/home`, rota índice `/`): só lê hooks de outros módulos (`useAgenda`, `useHabits`, `useSummary`,
-  `useCommitments` + os textos/tom de `attendance/absences.ts`, `useNotes`);
+  `useCommitments` + os textos/tom de `attendance/absences.ts`, `useNotes`, `useFinancingOverview`);
   não some valores nem calcule sequência no front. **Mudanças do sistema**: lista em `home/changelog.ts` (mais nova
   primeiro; `modules` só com os valores de `ChangeModule`); toda entrega que o usuário percebe adiciona uma entrada,
   escrita para quem usa (sem nomes de tela internos, rota, API ou termos técnicos), sem travessão. "Novo" = até 7
@@ -150,7 +158,7 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos, frequência e notas do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@4`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência, notas e financiamentos do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@5`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.

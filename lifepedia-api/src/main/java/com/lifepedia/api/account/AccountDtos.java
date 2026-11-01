@@ -2,6 +2,8 @@ package com.lifepedia.api.account;
 
 import com.lifepedia.api.attendance.AttendanceDtos.CommitmentData;
 import com.lifepedia.api.finance.EntryType;
+import com.lifepedia.api.financing.FinancingDtos.FinancingData;
+import com.lifepedia.api.financing.FinancingDtos.SimulationData;
 import com.lifepedia.api.group.GroupMember;
 import com.lifepedia.api.note.NoteDtos.NoteData;
 import com.lifepedia.api.planning.PlanItem;
@@ -29,10 +31,10 @@ import java.util.UUID;
 public final class AccountDtos {
 
     /** Versão do arquivo exportado; mudou o formato? Crie {@code @4} e mantenha a importação das anteriores. */
-    public static final String FORMAT = "lifepedia/account@4";
+    public static final String FORMAT = "lifepedia/account@5";
     /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência; {@code @3}: sem notas). */
     public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2",
-            "lifepedia/account@3", FORMAT);
+            "lifepedia/account@3", "lifepedia/account@4", FORMAT);
 
     private AccountDtos() {
     }
@@ -59,7 +61,8 @@ public final class AccountDtos {
 
     /**
      * Arquivo de exportação. Categorias, fixos, listas e etiquetas são ligados pelo {@code ref}; {@code groups} e
-     * {@code commitments} (frequência, desde o {@code @3}) e {@code notes} (desde o {@code @4}) são só registro (não importam).
+     * {@code commitments} (frequência, desde o {@code @3}), {@code notes} (desde o {@code @4}), {@code financings} e
+     * {@code financingSimulations} (desde o {@code @5}) são só registro (não importam).
      *
      * @param profile ignorado na importação
      * @param tasks   tarefas pessoais (nulo no {@code @1}: a importação não mexe nas tarefas)
@@ -79,7 +82,9 @@ public final class AccountDtos {
             @Size(max = 500, message = "Etiquetas demais no arquivo.") List<@NotNull @Valid LabelData> taskTags,
             @Size(max = 50_000, message = "Tarefas demais no arquivo.") List<@NotNull @Valid TaskData> tasks,
             List<CommitmentData> commitments,
-            List<NoteData> notes) {
+            List<NoteData> notes,
+            List<FinancingData> financings,
+            List<SimulationData> financingSimulations) {
     }
 
     public record Profile(String name, String username, String email) {

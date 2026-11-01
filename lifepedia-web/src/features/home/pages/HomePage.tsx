@@ -8,6 +8,7 @@ import { absenceTone, remainingLabel, TONE_BAR, TONE_TEXT } from '@/features/att
 import { useCommitments } from '@/features/attendance/api'
 import { useAuth } from '@/features/auth/auth-context'
 import { useSummary } from '@/features/finance/api'
+import { useFinancingOverview } from '@/features/financing/api'
 import { useNotes } from '@/features/notes/api'
 import { useAgenda, useHabits } from '@/features/tasks/api'
 import { formatTime } from '@/features/tasks/dates'
@@ -29,7 +30,7 @@ function taskLink(item: TaskItem) {
   return item.groupId ? `/grupos/${item.groupId}?aba=tarefas&tarefa=${id}` : `/tarefas?tarefa=${id}`
 }
 
-/** Início: resumo de tarefas de hoje, hábitos, frequência, o mês no financeiro, notas e as mudanças recentes do sistema. */
+/** Início: resumo de tarefas de hoje, hábitos, frequência, o mês no financeiro, financiamentos, notas e as mudanças recentes do sistema. */
 export function HomePage() {
   const { user } = useAuth()
   const today = todayIso()
@@ -45,6 +46,7 @@ export function HomePage() {
         <HabitsCard />
         <AttendanceCard />
         <FinanceCard />
+        <FinancingsCard />
         <NotesCard />
       </div>
       <section aria-labelledby="recent-changes" className="space-y-4">
@@ -249,6 +251,49 @@ function FinanceCard() {
               </dd>
             </div>
           </dl>
+        )}
+    </HomeCard>
+  )
+}
+
+/** Financiamentos em andamento (pessoais e dos grupos): próxima parcela e quanto já foi quitado. */
+function FinancingsCard() {
+  const { formatCurrency } = useMoney()
+  const { data, isLoading, isError } = useFinancingOverview()
+  const active = (data ?? []).filter((f) => f.progress.next).slice(0, 3)
+  return (
+    <HomeCard title="Financiamentos" to="/financiamentos" description="Próximas parcelas">
+      {isError ? <p className="text-sm text-destructive">Não foi possível carregar os financiamentos.</p>
+        : isLoading || !data ? <Skeleton className="h-32 w-full" />
+        : active.length === 0 ? (
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-sm text-muted-foreground">Simule a compra de uma casa, carro ou moto com as taxas médias dos bancos.</p>
+            <Button asChild variant="outline" size="sm"><Link to="/financiamentos/simular">Simular financiamento</Link></Button>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {active.map((f) => {
+              const next = f.progress.next!
+              const amount = f.groupId && f.myShare !== null ? (next.amount * f.myShare) / 100 : next.amount
+              return (
+                <li key={f.id}>
+                  <Link to={f.groupId ? `/grupos/${f.groupId}/financiamentos/${f.id}` : `/financiamentos/${f.id}`}
+                    className="block space-y-1.5 rounded-lg text-sm hover:underline">
+                    <span className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate font-medium">{f.name}</span>
+                      <span className="shrink-0 tabular-nums">{formatCurrency(amount)}</span>
+                    </span>
+                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted" role="presentation">
+                        <span className="block h-full rounded-full bg-data" style={{ width: `${f.progress.percent}%` }} />
+                      </span>
+                      <span className="shrink-0">vence {formatDate(next.date)}</span>
+                    </span>
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
         )}
     </HomeCard>
   )

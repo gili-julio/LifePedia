@@ -85,7 +85,7 @@ e `sort=campo,asc|desc` (campos da lista de cada rota; outro campo → `400`). R
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@4` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) e `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro) · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@5` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos) e `financingSimulations` (pedidos salvos), só registro · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
 | POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1`, `@2`, `@3` ou `@4`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
@@ -334,6 +334,31 @@ Mesmas rotas para as notas pessoais e as do grupo (só membros; quem não é mem
 
 `NoteTrashJob` (3h45) apaga de vez o que está na lixeira há mais de 30 dias.
 
+### Financiamentos (`/api/financings` e `/api/groups/{groupId}/financings`)
+
+Mesmas rotas para os pessoais e os do grupo (só membros; quem não é membro recebe 404). Taxas em % ao mês; cálculo
+todo na API (`FinancingMath`).
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/simulate` | `{kind: HOUSE\|APARTMENT\|CAR\|MOTORCYCLE\|OTHER, condition: NEW\|USED, price ≥1000, downPayment, fgts?, startMonth?, months?, income?, customRate?, costs?: {chave: valor}, scenario?, system?}` → cenários `LOW`/`MEDIAN`/`HIGH` (quartis dos bancos) e `CUSTOM` (se `customRate`), SAC e Price de cada um (1ª/última parcela, total, juros, CET), `terms` (prazos lado a lado), `costs` (gastos padrão com `when`: `UPFRONT`/`FINANCED`/`INSTALLMENT`/`YEARLY`/`MONTHLY`), `costTotals`, `income` (% da renda, preço máximo a 30%), `banks` (parcela por banco), `schedule` (do cenário/sistema escolhidos), `correction` (TR no imóvel) e `warnings`. Nada é salvo |
+| GET | `/rates?kind=` | `{source, low, median, high, index}` para preencher um contrato |
+| GET / POST | `/simulations` | Salvas (mais nova primeiro) · `{name ≤120, input}` → `201` · até 100 por dono |
+| DELETE | `/simulations/{id}` | Só quem salvou ou admin (403) |
+| GET | `/` | Lista do dono com `progress` (pagas, saldo, %, próxima, quitar hoje) e `myShare` |
+| GET | `/overview` | Pessoal: todos de que a pessoa participa (inclusive de grupos, com `groupName`) |
+| GET | `/{id}` | Contrato + `progress`, `members` (parte, valor na próxima, `fixed`; `recurringEntryId` só o próprio), `extras`, `costs` (com `nextDate`), `schedule` e `canDelete` |
+| POST / PUT | `/` · `/{id}` | `{name, kind, condition, price?, downPayment?, fgts?, financed, monthlyRate (0–20), system: SAC\|PRICE, months 1–420, firstMonth, dueDay, insuranceRate? (% do saldo ao mês), monthlyFee?, index: NONE\|TR\|IPCA\|INCC, bank?, reminderDays? (0–15), notes?, shares?: [{userId, share}]}` (`shares` só grupo, soma 100; ao criar sem `shares` divide igual) · até 50 por dono · refaz os fixos ligados |
+| DELETE | `/{id}` | Só quem cadastrou ou admin (403); apaga os fixos gerados |
+| POST | `/{id}/extras/preview` · `/{id}/extras` | `{month, amount, mode: TERM\|PAYMENT}` → prévia `{monthsBefore/After, lastMonthBefore/After, nextPaymentBefore/After, interestSaved, totalSaved}` · registra (mês entre a 1ª e a última parcela; até 120) |
+| DELETE | `/{id}/extras/{extraId}` | Remove a amortização |
+| POST / PUT / DELETE | `/{id}/costs` · `/{id}/costs/{costId}` | Gasto do bem `{name ≤80, amount, frequency: MONTHLY\|YEARLY, dueMonth (anual), dueDay}` · até 30 |
+| PUT | `/{id}/my-fixed` | `{enabled, categoryId (ao ligar), shareToGroup?}`: fixo pessoal com a parte de quem chama (valor do 1º mês + ajuste em cada mês diferente, via `ScheduledFixed`); no grupo pode ir sincronizado para o grupo |
+
+`FinancingRateJob` (1 min depois de subir e a cada 6 h) guarda as taxas por banco (Olinda, `ConsultaUnificada` por
+intervalo de datas: a consulta ordenada leva mais de 10 s) e os índices (SGS 7811 TR, 433 IPCA, 7456 INCC);
+`FinancingReminderJob` (8h) manda `FINANCING_DUE`/`FINANCING_COST_DUE` `reminderDays` antes do vencimento.
+
 ### Financeiro
 
 | Método | Rota | Descrição |
@@ -412,6 +437,9 @@ src/main/java/com/lifepedia/api/
 │                 lembretes (TaskReminderJob), export/import (TaskTransferService), TaskLinks (leitura para frequência e notas)
 ├── attendance/    frequência: compromissos (Commitment), marcações por dia (CommitmentMark), contagem e agenda,
 │                  CommitmentLinks (leitura para as notas)
+├── financing/     financiamentos: cálculo (FinancingMath, puro), gastos padrão (FinancingCosts), simulador
+│                  (FinancingSimulator), taxas e índices do Banco Central (BcbClient, FinancingRateService/Job),
+│                  contratos com partes, extras e gastos (FinancingService), avisos (FinancingReminderJob), simulações salvas
 ├── note/          notas pessoais e de grupo (NoteOwner), pastas/etiquetas, fotos (NoteImageStore), atividade,
 │                  lixeira (NoteTrashJob)
 ├── planning/      planejamento do grupo: itens, cenários, base, simulação (PlanningSimulator), prévia de link,
@@ -419,7 +447,7 @@ src/main/java/com/lifepedia/api/
 └── finance/
     ├── EntryType, YearMonthConverter, Installments (parcela no nome: adiantar/adiar)
     ├── category/      categorias do usuário, padrões (DefaultCategories), exclusão com migração, InvestmentCategories
-    ├── recurring/     lançamentos fixos e ajustes mensais (valor real)
+    ├── recurring/     lançamentos fixos e ajustes mensais (valor real); ScheduledFixed (fixo mantido por outro módulo)
     ├── importing/     importação de extrato/fatura (ocasionais + ajustes)
     ├── transaction/   lançamentos ocasionais
     ├── summary/       comparativo e histórico
@@ -436,4 +464,5 @@ src/main/resources/
                     · V22 vários responsáveis, "cada um conclui", horas da agenda
                     · V23 push · V24 aceite dos termos · V25 sono por dia na agenda
                     · V26 frequência · V27 lembrete até 30 dias · V28 notas
+                    · V29 financiamentos (taxas, índices, simulações, contratos, partes, extras, gastos)
 ```

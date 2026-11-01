@@ -38,8 +38,10 @@ export function PrivacyPage() {
           <li>Frequência: compromissos que você cadastra (dias, horário, período, limite de faltas) e as presenças e faltas marcadas.</li>
           <li>Notas: o texto, as fotos que você coloca nelas, pastas, etiquetas, modelos e o histórico de quem criou,
             editou, arquivou ou mandou para a lixeira. Notas na lixeira são apagadas de vez depois de 30 dias.</li>
+          <li>Financiamentos: simulações que você salva (tipo de bem, preço, entrada, FGTS, renda e prazo) e os dados dos
+            contratos que você cadastra (valor, taxa, prazo, banco, amortizações extras e gastos do bem).</li>
           <li>Grupos: nome, imagem, membros, itens financeiros que você leva, planejamento (com links e fotos de produtos),
-            notas do grupo e mensagens do chat.</li>
+            financiamentos do grupo (com a parte de cada um), notas do grupo e mensagens do chat.</li>
           <li>Amigos, pedidos de amizade, conquistas e notificações.</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
@@ -89,6 +91,8 @@ export function PrivacyPage() {
           <li><strong>Lojas e Buscapé</strong>: ao colar o link de um produto no planejamento, nosso servidor acessa a
             página da loja e, se ela não informar preço ou foto, busca o nome do produto no Buscapé. Nenhum dado seu é
             enviado além do link e do nome do produto.</li>
+          <li><strong>Banco Central</strong>: nosso servidor baixa dos dados abertos do Banco Central as taxas médias dos
+            bancos e os índices de correção (TR, IPCA, INCC) usados nos financiamentos. Nenhum dado seu é enviado.</li>
           <li><strong>Autoridades</strong>, somente quando a lei ou uma ordem judicial exigir.</li>
         </List>
         <p>

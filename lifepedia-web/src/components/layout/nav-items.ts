@@ -8,6 +8,7 @@ import {
   HeartHandshakeIcon,
   HouseIcon,
   InboxIcon,
+  LandmarkIcon,
   LayoutDashboardIcon,
   LayoutGridIcon,
   NotebookPenIcon,
@@ -71,6 +72,7 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/financeiro/categorias', label: 'Categorias', icon: TagsIcon },
         ],
       },
+      { to: '/financiamentos', label: 'Financiamentos', icon: LandmarkIcon },
     ],
   },
   {

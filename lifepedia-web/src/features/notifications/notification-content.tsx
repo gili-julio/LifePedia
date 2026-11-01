@@ -4,6 +4,7 @@ import {
   BellRingIcon,
   CircleCheckIcon,
   HeartHandshakeIcon,
+  LandmarkIcon,
   type LucideIcon,
   MessageCircleIcon,
   RepeatIcon,
@@ -13,6 +14,7 @@ import {
   UsersIcon,
 } from 'lucide-react'
 import { formatDate } from '@/lib/format'
+import { Amount } from './Amount'
 import type { ReactNode } from 'react'
 import type { AppNotification } from './types'
 
@@ -36,6 +38,12 @@ function onDay(n: AppNotification) {
 }
 
 const strong = (text: string | undefined) => <strong className="font-medium">{text}</strong>
+
+/** Página do financiamento: pessoal ou do grupo. */
+function financingLink(n: AppNotification) {
+  const id = encodeURIComponent(n.data.financingId ?? '')
+  return n.groupId ? `/grupos/${n.groupId}/financiamentos/${id}` : `/financiamentos/${id}`
+}
 
 /** Texto, link e ícone de cada tipo de notificação. */
 export function notificationContent(n: AppNotification): Content {
@@ -115,6 +123,18 @@ export function notificationContent(n: AppNotification): Content {
         text: <>{strong(n.data.actorName)} aceitou seu pedido de amizade</>,
         link: '/amigos',
         icon: HeartHandshakeIcon,
+      }
+    case 'FINANCING_DUE':
+      return {
+        text: <>Parcela de {strong(n.data.financingName)} vence{onDay(n)}: <Amount value={n.data.amount} /></>,
+        link: financingLink(n),
+        icon: LandmarkIcon,
+      }
+    case 'FINANCING_COST_DUE':
+      return {
+        text: <>{strong(n.data.costName)} de {strong(n.data.financingName)} vence{onDay(n)}: <Amount value={n.data.amount} /></>,
+        link: financingLink(n),
+        icon: LandmarkIcon,
       }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }

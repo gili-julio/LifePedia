@@ -162,6 +162,16 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   apagar de vez, lixeira vencida (`NoteTrashJob` → `purgeTrash`), grupo excluído (`onGroupDeleted`) e conta excluída
   (`deleteUserImagesAfterCommit`) apagam os arquivos. Resumo da lista em `NoteService.excerpt` (`NoteExcerptTest`).
   Teste em `NoteIntegrationTest` (organização, versão, lixeira, fotos, grupo e isolamento).
+- **Financiamentos** (`financing/`): dono por `FinancingOwner` e quem age por `FinancingScope` (excluir só quem
+  cadastrou ou admin). Cálculo só em `FinancingMath` (puro, em `double`, saída arredondada em `BigDecimal`;
+  `FinancingMathTest`): parcelas, amortização extra (`TERM` mantém a parcela, `PAYMENT` o prazo), CET por bisseção e
+  `firstPaymentFactor` (parcela é linear no valor financiado). Gastos padrão em `FinancingCosts` (chaves estáveis: o
+  front manda o valor editado pela chave). Banco Central só pelo `BcbClient` (via `SafeHttpClient`; falha = vazio, nunca
+  exceção) e o resto lê do banco (`FinancingRateService`; busca na hora só se vazio, 1 vez por hora). Nos testes o
+  `BcbClient` é `@MockitoBean`. Parcelas sempre calculadas na leitura; nada de parcela gravada. Fixo da parte só pela
+  fachada `finance/recurring/ScheduledFixed` (cria/atualiza/apaga com os ajustes mensais) e refeito em `syncFixed` a
+  cada mudança (contrato, partes, extras); fixo apagado pela pessoa desliga a ligação. Teste em
+  `FinancingIntegrationTest` (simulação, contrato, extras, fixo, gastos, aviso, grupo e isolamento).
 
 ## Testes
 

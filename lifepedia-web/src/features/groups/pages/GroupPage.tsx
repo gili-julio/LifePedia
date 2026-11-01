@@ -26,6 +26,7 @@ import { GroupRecurringTab } from '@/features/finance/group/GroupRecurringTab'
 import { GroupTransactionsTab } from '@/features/finance/group/GroupTransactionsTab'
 import { MonthPicker } from '@/features/finance/components/MonthPicker'
 import { useMonthParam } from '@/features/finance/use-month-param'
+import { GroupFinancingsTab } from '@/features/financing/components/GroupFinancingsTab'
 import { GroupNotesTab } from '@/features/notes/components/GroupNotesTab'
 import { PlanningTab } from '@/features/planning/components/PlanningTab'
 import { AgendaBoard } from '@/features/tasks/agenda/AgendaBoard'
@@ -37,9 +38,9 @@ import { GroupFormDialog } from '../components/GroupFormDialog'
 import { InviteDialog } from '../components/InviteDialog'
 import { MembersList } from '../components/MembersList'
 
-const TABS = ['visao-geral', 'chat', 'lancamentos', 'fixos', 'planejamento', 'tarefas', 'agenda', 'notas', 'membros'] as const
+const TABS = ['visao-geral', 'chat', 'lancamentos', 'fixos', 'planejamento', 'financiamentos', 'tarefas', 'agenda', 'notas', 'membros'] as const
 type Tab = (typeof TABS)[number]
-const MONEY_TABS: Tab[] = ['visao-geral', 'lancamentos', 'fixos', 'planejamento']
+const MONEY_TABS: Tab[] = ['visao-geral', 'lancamentos', 'fixos', 'planejamento', 'financiamentos']
 
 /** Página do grupo: métricas, itens levados pelos membros e participantes. */
 export function GroupPage() {
@@ -128,6 +129,7 @@ export function GroupPage() {
           <TabsTrigger value="lancamentos">Lançamentos</TabsTrigger>
           <TabsTrigger value="fixos">Fixos</TabsTrigger>
           <TabsTrigger value="planejamento">Planejamento</TabsTrigger>
+          <TabsTrigger value="financiamentos">Financiamentos</TabsTrigger>
           <TabsTrigger value="tarefas">Tarefas</TabsTrigger>
           <TabsTrigger value="agenda">Agenda</TabsTrigger>
           <TabsTrigger value="notas">Notas</TabsTrigger>
@@ -147,6 +149,9 @@ export function GroupPage() {
         </TabsContent>
         <TabsContent value="planejamento" className="pt-4">
           <PlanningTab groupId={group.id} />
+        </TabsContent>
+        <TabsContent value="financiamentos" className="pt-4">
+          {tab === 'financiamentos' && <GroupFinancingsTab groupId={group.id} />}
         </TabsContent>
         <TabsContent value="tarefas" className="pt-4">
           <GroupTasksTab group={group} />
