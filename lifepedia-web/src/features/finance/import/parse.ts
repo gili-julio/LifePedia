@@ -3,7 +3,7 @@ import { amountToInput, currentYearMonth, parseAmount, type YearMonth } from '@/
 import { normalizeName } from '../categories'
 import { isActiveIn, valueIn } from '../fixed'
 import type { Category, EntryType, RecurringEntry, Transaction } from '../types'
-import { SOURCE_LABEL, type ImportSource } from './prompt'
+import { SOURCE_LABEL, type ImportSource } from './format'
 
 /** Limite do endpoint batch da API. */
 export const MAX_IMPORT_ITEMS = 500
@@ -44,11 +44,11 @@ function extractJson(text: string): unknown {
   const candidate = (fenced ? fenced[1] : text).trim()
   const start = candidate.search(/[[{]/)
   const end = Math.max(candidate.lastIndexOf('}'), candidate.lastIndexOf(']'))
-  if (start < 0 || end <= start) throw new ImportParseError('Não encontrei um JSON no texto colado.')
+  if (start < 0 || end <= start) throw new ImportParseError('Não encontrei um JSON na resposta.')
   try {
     return JSON.parse(candidate.slice(start, end + 1))
   } catch {
-    throw new ImportParseError('O JSON colado está inválido. Peça ao agente para responder só com o bloco JSON.')
+    throw new ImportParseError('O JSON da resposta está inválido. Peça ao agente para responder só com o bloco JSON.')
   }
 }
 
@@ -125,8 +125,8 @@ export function parseAiOutput(
 ): ImportRow[] {
   const data = extractJson(text)
   const items = Array.isArray(data) ? data : (data as { items?: unknown })?.items
-  if (!Array.isArray(items)) throw new ImportParseError('O JSON não tem a lista "items".')
-  if (!items.length) throw new ImportParseError('A lista "items" está vazia.')
+  if (!Array.isArray(items)) throw new ImportParseError('A resposta não tem a lista "items".')
+  if (!items.length) throw new ImportParseError('A resposta veio sem lançamentos.')
   if (items.length > MAX_IMPORT_ITEMS) {
     throw new ImportParseError(`São ${items.length} lançamentos; importe no máximo ${MAX_IMPORT_ITEMS} por vez.`)
   }

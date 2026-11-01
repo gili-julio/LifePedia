@@ -73,7 +73,7 @@ O site instala como app no celular e no desktop (Chrome, Edge, Android; no iPhon
 | `/financeiro/fixos` | Ganhos e despesas fixas (mensais), paginados; filtro por banco (`?banco=`) e seleção para definir o banco em lote |
 | `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; filtro por banco (`?banco=`), seleção para definir o banco em lote, ação **Tornar fixo** em cada item e **Adiantar ou adiar parcela** nos que têm "(n/total)" no nome (só esta ou esta e as seguintes) |
 | `/financeiro/bancos` | Gastos do mês por banco: maior banco, valor sem banco, lista com conta e cartão, comparação de 6 meses e um cartão por banco com as maiores categorias |
-| `/financeiro/importar` | Importar extratos e faturas com IA (juntos, um ou vários meses): copia o prompt (categorias + fixos + nomes já usados), cola a resposta do agente, revisa numa prévia editável e importa |
+| `/financeiro/importar` | Importar extratos e faturas com IA (juntos, um ou vários meses). **Pelo site** (padrão, com a API configurada): envia os arquivos, vê os limites e o quanto já usou e pode sair; a leitura segue em segundo plano e avisa ao terminar. **Com o seu agente**: copia o prompt, cola a resposta. Nos dois, revisa numa prévia editável, salva como rascunho a cada edição, e importa ou descarta |
 | `/financeiro/categorias` | Categorias de despesa e ganho em cartões (lista completa): criar, editar (nome/cor), excluir movendo os lançamentos |
 
 O mês selecionado fica na URL (`?mes=2026-09`); a aba do grupo também (`?aba=lancamentos`).
@@ -226,7 +226,13 @@ src/
 │       ├── types.ts, api.ts          tipos e hooks React Query
 │       ├── categories.ts             ordenação/normalização de nomes
 │       ├── use-category-lookup.ts    categorias do usuário por id/tipo
-│       ├── import/prompt.ts          gera o prompt para o agente de IA (formato lifepedia/transactions@4)
+│       ├── import/format.ts          versão do formato e origem dos itens (o prompt vem da API)
+│       ├── import/DocumentImport.tsx envio dos documentos para a IA, com os limites
+│       ├── import/ManualImport.tsx   prompt para o agente da pessoa e resposta colada
+│       ├── import/ImportReview.tsx   prévia editável, importar e descartar
+│       ├── import/rows.ts            monta as linhas da prévia (resposta da IA ou rascunho)
+│       ├── import/use-draft-autosave.ts grava a prévia na API a cada edição
+│       ├── import/use-import-watcher.ts acompanha a leitura em qualquer tela
 │       ├── import/parse.ts           lê a resposta do agente, casa categorias, detecta duplicados
 │       ├── fixed.ts                  vigência e valor do fixo no mês (valueIn)
 │       ├── installments.ts           parcela no nome ("(3/10)"), espelho de Installments.java

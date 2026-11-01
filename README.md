@@ -19,7 +19,7 @@ compartilham usuário, autenticação, design e padrões.
 | **Usuários** | ✅ v1.3 | Cadastro com **@username** único e obrigatório, login (sessão em cookie HttpOnly, **lembrar de mim** por 30 dias), **entrar/cadastrar com o Google** e vincular no perfil, **notificações** (também **push** no celular/computador), **exportar/importar dados** e **excluir conta** |
 | **Grupos** | ✅ v1.3 | Grupos com nome e **imagem** (recorte antes de salvar), convites diretos (aceitar/recusar) ou por **link**, admins e membros, **chat** em tempo real (responder, editar, apagar, não lidas na sidebar), **atalhos na sidebar** (até 3 fixados ou com atividade recente) e **planejamento** (compras e investimentos com prazo, simulação, cenários e "e se") |
 | **Amigos** | ✅ v1.0 | Pedidos de amizade por nome ou @username (aceitar/recusar/cancelar), perfil do amigo e **conquistas** com níveis (tarefas, hábitos, amigos, grupos, lançamentos) |
-| **Financeiro** | ✅ v1.3 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **investimentos** (fora das despesas, somam na reserva do grupo), **adiantar/adiar parcelas**, **importação de extrato/fatura via agente de IA** e **finanças em grupo** |
+| **Financeiro** | ✅ v1.3 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **investimentos** (fora das despesas, somam na reserva do grupo), **adiantar/adiar parcelas**, **importação de extrato/fatura com IA, pelo site ou com o seu agente** e **finanças em grupo** |
 | **Financiamentos** | ✅ v1.0 | **Simulador** sem pedir juros (casa, apartamento, carro, moto ou outro bem, novo ou usado): cenários com as **taxas médias dos bancos** do Banco Central, **ranking por banco**, **SAC x Price**, prazos lado a lado, **gastos padrão** editáveis (ITBI, cartório, seguros, IOF, tarifas, IPVA...), **CET**, **FGTS**, **cabe na renda**, gráfico e tabela de parcelas (CSV); **simulações salvas**; **financiamentos em andamento** com saldo, % quitado, **quitar hoje**, **amortização extra** (prévia e registro), **correção por índice** (TR/IPCA/INCC), **gastos do bem** com aviso, **parcelas nos fixos** (valor de cada mês), **financiamento do grupo** com a parte de cada um, atalho no **planejamento** e card no **Início** |
 | **Tarefas** | ✅ v1.1 | Tarefas pessoais e **em grupo** para hoje, outros dias ou sem data, **atrasadas**, **repetição** (a cada N dias/semanas/meses/anos, dias da semana, dia do mês, a partir da conclusão), prioridade, horário e duração, **subtarefas**, **listas** e **etiquetas**; **agenda** em grade de horários (dia/semana, pessoal e no grupo); no grupo, **vários responsáveis** ou **todos**, "basta um" ou "cada um conclui a sua", **rodízio**, **comentários** e avisos; **levar tarefa pessoal para um grupo**; **semana** (arrastar muda o dia), **hábitos** (sequência e % do mês), **lembretes** e **ligação com fixos do financeiro** |
 | **Notas** | ✅ v1.0 | Anotações em **markdown** com editor visual (barra, menu "/", checklist, tabela, código com cores, fotos), modo **markdown** e **lado a lado**, salvar automático, **pastas**, **etiquetas**, cor/ícone, **fixar**, **arquivar**, **lixeira** (30 dias), **modelos**, links `[[Nome]]` entre notas, ligação com **tarefa** ou **compromisso**, **notas do grupo** com atividade, baixar `.md` e card no **Início** |
@@ -56,10 +56,17 @@ compartilham usuário, autenticação, design e padrões.
 - **Observações** (lançamentos, fixos, itens do planejamento e tarefas): até 10 mil caracteres.
 - **Listagens** (lançamentos e fixos): paginadas e ordenadas pela API (10/25/50/100 por página, clique no
   cabeçalho para ordenar). Os totais do topo sempre consideram todos os itens do mês.
-- **Importar com IA**: a tela *Importar* gera um **prompt pronto** que serve para **extratos bancários** e **faturas do
-  cartão** (juntos ou separados, de um ou vários meses), com as categorias, os fixos e os nomes que você já usa nos lançamentos. Você cola o prompt num agente de IA (ChatGPT,
-  Claude, Gemini...) junto com o documento; o agente devolve um JSON no modelo `lifepedia/transactions@4` (com o banco de cada item); você cola a
-  resposta, revisa numa prévia editável e importa tudo de uma vez. O LifePedia não envia o documento a lugar nenhum.
+- **Importar com IA**: dois caminhos para **extratos bancários** e **faturas do cartão** (juntos ou separados, de um ou
+  vários meses), com o mesmo prompt, que traz as categorias, os fixos e os nomes que você já usa nos lançamentos.
+  - **Pelo site** (padrão, com `AI_API_KEY`): você envia os arquivos (até 10 por vez, 15 MB somados, até 50 páginas por
+    PDF, sem senha) e a API chama o Gemini **em segundo plano**: dá para sair da tela ou fechar o app. Ao terminar chegam
+    toast, notificação e push. Limites por conta: **1 envio a cada 4 horas, 5 em 7 dias e 10 em 30 dias**, mostrados na
+    tela; leitura que falha não conta. Os arquivos ficam só na memória enquanto a leitura roda e vão inteiros para o Google.
+  - **Com o seu agente**: você copia o prompt para um agente (ChatGPT, Claude, Gemini...) junto com o documento; ele
+    devolve um JSON no modelo `lifepedia/transactions@4` (com o banco de cada item) e você cola a resposta. Aqui o
+    LifePedia não envia o documento a lugar nenhum.
+  - Nos dois, você revisa numa prévia editável e importa tudo de uma vez. A revisão fica salva como **rascunho** na API a
+    cada edição: saia e volte sem perder nada. Uma revisão aberta por pessoa; sem mexer por 30 dias, ela é apagada.
   - O agente marca a **origem** de cada item (extrato ou fatura) e tira as datas do documento: item de extrato conta
     no mês da data; compra no cartão conta no mês de vencimento da sua fatura. Na prévia dá para conferir e trocar a
     origem de cada linha.
@@ -432,6 +439,8 @@ VPS de 4 GB com o Coolify) e `COOKIE_SECURE` sempre ligado.
    | `GOOGLE_CLIENT_ID` | opcional: login com Google (ver abaixo); vazio = sem botão |
    | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | opcional: notificações push (ver abaixo); vazias = sem push |
    | `VAPID_SUBJECT` | com o push: contato, ex.: `https://app.seudominio.com.br` ou `mailto:...` |
+   | `AI_API_KEY` | opcional: chave do Gemini para a importação pelo site (ver abaixo); vazia = só o agente da pessoa |
+   | `AI_MODEL` / `AI_TIMEOUT` / `AI_DAILY_LIMIT` | opcionais: modelo (`gemini-3.5-flash-lite`), tempo máximo da leitura (`180s`) e leituras por dia somando todas as contas (`100`) |
    | `DB_USER` | opcional, padrão `lifepedia` |
 
 4. Deploy. O primeiro build demora (Maven e npm baixam tudo).
@@ -450,6 +459,12 @@ projeto e abra *Google Auth Platform* (antes *APIs e serviços → Tela de permi
 
 Não há secret: a API só confere a assinatura do token do Google com o ID. O mesmo botão serve para entrar, cadastrar
 e vincular a conta em *Meu perfil*.
+
+**Importação pelo site** (opcional): crie a chave no [Google AI Studio](https://aistudio.google.com/apikey), num projeto
+com **cobrança ativa**, e coloque em `AI_API_KEY` (Coolify e, se quiser local, `.env`). A assinatura Google AI (Pro ou de
+estudante) não cobre a API. Sem cobrança a chave cai no plano gratuito, em que o Google pode usar o conteúdo para melhorar
+produtos e pessoas podem revisá-lo, e a Política de privacidade do app promete o contrário: não use chave gratuita com
+documentos reais. Defina um teto de gastos no projeto do Google, porque a chave é uma só para todas as contas.
 
 **Notificações push** (opcional): gere um par de chaves VAPID (uma vez; **diferente** do local) e coloque no Coolify:
 
@@ -510,7 +525,11 @@ Pontos em aberto / recomendações:
 - **Criptografia em disco**: o volume do Postgres não é criptografado — ative o **BitLocker** no Windows.
 - **Backup**: ainda não há rotina de backup dos volumes `lifepedia-db` e `lifepedia-uploads`.
 - **Busca de usuários**: qualquer usuário logado encontra outros pelo nome/@username ao adicionar amigo (sem opção de ficar oculto).
-- **Importação com IA**: a fatura vai para o serviço de IA escolhido pelo usuário; a tela orienta a ocultar dados do cartão.
+- **Importação com IA**: com o agente da pessoa, a fatura vai para o serviço que ela escolher e a tela orienta a ocultar
+  dados do cartão. Pelo site, o arquivo vai inteiro para o Google com a chave do servidor, conforme avisa a tela. O prompt é
+  montado na API, nunca vem do navegador, para a chave não virar um Gemini aberto a qualquer conta. Os arquivos só ficam na
+  memória e o nginx não os grava em disco. O resultado da IA só vira lançamento depois da revisão da pessoa, e o rascunho
+  tem os mesmos cuidados dos lançamentos (dono, `ON DELETE CASCADE`), mas não entra no arquivo exportado.
 - **Prévia de links**: ao buscar um link, a loja vê um acesso vindo do servidor do LifePedia (não do navegador). O nome
   do produto (tirado do link ou digitado) vai para a busca do Buscapé quando a loja não libera os dados.
 - **Preço de referência** é de um produto **parecido**, não necessariamente o mesmo (cor/versão podem mudar); a tela

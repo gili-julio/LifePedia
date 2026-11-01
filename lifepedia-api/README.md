@@ -36,6 +36,11 @@ Imagem Docker: `docker build -t lifepedia-api .` (o `docker-compose.yml` da raiz
 | `GOOGLE_CLIENT_ID` | vazio (login com Google desligado) | OAuth Client ID (Aplicativo da Web) do Google Cloud; público, sem secret. Passo a passo no README da raiz |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | vazio (push desligado) | Par VAPID P-256 em base64url (comando no README da raiz). A API confere na subida que formam um par |
 | `VAPID_SUBJECT` | vazio | Contato para os serviços de push (`https://...` ou `mailto:`); obrigatório com as chaves |
+| `AI_API_KEY` | vazio (importação pelo site desligada) | Chave do Gemini, de projeto com cobrança ativa (ver README da raiz) |
+| `AI_MODEL` | `gemini-3.5-flash-lite` | Modelo do Gemini |
+| `AI_TIMEOUT` | `180s` | Tempo máximo de uma leitura (número puro = segundos) |
+| `AI_DAILY_LIMIT` | `100` | Leituras por dia somando todas as contas |
+| `AI_BASE_URL` | API do Google | Endereço da API; só para apontar a um servidor falso em teste |
 | `STORAGE_DIR` | `data/uploads` (no compose: `/data/uploads`, volume `lifepedia-uploads`) | Pasta das imagens (`users/`, `groups/`, `plan-items/`, cada uma com `<chave>.jpg`) |
 
 Limites de segurança ficam em `lifepedia.auth.*` no `application.yml` (tentativas por IP, bloqueio por e-mail).
@@ -381,7 +386,15 @@ intervalo de datas: a consulta ordenada leva mais de 10 s) e os índices (SGS 78
 | POST / PUT / DELETE | `/api/finance/transactions[/{id}]` | CRUD de ocasionais |
 | PUT | `/api/finance/transactions/{id}/month` | `{month, following?}` adianta/adia a parcela ("Loja (3/10)"); `following` move as seguintes da mesma compra com o mesmo deslocamento (sincronizadas nos grupos também) → `{moved}` · `400` antes do mês da compra ou `following` sem parcela no nome |
 | POST | `/api/finance/transactions/batch` | `{items: [...]}` (1 a 500) — lote de ocasionais, tudo ou nada; erro indica a linha |
-| POST | `/api/finance/import` | `{transactions: [...], fixedAdjustments: [{recurringEntryId, month, amount}], fixedBanks: [{recurringEntryId, bank}]}` — importação de extrato/fatura, tudo ou nada; `fixedBanks` só preenche fixo sem banco |
+| POST | `/api/finance/import` | `{transactions: [...], fixedAdjustments: [{recurringEntryId, month, amount}], fixedBanks: [{recurringEntryId, bank}], draftId?}` — importação de extrato/fatura, tudo ou nada; `fixedBanks` só preenche fixo sem banco; `draftId` fecha a revisão junto (`409` se já fechada) |
+| GET | `/api/finance/import/assistant` | `{enabled, maxFiles, maxTotalBytes, maxPages, quota: {intervalHours, weekLimit, monthLimit, usedWeek, usedMonth, nextAt}}` |
+| GET | `/api/finance/import/prompt` | `{prompt}` com as categorias, os fixos e os nomes da pessoa |
+| POST | `/api/finance/import/analyze` | Multipart `files` → `202` com a revisão em `RUNNING`; a leitura segue em segundo plano. `400` arquivo fora dos limites, com senha ou de tipo não aceito · `404` sem `AI_API_KEY` · `409` já há revisão aberta · `429` limite de envios · `503` leituras demais ao mesmo tempo |
+| GET | `/api/finance/import/draft` | Revisão aberta (`{id, origin, status, fileCount, itemCount, error, createdAt}`) ou `204` |
+| GET | `/api/finance/import/draft/{id}/content` | `{result, rows}`: prévia gravada ou, na primeira abertura, a resposta da IA |
+| POST | `/api/finance/import/draft` | `{rows, itemCount}` → `201`: revisão da importação com o agente da pessoa |
+| PUT | `/api/finance/import/draft/{id}` | `{rows, itemCount}`: grava a prévia (`rows` é JSON do front, até 2 milhões de caracteres) |
+| DELETE | `/api/finance/import/draft/{id}` | Descarta a revisão ou tira o aviso da leitura que falhou; `409` enquanto lê |
 | GET | `/api/finance/banks/last` | `{bank}`: banco do item com banco criado por último (nulo se nenhum), para o formulário abrir com ele |
 | PUT | `/api/finance/banks/assign` | `{transactionIds, recurringIds, bank}` — define o banco de até 500 itens de cada tipo, tudo ou nada; `bank` nulo tira; sincronizados acompanham · `404` se algum item não for do usuário |
 | GET | `/api/finance/summary/banks?month=&months=6` | Uma linha por banco (`key`, `code`, `name`, `income`, `expense`, `invested`, `fixed`, `occasional`, `account`, `card`, `categories`, `history`), sem banco por último. Mesma rota no grupo: `/api/groups/{id}/finance/summary/banks` |

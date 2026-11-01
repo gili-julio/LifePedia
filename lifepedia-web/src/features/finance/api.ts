@@ -1,6 +1,7 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useIsMutating, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import type { Page } from '@/components/data-table/list-state'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import type { BankRef } from '@/lib/banks'
 import type { YearMonth } from '@/lib/format'
 import type {
@@ -11,6 +12,9 @@ import type {
   CategoryRequest,
   EntryType,
   FixedAdjustment,
+  ImportAssistant,
+  ImportDraft,
+  ImportDraftContent,
   ImportRequest,
   ImportResponse,
   MonthlySummary,
@@ -24,9 +28,17 @@ import type {
 /** Parâmetros de listagem paginada (`sort` = `campo,asc|desc`). */
 export type PageParams = { page: number; size: number; sort: string }
 
+const DRAFT_POLL_MS = 4000
+const SEND_DOCUMENTS = ['finance', 'import', 'send']
+
+const draftBody = (rows: unknown[]) => ({ rows: JSON.stringify(rows), itemCount: rows.length })
+
 /** Chaves sob 'finance': toda mutação invalida o módulo inteiro. */
 const keys = {
   all: ['finance'] as const,
+  importAssistant: ['finance', 'import', 'assistant'] as const,
+  importPrompt: ['finance', 'import', 'prompt'] as const,
+  importDraft: ['finance', 'import', 'draft'] as const,
   summary: (month: YearMonth, filter: BankFilter) => ['finance', 'summary', month, filter] as const,
   banks: (month: YearMonth, months: number) => ['finance', 'banks', month, months] as const,
   lastBank: ['finance', 'banks', 'last'] as const,
@@ -203,6 +215,87 @@ export function useImport() {
   return useFinanceMutation((request: ImportRequest) =>
     api<ImportResponse>('/api/finance/import', { method: 'POST', body: request }),
   )
+}
+
+export function useImportAssistant() {
+  return useQuery({
+    queryKey: keys.importAssistant,
+    queryFn: () => api<ImportAssistant>('/api/finance/import/assistant'),
+  })
+}
+
+export function useImportPrompt(enabled: boolean) {
+  return useQuery({
+    queryKey: keys.importPrompt,
+    queryFn: () => api<{ prompt: string }>('/api/finance/import/prompt'),
+    enabled,
+  })
+}
+
+/** Revisão em aberto; enquanto a IA lê, confere a cada poucos segundos. */
+export function useImportDraft() {
+  return useQuery({
+    queryKey: keys.importDraft,
+    queryFn: async () => (await api<ImportDraft | undefined>('/api/finance/import/draft')) ?? null,
+    refetchInterval: (query) => (query.state.data?.status === 'RUNNING' ? DRAFT_POLL_MS : false),
+  })
+}
+
+export function fetchDraftContent(id: string) {
+  return api<ImportDraftContent>(`/api/finance/import/draft/${id}/content`)
+}
+
+/** Grava a prévia; fora do `useFinanceMutation` para não recarregar o módulo a cada edição. */
+export function saveDraftRows(id: string, rows: unknown[]) {
+  return api<ImportDraft>(`/api/finance/import/draft/${id}`, { method: 'PUT', body: draftBody(rows) })
+}
+
+function useDraftMutation<TVariables>(fn: (variables: TVariables) => Promise<ImportDraft | undefined>) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: (draft) => {
+      queryClient.setQueryData(keys.importDraft, draft ?? null)
+      return queryClient.invalidateQueries({ queryKey: keys.importAssistant })
+    },
+  })
+}
+
+export function useCreateDraft() {
+  return useDraftMutation((rows: unknown[]) =>
+    api<ImportDraft>('/api/finance/import/draft', { method: 'POST', body: draftBody(rows) }),
+  )
+}
+
+export function useDiscardDraft() {
+  return useDraftMutation((id: string) => api<undefined>(`/api/finance/import/draft/${id}`, { method: 'DELETE' }))
+}
+
+/** Avisos aqui, e não na tela: a pessoa pode sair durante o envio. */
+export function useSendDocuments() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationKey: SEND_DOCUMENTS,
+    mutationFn: (files: File[]) => {
+      const body = new FormData()
+      for (const file of files) body.append('files', file)
+      return api<ImportDraft>('/api/finance/import/analyze', { method: 'POST', body })
+    },
+    onSuccess: (draft) => {
+      queryClient.setQueryData(keys.importDraft, draft)
+      toast.success('Leitura iniciada. Pode sair desta tela: avisamos quando terminar.')
+      return queryClient.invalidateQueries({ queryKey: keys.importAssistant })
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : 'Não foi possível enviar os documentos.')
+      return queryClient.invalidateQueries({ queryKey: keys.importAssistant })
+    },
+  })
+}
+
+/** Envio em andamento, mesmo depois de sair e voltar para a tela. */
+export function useSendingDocuments() {
+  return useIsMutating({ mutationKey: SEND_DOCUMENTS }) > 0
 }
 
 /** Define (ou tira, com `bank` nulo) o banco de vários itens pessoais. */

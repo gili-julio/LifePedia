@@ -63,6 +63,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 ## Segurança (dados sensíveis — regras obrigatórias)
 
 - **Senha**: só `PasswordEncoder` (BCrypt 12). Nunca logar, devolver ou persistir senha/token em texto puro.
+- **IA**: chave só no ambiente, só na API (`shared/ai/GeminiClient`, cabeçalho, nunca na URL). Prompt montado na API, nunca
+  vindo do cliente. Documento e resposta nunca vão para log nem disco; só a lista lida fica no rascunho do dono.
 - **Token**: nunca guardar em `localStorage`/`sessionStorage` nem expor ao JavaScript. No navegador a sessão é o
   cookie HttpOnly `lifepedia_session`. O JWT só leva o id do usuário (`sub`) — nada de dados pessoais.
 - **CSRF**: toda requisição que altera dados sem `Authorization` precisa de `X-Requested-With` (o `lib/api.ts` já envia).
@@ -116,6 +118,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Frequência: `AttendanceDtos.DayStatus`, `CommitmentMark.Mark` ↔ `features/attendance/types.ts`
   - Notas: `NoteDtos.Status`, `NoteActivity.Action` ↔ `features/notes/types.ts`
   - Bancos: `finance/bank/Bank` (códigos e nomes), `BankKind` ↔ `src/lib/banks.ts` (+ logo em `src/assets/banks/<code>.svg`)
+  - Importação: `ImportDraft.Origin/Status` ↔ `features/finance/types.ts` (`ImportDraft`); `ImportPrompt.FORMAT` ↔ `import/format.ts`
   - Financiamentos: `FinancingKind` (e prazos padrão/máximo), `ItemCondition`, `CorrectionIndex`,
     `FinancingMath.AmortizationSystem/ExtraMode`, `FinancingDtos.Scenario/CostWhen`, `FinancingCost.Frequency` ↔
     `features/financing/types.ts` (+ `MONTHS_LIMIT` em `labels.ts`)
@@ -251,6 +254,15 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   criado por último) e `PUT /api/finance/banks/assign {transactionIds, recurringIds, bank}` (lote, tudo ou nada; `bank`
   nulo tira; sincronizados acompanham). Financiamento guarda `bank` (nome) + `bankCode`; o fixo ligado herda o banco como
   conta (nome digitado antes do catálogo vira `OTHER`). O banco **não** entra no arquivo da conta.
+- **Importação pelo site** (`AI_API_KEY`): `GET /api/finance/import/assistant` (`enabled`, limites de arquivo e `quota`),
+  `POST /analyze` (multipart `files`, **202**: valida, grava `import_drafts` em `RUNNING` e a API chama o Gemini em segundo
+  plano; o front nunca manda prompt), `GET /prompt` (o mesmo prompt, para o agente da pessoa). Limites por conta em
+  `ImportQuota` (janelas móveis, contados no banco; falha não conta, descartar não devolve): 1 a cada 4 h, 5 em 7 dias, 10 em
+  30 dias. Arquivos: `ImportDocuments` (10, 15 MB somados, 50 páginas por PDF, sem senha; tipo pelo conteúdo). Terminou:
+  notificação `IMPORT_READY`/`IMPORT_FAILED` (com push). **Rascunho**: uma revisão aberta por pessoa, em `/draft`: `GET`
+  (204 sem revisão), `GET /{id}/content` (`rows` ou, na 1ª abertura, `result`), `POST` (revisão manual), `PUT /{id}` (a cada
+  edição; `rows` é JSON do front, a API não lê), `DELETE /{id}`. Importar com `draftId` fecha a revisão na mesma transação
+  (repetir → 409). Linha fechada fica sem conteúdo, só para contar os limites.
 - **Importação por IA**: `POST /api/finance/import` grava ocasionais + ajustes de fixos + banco de fixos sem banco
   (`fixedBanks`, nunca troca banco já definido; tudo ou nada). O modelo de resposta é `lifepedia/transactions@4`: `descriptionOficial` (como no documento, só leitura, gravada em
   `original_description` e nunca alterada depois) e `descriptionNormal` (nome padronizado, editável, vira
@@ -258,7 +270,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   (nome do catálogo ou outro; fora da lista vira `OTHER`, com aviso) e
   opcionais `fixed` = nome do fixo e `invoiceMonth` = mês de vencimento da fatura (item `card`; vira o `month` do
   ocasional) (prompt único para extrato e fatura em
-  `lifepedia-web/src/features/finance/import/prompt.ts`, parser em `import/parse.ts`). Mudou o formato? Crie `@5`
+  `lifepedia-api/.../finance/importing/ImportPrompt.java`, parser em `lifepedia-web/src/features/finance/import/parse.ts`). Mudou o formato? Crie `@5`
   e mantenha o parser aceitando os anteriores (`@1` usa só `description`, `@2` não tem `source`/`invoiceMonth`, `@3` não tem
   `bank`; usuários podem ter prompts antigos salvos).
 

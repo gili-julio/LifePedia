@@ -70,6 +70,8 @@ export function PrivacyPage() {
           <li><strong>Login com o Google e notificações push</strong>: só se você escolher usar. Base: consentimento
             (art. 7º, I), que você retira a qualquer momento desvinculando o Google ou desativando as notificações em
             <em> Meu perfil</em>.</li>
+          <li><strong>Importação pelo site</strong>: só quando você envia os arquivos. Base: consentimento (art. 7º, I),
+            dado a cada envio; basta não enviar, ou usar a importação com o seu agente.</li>
           <li><strong>Obrigações legais</strong> e defesa de direitos, quando houver (art. 7º, II e VI), como guardar
             registros de acesso pelo prazo exigido pelo Marco Civil da Internet, quando aplicável.</li>
         </List>
@@ -86,6 +88,10 @@ export function PrivacyPage() {
             nome, como operador.</li>
           <li><strong>Google</strong>: se você usar o botão do Google, a página carrega o script do Google e o Google
             sabe que você entrou no LifePedia, conforme a política de privacidade dele.</li>
+          <li><strong>Google (Gemini)</strong>: se você usar a importação pelo site, os arquivos enviados vão inteiros,
+            com tudo o que estiver neles, junto das suas categorias, fixos e nomes de lançamentos, para o Gemini ler e
+            devolver os lançamentos. Usamos o plano pago da API, em que o Google não usa esse conteúdo para melhorar seus
+            produtos, mas pode registrá-lo por tempo limitado para detectar abusos, conforme os termos dele.</li>
           <li><strong>Serviços de notificação</strong> do seu navegador (Google, Mozilla, Apple ou Microsoft), se você
             ativar o push. O conteúdo vai <strong>criptografado de ponta a ponta</strong>: esses serviços só entregam,
             não conseguem ler.</li>
@@ -97,9 +103,13 @@ export function PrivacyPage() {
           <li><strong>Autoridades</strong>, somente quando a lei ou uma ordem judicial exigir.</li>
         </List>
         <p>
-          <strong>Importação com IA</strong>: o LifePedia não envia seus extratos a nenhuma IA. Você copia o texto
-          gerado e o leva, por conta própria, ao serviço de IA que escolher, que trata os dados conforme as regras dele.
-          Oculte dados do cartão e documentos antes de enviar.
+          <strong>Importação com IA</strong>: há dois caminhos, e você escolhe. <em>Pelo site</em>, o LifePedia envia os
+          arquivos ao Google (Gemini): eles ficam no nosso servidor só enquanto a leitura roda e não são gravados; guardamos
+          os lançamentos lidos como rascunho até você importar ou descartar (no máximo 30 dias sem mexer) e, por até 31
+          dias, só a data do envio, para contar os limites. <em>Com o seu agente</em>, nada é enviado à IA pelo LifePedia:
+          você copia o texto gerado e o leva, por conta própria, ao serviço que escolher, que trata os dados conforme as
+          regras dele. Nesse caso oculte dados do cartão e documentos antes de enviar. Nos dois caminhos, o rascunho da
+          revisão fica guardado da mesma forma.
         </p>
         <p>Não vendemos, alugamos ou cedemos seus dados a terceiros.</p>
       </Section>

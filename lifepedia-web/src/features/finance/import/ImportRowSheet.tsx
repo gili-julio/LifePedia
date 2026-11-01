@@ -16,7 +16,7 @@ import { FixedOutcomeNote } from './FixedOutcomeNote'
 import { FixedSelect } from './FixedSelect'
 import { CountsIn } from './ImportRowItem'
 import { rowErrors, rowMonth, withBank, withSource, type ImportRow } from './parse'
-import { SOURCE_LABEL, type ImportSource } from './prompt'
+import { SOURCE_LABEL, type ImportSource } from './format'
 
 type Props = {
   open: boolean

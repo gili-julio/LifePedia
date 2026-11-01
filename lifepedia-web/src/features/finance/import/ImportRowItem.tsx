@@ -10,7 +10,7 @@ import type { Category, RecurringEntry } from '../types'
 import { FixedOutcomeNote } from './FixedOutcomeNote'
 import { OriginalDescription } from './OriginalDescription'
 import type { ImportRow } from './parse'
-import { SOURCE_LABEL } from './prompt'
+import { SOURCE_LABEL } from './format'
 
 type Props = {
   row: ImportRow

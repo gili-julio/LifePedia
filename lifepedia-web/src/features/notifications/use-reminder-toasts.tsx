@@ -1,4 +1,3 @@
-import { BellRingIcon } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -6,11 +5,18 @@ import type { Page } from '@/components/data-table/list-state'
 import { api } from '@/lib/api'
 import { useMarkNotificationRead } from './api'
 import { notificationContent } from './notification-content'
-import type { AppNotification } from './types'
+import type { AppNotification, NotificationType } from './types'
 
 const recent = () => api<Page<AppNotification>>('/api/notifications', { query: { page: 0, size: 10 } })
 
-/** Mostra na tela os lembretes de tarefa que chegam com o app aberto (confere quando as não lidas sobem). */
+/** Avisos que merecem aparecer na hora, com o rótulo do botão. */
+const TOASTED: Partial<Record<NotificationType, string>> = {
+  TASK_REMINDER: 'Ver',
+  IMPORT_READY: 'Revisar',
+  IMPORT_FAILED: 'Ver',
+}
+
+/** Mostra na tela lembretes e o fim da importação quando chegam com o app aberto (confere quando as não lidas sobem). */
 export function useReminderToasts(unread: number | undefined) {
   const navigate = useNavigate()
   const { mutate: markRead } = useMarkNotificationRead()
@@ -36,14 +42,16 @@ export function useReminderToasts(unread: number | undefined) {
         return
       }
       for (const n of items) {
-        if (n.type !== 'TASK_REMINDER' || n.read || seen.current.has(n.id)) continue
+        const label = TOASTED[n.type]
+        if (!label || n.read || seen.current.has(n.id)) continue
         seen.current.add(n.id)
         const content = notificationContent(n)
+        const Icon = content.icon
         toast(content.text, {
-          icon: <BellRingIcon className="size-4" />,
+          icon: <Icon className="size-4" />,
           duration: 15_000,
           action: {
-            label: 'Ver',
+            label,
             onClick: () => {
               markRead(n.id)
               navigate(content.link)

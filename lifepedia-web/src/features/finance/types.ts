@@ -132,6 +132,40 @@ export type ImportRequest = {
   fixedAdjustments: (FixedAdjustment & { recurringEntryId: string })[]
   /** Banco para fixos que ainda não têm */
   fixedBanks: { recurringEntryId: string; bank: BankRef }[]
+  /** Revisão que fecha junto com a importação */
+  draftId?: string
 }
 
 export type ImportResponse = { transactions: number; fixedAdjustments: number }
+
+/** Limites de envio à IA por conta. `nextAt` nulo = pode enviar agora. */
+export type ImportQuota = {
+  intervalHours: number
+  weekLimit: number
+  monthLimit: number
+  usedWeek: number
+  usedMonth: number
+  nextAt: string | null
+}
+
+export type ImportAssistant = {
+  enabled: boolean
+  maxFiles: number
+  maxTotalBytes: number
+  maxPages: number
+  quota: ImportQuota
+}
+
+/** Espelha `ImportDraft.Origin` e `ImportDraft.Status` da API (só os estados que chegam abertos). */
+export type ImportDraft = {
+  id: string
+  origin: 'SITE' | 'MANUAL'
+  status: 'RUNNING' | 'REVIEW' | 'FAILED'
+  fileCount: number
+  itemCount: number
+  error: string | null
+  createdAt: string
+}
+
+/** `rows` = prévia gravada; nulo = abrir pelo `result`, a resposta da IA. */
+export type ImportDraftContent = { result: string | null; rows: string | null }

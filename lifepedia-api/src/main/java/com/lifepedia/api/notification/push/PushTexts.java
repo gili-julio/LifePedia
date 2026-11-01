@@ -14,6 +14,7 @@ import java.util.UUID;
 public final class PushTexts {
 
     private static final String APP = "LifePedia";
+    private static final String IMPORT_LINK = "/financeiro/importar";
 
     private PushTexts() {
     }
@@ -47,6 +48,9 @@ public final class PushTexts {
             case FINANCING_COST_DUE -> new PushMessage(title, data.getOrDefault("costName", "") + " de "
                     + data.getOrDefault("financingName", "") + " vence" + onDay(data) + ": " + money(data),
                     financingLink(data, groupId), tag + ":" + data.getOrDefault("costName", ""), false);
+            case IMPORT_READY -> new PushMessage(APP, "Importação concluída: " + data.getOrDefault("items", "")
+                    + " item(ns) esperam sua revisão", IMPORT_LINK, importTag(type, data), false);
+            case IMPORT_FAILED -> new PushMessage(APP, "Não foi possível ler seus documentos", IMPORT_LINK, importTag(type, data), false);
         };
     }
 
@@ -54,6 +58,10 @@ public final class PushTexts {
     public static PushMessage chat(UUID groupId, String groupName, String author, String body) {
         String text = body.length() > 140 ? body.substring(0, 139) + "…" : body;
         return new PushMessage(groupName, author + ": " + text, "/grupos/" + groupId + "?aba=chat", "chat:" + groupId, true);
+    }
+
+    private static String importTag(NotificationType type, Map<String, String> data) {
+        return type.name() + ":" + data.getOrDefault("draftId", "");
     }
 
     private static String taskLink(Map<String, String> data, UUID groupId) {

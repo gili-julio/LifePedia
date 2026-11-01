@@ -28,6 +28,21 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'importar-pelo-site',
+    date: '2026-11-01',
+    title: 'Importe extratos e faturas direto pelo site',
+    modules: ['Finanças', 'Notificações', 'Privacidade'],
+    details: [
+      'Nova forma de importar: envie seus extratos e faturas no próprio site e a IA separa tudo nas suas categorias.',
+      'Pode enviar até 10 arquivos de uma vez, com até 15 MB somados e até 50 páginas por PDF, sem senha.',
+      'Cada conta tem 1 envio a cada 4 horas, 5 em 7 dias e 10 em 30 dias. Os limites e o quanto você já usou aparecem na tela.',
+      'A leitura continua mesmo se você sair da tela ou fechar o app. Quando terminar, avisamos com notificação.',
+      'A revisão agora fica salva como rascunho, pelo site ou com o seu agente: saia, volte depois e continue de onde parou.',
+      'A importação com o seu agente continua disponível na outra aba.',
+      'A Política de privacidade e os Termos foram atualizados, porque os arquivos enviados pelo site vão para o Google (Gemini).',
+    ],
+  },
+  {
     id: 'bancos',
     date: '2026-11-01',
     title: 'Bancos: saiba de onde saiu cada gasto',

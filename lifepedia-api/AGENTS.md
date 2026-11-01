@@ -41,6 +41,14 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 
 - Estilo verificado pelo Checkstyle (ver Testes). Comentários: regra da raiz (só o essencial, Javadoc de uma linha). Não edite migrations já aplicadas, nem para
   mudar comentário — o Flyway valida o checksum e a API não sobe.
+- **Importação pelo site** (`finance/importing`): `ImportAssistantService.analyze` valida tudo antes (`ImportDocuments`,
+  com PDFBox para páginas e senha; `ImportQuota`, pura, testada em `ImportQuotaTest`), grava a linha e chama o Gemini num
+  thread virtual, sem transação; no máximo `MAX_RUNNING` leituras juntas (segura os arquivos na memória). Fim e falha só por
+  `ImportDraftService.complete/fail`, que notificam na mesma transação. `ImportDraftJob` encerra leitura perdida (a API
+  reiniciou) e apaga rascunho esquecido. Prompt só em `ImportPrompt` (`ImportPromptTest`). HTTP só por `shared/ai/GeminiClient`
+  (`java.net.http`; `GeminiClientTest` com servidor local). Testes de integração usam `@MockitoBean GeminiClient`
+  (`ImportAssistantIntegrationTest`), sem rede. Limite `multipart` da API é o da importação; imagens têm 1 MB em
+  `Images.uploadBytes`. Tudo fica na memória (`file-size-threshold`): documento não passa pelo disco.
 - **Banco** (`finance/bank`): `BankRef` é `@Embedded` em ocasionais, fixos e itens de grupo; valide com `BankRef.clean`
   antes de gravar e passe nos `sync` do `GroupFinanceSync`. Soma por banco só em `BankReport`, nunca em SQL solto.
   Banco novo no catálogo = valor em `Bank` + entrada e logo no web (`src/lib/banks.ts`).

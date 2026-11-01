@@ -43,6 +43,10 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      AI_API_KEY: ${AI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-gemini-3.5-flash-lite}
+      AI_TIMEOUT: ${AI_TIMEOUT:-180s}
+      AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-100}
       # Heap proporcional ao limite do container (cabe numa VPS de 4 GB junto com o Coolify).
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
     volumes:

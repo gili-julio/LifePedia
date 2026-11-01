@@ -79,7 +79,8 @@ export function TermsPage() {
             <strong> organização</strong>. Não são consultoria financeira, contábil ou de investimentos.</li>
           <li>Preços e fotos buscados em lojas ou no Buscapé podem estar desatualizados ou ser de um produto parecido; o
             app sempre indica a origem. Confira na loja antes de comprar.</li>
-          <li>Na importação com IA, o serviço de IA é escolhido e usado por você. Revise a prévia antes de importar.</li>
+          <li>A importação com IA pode errar, pelo site ou com o seu agente. Revise a prévia antes de importar. Pelo site há
+            limites de envio por conta, mostrados na tela, e a leitura pode ficar indisponível.</li>
         </List>
       </Section>
 

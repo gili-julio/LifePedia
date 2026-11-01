@@ -3,6 +3,8 @@ import {
   BellIcon,
   BellRingIcon,
   CircleCheckIcon,
+  FileCheckIcon,
+  FileWarningIcon,
   HeartHandshakeIcon,
   LandmarkIcon,
   type LucideIcon,
@@ -17,6 +19,8 @@ import { formatDate } from '@/lib/format'
 import { Amount } from './Amount'
 import type { ReactNode } from 'react'
 import type { AppNotification } from './types'
+
+const IMPORT_LINK = '/financeiro/importar'
 
 type Content = {
   text: ReactNode
@@ -136,6 +140,14 @@ export function notificationContent(n: AppNotification): Content {
         link: financingLink(n),
         icon: LandmarkIcon,
       }
+    case 'IMPORT_READY':
+      return {
+        text: <>Importação concluída: {strong(n.data.items)} item(ns) esperam sua revisão</>,
+        link: IMPORT_LINK,
+        icon: FileCheckIcon,
+      }
+    case 'IMPORT_FAILED':
+      return { text: 'Não foi possível ler seus documentos', link: IMPORT_LINK, icon: FileWarningIcon }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
   }

@@ -25,5 +25,9 @@ public enum NotificationType {
     /** Parcela de financiamento perto do vencimento. data: financingId, financingName, amount (parte da pessoa), date, groupName (grupo) */
     FINANCING_DUE,
     /** Gasto do bem perto do vencimento. data: financingId, financingName, costName, amount, date, groupName (grupo) */
-    FINANCING_COST_DUE
+    FINANCING_COST_DUE,
+    /** Leitura dos documentos pronta para revisar. data: draftId, items */
+    IMPORT_READY,
+    /** Leitura dos documentos falhou. data: draftId */
+    IMPORT_FAILED
 }

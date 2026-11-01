@@ -58,6 +58,13 @@ public final class Images {
         }
     }
 
+    /** Tipo da imagem pelos bytes; nulo se não for JPEG, PNG nem WebP. */
+    public static String mimeOf(byte[] bytes) {
+        if (isJpeg(bytes)) return "image/jpeg";
+        if (isPng(bytes)) return "image/png";
+        return isWebp(bytes) ? "image/webp" : null;
+    }
+
     /** Imagem baixada da internet (JPEG, PNG ou WebP; tamanho já limitado no download). */
     public static byte[] fromDownload(byte[] bytes, int maxSide) {
         if (!isJpeg(bytes) && !isPng(bytes) && !isWebp(bytes)) {

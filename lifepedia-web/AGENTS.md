@@ -172,8 +172,14 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   `BANKS` e o SVG (sem script e com `viewBox`). Filtro: `BankFilterSelect` + `toBankFilter` em `bank-filter.ts` (`chave` ou `chave|CARD`, na
   URL como `?banco=`); lote: `useSelection` + `BankAssignBar`. Totais por banco só da API (`useBankOverview`,
   `useSummary(month, filtro)`); gráfico `BankHistoryChart` com a cor presa à ordem das chaves, não ao valor.
+- **Importação pelo site**: tudo a partir de `useImportDraft` (revisão aberta, confere a cada 4 s enquanto lê): `RUNNING`
+  mostra a leitura, `FAILED` o motivo, `REVIEW` a prévia (`ImportReview`, remontada por `draft.id`). Rascunho **sempre na API**
+  (`useDraftAutosave`, 1 s depois da última edição, ao sair da tela e ao esconder a aba), nunca em `localStorage`: é dado
+  financeiro. Autosave fora do `useFinanceMutation`, senão recarrega o módulo a cada edição. Avisos do envio ficam no hook
+  (`useSendDocuments`), pois a pessoa pode sair no meio. `useImportWatcher` (no `AppLayout`) recarrega as notificações quando a
+  leitura termina e o toast vem de `useReminderToasts`, para aparecer uma vez só. Limites sempre da API (`useImportAssistant`).
 - **Importação por IA**: o formato `lifepedia/transactions@4` é um contrato com prompts que o usuário já copiou.
-  Mudou `import/prompt.ts`? Mantenha `import/parse.ts` compatível (ou crie `@5` aceitando todos; `@1` só tem
+  Mudou `ImportPrompt.java` na API? Mantenha `import/parse.ts` compatível (ou crie `@5` aceitando todos; `@1` só tem
   `description`, `@2` não tem `source`/`invoiceMonth`, `@3` não tem `bank`). Prompt único para extrato e fatura: cada linha tem `source`;
   item de fatura conta no `invoiceMonth`. Conta ou cartão sai da origem (`rowBank`); trocar o banco na prévia sempre por `withBank`. Trocar a origem na prévia sempre por `withSource` (recalcula o `month`). `descriptionOficial` → `originalDescription`: só leitura na revisão (`OriginalDescription`) e no
   lançamento; só `descriptionNormal` (a `description`) é editável.

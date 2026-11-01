@@ -8,6 +8,7 @@ import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sideb
 import { ProfileGate } from '@/features/auth/ProfileGate'
 import { LegalGate } from '@/features/legal/LegalGate'
 import { useChatStream } from '@/features/chat/use-chat-stream'
+import { useImportWatcher } from '@/features/finance/import/use-import-watcher'
 import { useUnreadNotifications } from '@/features/notifications/api'
 import { NotificationsSheet } from '@/features/notifications/NotificationsSheet'
 import { useDevicePush } from '@/features/notifications/push'
@@ -32,6 +33,7 @@ export function AppLayout() {
   const { data: unread = 0, isSuccess } = useUnreadNotifications()
   useReminderToasts(isSuccess ? unread : undefined)
   useChatStream()
+  useImportWatcher()
   // Religa o push deste aparelho à sessão atual (depois de sair e entrar de novo).
   useDevicePush()
 

@@ -1,141 +1,96 @@
-import { useQueryClient } from '@tanstack/react-query'
-import { AlertTriangleIcon, CheckIcon, ClipboardCopyIcon, Loader2Icon, ShieldCheckIcon, SparklesIcon } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangleIcon, Loader2Icon } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
-import { toast } from 'sonner'
-import { BankSelect } from '@/components/bank/BankSelect'
-import { DatePicker } from '@/components/DatePicker'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Input } from '@/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Textarea } from '@/components/ui/textarea'
-import { ApiError } from '@/lib/api'
-import { OTHER_BANK } from '@/lib/banks'
-import { currentYearMonth, parseAmount } from '@/lib/format'
-import { useMoney } from '@/lib/hide-values'
-import { cn } from '@/lib/utils'
-import { fetchTransactions, useImport, useRecurringEntries, useTransactionDescriptions } from '../api'
-import { CategorySelect } from '../components/CategorySelect'
-import { FixedOutcomeNote } from '../import/FixedOutcomeNote'
-import { FixedSelect } from '../import/FixedSelect'
-import {
-  fixedOutcome,
-  ImportParseError,
-  linkFixed,
-  markDuplicates,
-  monthsOf,
-  parseAiOutput,
-  rowBank,
-  rowErrors,
-  rowMonth,
-  withBank,
-  withSource,
-  type ImportRow,
-} from '../import/parse'
-import { CountsIn, ImportRowItem } from '../import/ImportRowItem'
-import { ImportRowSheet } from '../import/ImportRowSheet'
-import { OriginalDescription } from '../import/OriginalDescription'
-import { buildImportPrompt, IMPORT_FORMAT, SOURCE_LABEL, type ImportSource } from '../import/prompt'
-import type { EntryType, ImportRequest, RecurringEntry } from '../types'
+import { Card, CardContent } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useDiscardDraft, useImportAssistant, useImportDraft, useRecurringEntries, useTransactionDescriptions } from '../api'
+import { DocumentImport } from '../import/DocumentImport'
+import { ImportParseError } from '../import/parse'
+import { ImportReview } from '../import/ImportReview'
+import { ManualImport } from '../import/ManualImport'
+import { rowsOfDraft, type ImportLookups } from '../import/rows'
+import type { ImportDraft } from '../types'
 import { useCategoryLookup } from '../use-category-lookup'
 
-function Step({ n, title, description, children }: { n: number; title: string; description: string; children: React.ReactNode }) {
+function Notice({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <span className="flex size-6 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">{n}</span>
-          {title}
-        </CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">{children}</CardContent>
+      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 text-sm">{children}</div>
+        {action}
+      </CardContent>
     </Card>
   )
 }
 
-export function ImportPage() {
-  const { formatCurrency } = useMoney()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { list: categories, byId, isLoading: loadingCategories } = useCategoryLookup()
-  const { data: fixedData, isLoading: loadingFixed } = useRecurringEntries()
-  const fixedEntries = useMemo(() => fixedData ?? [], [fixedData])
-  const fixedById = useMemo(() => new Map(fixedEntries.map((f) => [f.id, f])), [fixedEntries])
-  const { data: namesData, isLoading: loadingNames } = useTransactionDescriptions()
-  const knownNames = useMemo(() => namesData ?? [], [namesData])
-  const importMutation = useImport()
-  const loading = loadingCategories || loadingFixed || loadingNames
-
-  const [copied, setCopied] = useState(false)
-  const [raw, setRaw] = useState('')
-  const [analyzing, setAnalyzing] = useState(false)
-  const [parseError, setParseError] = useState<string | null>(null)
-  const [rows, setRows] = useState<ImportRow[] | null>(null)
-  const [editor, setEditor] = useState<{ open: boolean; key?: string; seq: number }>({ open: false, seq: 0 })
-  const [batchBank, setBatchBank] = useState('')
-
-  const prompt = useMemo(
-    () => buildImportPrompt(categories, fixedEntries, knownNames),
-    [categories, fixedEntries, knownNames],
+function Reading({ draft }: { draft: ImportDraft }) {
+  return (
+    <Notice>
+      <p className="flex items-center gap-2 font-medium">
+        <Loader2Icon className="size-4 animate-spin" />
+        Lendo {draft.fileCount} documento{draft.fileCount === 1 ? '' : 's'}…
+      </p>
+      <p className="mt-1 text-muted-foreground">Pode sair desta tela ou fechar o app: a leitura continua e avisamos quando a revisão estiver pronta.</p>
+    </Notice>
   )
+}
 
-  async function copyPrompt() {
-    try {
-      await navigator.clipboard.writeText(prompt)
-      setCopied(true)
-      toast.success('Prompt copiado.')
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error('Não consegui copiar. Selecione o texto e copie manualmente.')
-    }
-  }
+function Failed({ draft, message }: { draft: ImportDraft; message: string }) {
+  const discard = useDiscardDraft()
+  return (
+    <Notice action={<Button variant="outline" disabled={discard.isPending} onClick={() => discard.mutate(draft.id)}>Voltar</Button>}>
+      <p className="flex items-center gap-2 font-medium text-destructive"><AlertTriangleIcon className="size-4 shrink-0" /> Não foi possível concluir a leitura</p>
+      <p className="mt-1 text-muted-foreground">{message}</p>
+    </Notice>
+  )
+}
 
-  async function analyze() {
-    setParseError(null)
-    setAnalyzing(true)
-    try {
-      const parsed = linkFixed(parseAiOutput(raw, categories, fixedEntries, knownNames), fixedEntries)
-      const existing = (await Promise.all(monthsOf(parsed).map((m) => fetchTransactions(queryClient, m)))).flat()
-      setRows(markDuplicates(parsed, existing))
-    } catch (error) {
-      setRows(null)
-      setParseError(error instanceof ImportParseError || error instanceof ApiError ? error.message : 'Não foi possível analisar.')
-    } finally {
-      setAnalyzing(false)
-    }
-  }
+/** Abre as linhas gravadas uma vez; dali em diante a revisão manda, e o rascunho vai para a API. */
+function DraftReview({ draft, lookups }: { draft: ImportDraft; lookups: ImportLookups }) {
+  const queryClient = useQueryClient()
+  const { data: rows, error } = useQuery({
+    queryKey: ['finance', 'import', 'content', draft.id],
+    queryFn: () => rowsOfDraft(draft.id, lookups, queryClient),
+    staleTime: Infinity,
+    gcTime: 0,
+    retry: false,
+  })
+  if (rows) return <ImportReview key={draft.id} draft={draft} initialRows={rows} fixedEntries={lookups.fixedEntries} />
+  if (error) return <Failed draft={draft} message={error instanceof ImportParseError ? error.message : 'Não consegui abrir a revisão.'} />
+  return <Notice><p className="flex items-center gap-2"><Loader2Icon className="size-4 animate-spin" /> Abrindo a revisão…</p></Notice>
+}
 
-  function updateRow(key: string, patch: Partial<ImportRow>) {
-    setRows((current) => current?.map((r) => (r.key === key ? { ...r, ...patch } : r)) ?? null)
-  }
+export function ImportPage() {
+  const { list: categories, isLoading: loadingCategories } = useCategoryLookup()
+  const { data: fixedData, isLoading: loadingFixed } = useRecurringEntries()
+  const { data: namesData, isLoading: loadingNames } = useTransactionDescriptions()
+  const { data: draft, isLoading: loadingDraft } = useImportDraft()
+  const { data: assistant, isLoading: loadingAssistant } = useImportAssistant()
+  const lookups = useMemo<ImportLookups>(
+    () => ({ categories, fixedEntries: fixedData ?? [], knownNames: namesData ?? [] }),
+    [categories, fixedData, namesData],
+  )
+  const loading = loadingCategories || loadingFixed || loadingNames
+  const [tab, setTab] = useState('site')
 
-  const editingRow = rows?.find((r) => r.key === editor.key)
-  const selected = rows?.filter((r) => r.include) ?? []
-  const errorsOf = (row: ImportRow) => (row.include ? rowErrors(row, byId, fixedById) : [])
-  const invalidCount = selected.filter((r) => errorsOf(r).length > 0).length
-  const plan = buildPlan(selected, fixedById)
-  const hasWork = plan.request.transactions.length + plan.request.fixedAdjustments.length + plan.request.fixedBanks.length > 0
-
-  /** Mesmo banco em todas as linhas selecionadas. */
-  function applyBank() {
-    setRows((current) => current?.map((r) => (r.include ? { ...r, ...withBank(r, batchBank) } : r)) ?? null)
-  }
-
-  async function save() {
-    try {
-      const saved = await importMutation.mutateAsync(plan.request)
-      const banks = plan.request.fixedBanks.length
-      toast.success(`${saved.transactions} lançamento(s) importado(s) · ${saved.fixedAdjustments} fixo(s) atualizado(s)${banks ? ` · ${banks} fixo(s) com banco definido` : ''}.`)
-      const month = monthsOf(selected).sort().at(-1) ?? currentYearMonth()
-      navigate(month === currentYearMonth() ? '/financeiro/lancamentos' : `/financeiro/lancamentos?mes=${month}`)
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : 'Não foi possível importar.')
-    }
+  function content() {
+    if (loading || loadingDraft || loadingAssistant) return null
+    if (draft?.status === 'RUNNING') return <Reading draft={draft} />
+    if (draft?.status === 'FAILED') return <Failed draft={draft} message={draft.error ?? 'Tente de novo.'} />
+    if (draft?.status === 'REVIEW') return <DraftReview draft={draft} lookups={lookups} />
+    if (!assistant?.enabled) return <ManualImport lookups={lookups} loading={loading} />
+    return (
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList>
+          <TabsTrigger value="site">Pelo site</TabsTrigger>
+          <TabsTrigger value="manual">Com o seu agente</TabsTrigger>
+        </TabsList>
+        <TabsContent value="site" className="space-y-6"><DocumentImport assistant={assistant} /></TabsContent>
+        <TabsContent value="manual" className="space-y-6"><ManualImport lookups={lookups} loading={loading} /></TabsContent>
+      </Tabs>
+    )
   }
 
   return (
@@ -143,243 +98,9 @@ export function ImportPage() {
       <PageHeader
         hideValues
         title="Importar com IA"
-        description="Use um agente de IA para separar extratos e faturas nas suas categorias e importe tudo de uma vez — um mês ou um período inteiro."
+        description="Separe extratos e faturas nas suas categorias e importe tudo de uma vez, um mês ou um período inteiro."
       />
-
-      <Step n={1} title="Copie o prompt" description="Ele já traz suas categorias, seus fixos, os nomes que você usa e o modelo de resposta que o LifePedia entende.">
-        <Textarea readOnly value={loading ? 'Carregando…' : prompt}
-          className="h-56 font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={copyPrompt} disabled={loading}>
-            {copied ? <CheckIcon /> : <ClipboardCopyIcon />} {copied ? 'Copiado' : 'Copiar prompt'}
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            Cole no seu agente (ChatGPT, Claude, Gemini…) e anexe extratos e/ou faturas (PDF, print ou texto), de um ou
-            mais meses. O agente separa a origem de cada item e tira as datas do documento.
-          </p>
-        </div>
-        <p className="flex gap-2 rounded-lg bg-muted px-3 py-2 text-xs text-muted-foreground">
-          <ShieldCheckIcon className="size-4 shrink-0" />
-          O documento e o prompt (com suas categorias, fixos e nomes de lançamentos recentes) vão para o serviço de IA que você escolher — o LifePedia
-          não envia nada. Oculte números de conta/cartão e dados pessoais e prefira contas com o uso para treino desativado.
-        </p>
-      </Step>
-
-      <Step n={2} title="Cole a resposta do agente" description="Pode colar a resposta inteira; o LifePedia encontra o bloco JSON.">
-        <Textarea value={raw} onChange={(e) => setRaw(e.target.value)} className="h-40 font-mono text-base md:text-xs"
-          placeholder={`\`\`\`json\n{ "format": "${IMPORT_FORMAT}", "items": [ ... ] }\n\`\`\``} />
-        {parseError && (
-          <p className="flex items-center gap-2 text-sm text-destructive">
-            <AlertTriangleIcon className="size-4" /> {parseError}
-          </p>
-        )}
-        <Button onClick={analyze} disabled={!raw.trim() || analyzing || loading}>
-          {analyzing ? <Loader2Icon className="animate-spin" /> : <SparklesIcon />} Analisar
-        </Button>
-      </Step>
-
-      {rows && (
-        <Step n={3} title="Revise e importe" description={`Itens de fatura contam no mês da fatura em que vieram (sem ele, no mês da compra); itens de extrato, no mês da data. A descrição pode ser ajustada; a do documento fica guardada como veio. Itens de fixos não viram lançamento: atualizam o valor real do fixo no mês. Nada é salvo antes de confirmar.`}>
-          <div className="flex flex-wrap items-center gap-2 rounded-xl bg-muted p-2">
-            <span className="px-1 text-sm">Banco das linhas selecionadas:</span>
-            <div className="w-full sm:w-52"><BankSelect size="sm" value={batchBank} onChange={setBatchBank} /></div>
-            <Button size="sm" variant="outline" disabled={batchBank === OTHER_BANK} onClick={applyBank}>Aplicar</Button>
-          </div>
-          <div className="md:hidden">
-            <label className="flex items-center gap-3 border-b pb-3 text-sm">
-              <Checkbox checked={selected.length === rows.length}
-                onCheckedChange={(v) => setRows(rows.map((r) => ({ ...r, include: v === true })))} />
-              Selecionar todos
-            </label>
-            <ul className="divide-y">
-              {rows.map((row) => (
-                <ImportRowItem
-                  key={row.key}
-                  row={row}
-                  errors={errorsOf(row)}
-                  category={byId.get(row.categoryId)}
-                  fixed={fixedById.get(row.fixedEntryId)}
-                  onToggle={(include) => updateRow(row.key, { include })}
-                  onOpen={() => setEditor((e) => ({ open: true, key: row.key, seq: e.seq + 1 }))}
-                />
-              ))}
-            </ul>
-          </div>
-
-          <div className="hidden overflow-x-auto md:block">
-            <Table className="min-w-[1040px]">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8">
-                    <Checkbox
-                      aria-label="Selecionar todos"
-                      checked={selected.length === rows.length}
-                      onCheckedChange={(v) => setRows(rows.map((r) => ({ ...r, include: v === true })))}
-                    />
-                  </TableHead>
-                  <TableHead className="w-36">Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead className="w-40">Tipo, origem e banco</TableHead>
-                  <TableHead className="w-52">Lançar como</TableHead>
-                  <TableHead className="w-44">Categoria</TableHead>
-                  <TableHead className="w-28 text-right">Valor (R$)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((row) => {
-                  const errors = errorsOf(row)
-                  const fixed = fixedById.get(row.fixedEntryId)
-                  return (
-                    <TableRow key={row.key} className={cn(!row.include && 'opacity-50')}>
-                      <TableCell className="align-top">
-                        <Checkbox aria-label="Importar linha" checked={row.include}
-                          onCheckedChange={(v) => updateRow(row.key, { include: v === true })} />
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <DatePicker size="sm" value={row.date} invalid={errors.includes('data')}
-                          onChange={(date) => updateRow(row.key, { date })} />
-                        <CountsIn row={row} className="mt-1" />
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Input className="h-7" value={row.description} maxLength={120} aria-invalid={errors.includes('descrição')}
-                          onChange={(e) => updateRow(row.key, { description: e.target.value })} />
-                        <OriginalDescription className="mt-1" original={row.originalDescription} description={row.description} />
-                        {row.warnings.map((w) => (
-                          <p key={w} className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                            <AlertTriangleIcon className="size-3 shrink-0" /> {w}
-                          </p>
-                        ))}
-                        {fixed && row.include && <div className="mt-1"><FixedOutcomeNote row={row} fixed={fixed} /></div>}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Select value={row.type}
-                          onValueChange={(v) => {
-                            const type = v as EntryType
-                            const keep = byId.get(row.categoryId)?.type === type
-                            updateRow(row.key, {
-                              type,
-                              categoryId: keep ? row.categoryId : '',
-                              fixedEntryId: fixed?.type === type ? row.fixedEntryId : '',
-                            })
-                          }}>
-                          <SelectTrigger size="sm" className="w-full" aria-label="Tipo"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="EXPENSE">Despesa</SelectItem>
-                            <SelectItem value="INCOME">Ganho</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select value={row.source} onValueChange={(v) => updateRow(row.key, withSource(row, v as ImportSource))}>
-                          <SelectTrigger size="sm" className="mt-1 w-full" aria-label="Origem"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {(Object.keys(SOURCE_LABEL) as ImportSource[]).map((key) => (
-                              <SelectItem key={key} value={key}>{SOURCE_LABEL[key]}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <div className="mt-1">
-                          <BankSelect size="sm" value={row.bankCode}
-                            onChange={(code) => updateRow(row.key, withBank(row, code, row.bankName))} />
-                        </div>
-                        {row.bankCode === OTHER_BANK && (
-                          <Input className="mt-1 h-7" aria-label="Nome do banco" placeholder="Nome do banco" maxLength={60}
-                            value={row.bankName} onChange={(e) => updateRow(row.key, { bankName: e.target.value })} />
-                        )}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <FixedSelect size="sm" type={row.type} month={rowMonth(row)} value={row.fixedEntryId}
-                          fixedEntries={fixedEntries} invalid={errors.includes('fixo')}
-                          onChange={(fixedEntryId) => updateRow(row.key, { fixedEntryId })} />
-                      </TableCell>
-                      <TableCell className="align-top">
-                        {fixed ? (
-                          <span className="text-xs text-muted-foreground">A do fixo</span>
-                        ) : (
-                          <CategorySelect size="sm" type={row.type} value={row.categoryId} invalid={errors.includes('categoria')}
-                            onChange={(categoryId) => updateRow(row.key, { categoryId })} />
-                        )}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Input className="h-7 text-right" inputMode="decimal" value={row.amount} aria-invalid={errors.includes('valor')}
-                          onChange={(e) => updateRow(row.key, { amount: e.target.value })} />
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm">
-              <p>
-                <span className="font-medium">{plan.request.transactions.length}</span> lançamento(s) novo(s)
-                (despesas <span className="tabular-nums">{formatCurrency(plan.expense)}</span>, ganhos{' '}
-                <span className="tabular-nums">{formatCurrency(plan.income)}</span>) ·{' '}
-                <span className="font-medium">{plan.request.fixedAdjustments.length}</span> fixo(s) com valor real ·{' '}
-                {plan.covered} já coberto(s) por fixos
-              </p>
-              {invalidCount > 0 && (
-                <p className="text-destructive">{invalidCount} linha(s) com campos a corrigir.</p>
-              )}
-            </div>
-            <Button className="w-full sm:w-auto" onClick={save} disabled={!hasWork || invalidCount > 0 || importMutation.isPending}>
-              {importMutation.isPending && <Loader2Icon className="animate-spin" />}
-              Importar
-            </Button>
-          </div>
-        </Step>
-      )}
-      {editingRow && (
-        <ImportRowSheet
-          key={editor.seq}
-          open={editor.open}
-          onOpenChange={(open) => setEditor((e) => ({ ...e, open }))}
-          row={editingRow}
-          categoriesById={byId}
-          fixedEntries={fixedEntries}
-          fixedById={fixedById}
-          onSave={(row) => updateRow(row.key, row)}
-        />
-      )}
+      {content()}
     </div>
   )
-}
-
-/** Separa as linhas selecionadas em ocasionais novos, ajustes de fixos e itens já cobertos. */
-function buildPlan(selected: ImportRow[], fixedById: Map<string, RecurringEntry>) {
-  const request: ImportRequest = { transactions: [], fixedAdjustments: [], fixedBanks: [] }
-  const adjustments = new Map<string, ImportRequest['fixedAdjustments'][number]>()
-  const banks = new Map<string, ImportRequest['fixedBanks'][number]>()
-  let covered = 0
-  let expense = 0
-  let income = 0
-  for (const row of selected) {
-    const fixed = fixedById.get(row.fixedEntryId)
-    const bank = rowBank(row)
-    if (fixed) {
-      if (bank && !fixed.bank) banks.set(fixed.id, { recurringEntryId: fixed.id, bank })
-      const outcome = fixedOutcome(row, fixed)
-      if (outcome.changes) {
-        adjustments.set(`${fixed.id}|${outcome.month}`, { recurringEntryId: fixed.id, month: outcome.month, amount: outcome.amount })
-      } else covered++
-      continue
-    }
-    const amount = parseAmount(row.amount)
-    if (row.type === 'EXPENSE') expense += amount || 0
-    else income += amount || 0
-    request.transactions.push({
-      date: row.date,
-      description: row.description.trim(),
-      type: row.type,
-      categoryId: row.categoryId,
-      amount,
-      notes: row.notes.trim() || null,
-      originalDescription: row.originalDescription || null,
-      bank,
-      ...(row.month && { month: row.month }),
-    })
-  }
-  request.fixedAdjustments = [...adjustments.values()]
-  request.fixedBanks = [...banks.values()]
-  return { request, covered, expense, income }
 }

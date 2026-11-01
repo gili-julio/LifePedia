@@ -12,6 +12,8 @@ export type NotificationType =
   | 'FRIEND_ACCEPTED'
   | 'FINANCING_DUE'
   | 'FINANCING_COST_DUE'
+  | 'IMPORT_READY'
+  | 'IMPORT_FAILED'
 
 export type AppNotification = {
   id: string

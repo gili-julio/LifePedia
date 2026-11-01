@@ -22,10 +22,13 @@ public class ImportService {
 
     private final TransactionService transactionService;
     private final RecurringEntryService recurringEntryService;
+    private final ImportDraftService drafts;
 
-    public ImportService(TransactionService transactionService, RecurringEntryService recurringEntryService) {
+    public ImportService(TransactionService transactionService, RecurringEntryService recurringEntryService,
+                         ImportDraftService drafts) {
         this.transactionService = transactionService;
         this.recurringEntryService = recurringEntryService;
+        this.drafts = drafts;
     }
 
     /** Tudo ou nada. */
@@ -51,6 +54,7 @@ public class ImportService {
         for (FixedBank fixed : banks) {
             recurringEntryService.fillBank(userId, fixed.recurringEntryId(), BankRef.clean(fixed.bank()));
         }
+        if (request.draftId() != null) drafts.finish(userId, request.draftId());
         return new ImportResponse(transactions.size(), adjustments.size());
     }
 }
