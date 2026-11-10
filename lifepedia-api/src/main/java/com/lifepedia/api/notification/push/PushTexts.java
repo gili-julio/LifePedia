@@ -51,6 +51,8 @@ public final class PushTexts {
             case IMPORT_READY -> new PushMessage(APP, "Importação concluída: " + data.getOrDefault("items", "")
                     + " item(ns) esperam sua revisão", IMPORT_LINK, importTag(type, data), false);
             case IMPORT_FAILED -> new PushMessage(APP, "Não foi possível ler seus documentos", IMPORT_LINK, importTag(type, data), false);
+            case SYSTEM_MESSAGE -> new PushMessage(data.getOrDefault("title", APP), data.getOrDefault("body", ""), "/",
+                    "system:" + data.getOrDefault("title", ""), false);
         };
     }
 

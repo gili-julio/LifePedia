@@ -5,6 +5,7 @@ import { HideValuesButton } from '@/components/HideValuesButton'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar'
+import { AnnouncementBanner } from '@/features/announcements/AnnouncementBanner'
 import { ProfileGate } from '@/features/auth/ProfileGate'
 import { LegalGate } from '@/features/legal/LegalGate'
 import { useChatStream } from '@/features/chat/use-chat-stream'
@@ -42,6 +43,7 @@ export function AppLayout() {
       <AppSidebar unread={unread} onOpenNotifications={() => setNotificationsOpen(true)} onInstall={onInstall} />
       <SidebarInset className="min-w-0">
         <TopBar unread={unread} />
+        <AnnouncementBanner />
         <div className="mx-auto w-full max-w-6xl px-4 py-8">
           <Outlet />
         </div>

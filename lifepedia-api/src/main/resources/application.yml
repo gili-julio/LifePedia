@@ -59,6 +59,9 @@ lifepedia:
     lockout-window: 15m
     # Sessão com "Lembrar de mim" (sem ele vale lifepedia.jwt.expiration e o cookie some ao fechar o navegador).
     remember-for: 30d
+  admin:
+    # E-mail da conta que é sempre admin (dá acesso ao /admin e não pode perder o acesso). Vazio = nenhuma fixa.
+    email: ${ADMIN_EMAIL:}
   google:
     # OAuth Client ID (tipo "Aplicativo da Web") do Google Cloud. Vazio = botão do Google escondido.
     client-id: ${GOOGLE_CLIENT_ID:}

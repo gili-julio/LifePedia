@@ -67,6 +67,19 @@ class SecurityIntegrationTest extends ApiTestSupport {
     }
 
     @Test
+    void adminRoutesNeedAnAdminCheckedOnTheServer() {
+        Cookie session = register(newEmail()).getResponse().getCookie("lifepedia_session");
+        for (String uri : new String[]{"/api/admin/overview", "/api/admin/users", "/api/admin/status", "/api/admin/x"}) {
+            assertThat(mvc.get().uri(uri)).as(uri).hasStatus(401);
+            assertThat(mvc.get().uri(uri).cookie(session)).as(uri).hasStatus(403);
+        }
+        assertThat(mvc.put().uri("/api/admin/users/" + UUID.randomUUID() + "/admin").cookie(session).header(CSRF, "x")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"admin\":true}")).hasStatus(403);
+        assertThat(mvc.get().uri("/api/announcements").cookie(session)).hasStatusOk();
+        assertThat(mvc.get().uri("/api/announcements")).hasStatus(401);
+    }
+
+    @Test
     void groupsNotificationsAndImagesRequireLogin() {
         for (String uri : new String[]{"/api/groups", "/api/groups/invites", "/api/notifications",
                 "/api/groups/" + UUID.randomUUID() + "/image", "/api/groups/join/qualquer",

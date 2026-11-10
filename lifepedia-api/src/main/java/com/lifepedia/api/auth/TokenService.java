@@ -3,6 +3,7 @@ package com.lifepedia.api.auth;
 import com.lifepedia.api.config.AuthProperties;
 import com.lifepedia.api.config.JwtProperties;
 import com.lifepedia.api.user.User;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtClaimsSet;
@@ -27,14 +28,16 @@ public class TokenService {
     private final JwtProperties properties;
     private final AuthProperties authProperties;
     private final UserSessionRepository sessions;
+    private final ApplicationEventPublisher events;
 
     public TokenService(JwtEncoder encoder, JwtDecoder decoder, JwtProperties properties, AuthProperties authProperties,
-                        UserSessionRepository sessions) {
+                        UserSessionRepository sessions, ApplicationEventPublisher events) {
         this.encoder = encoder;
         this.decoder = decoder;
         this.properties = properties;
         this.authProperties = authProperties;
         this.sessions = sessions;
+        this.events = events;
     }
 
     @Transactional
@@ -64,6 +67,13 @@ public class TokenService {
         } catch (JwtException | IllegalArgumentException ignored) {
             // já não vale
         }
+    }
+
+    /** Encerra todas as sessões da pessoa (todos os aparelhos); conexões abertas fecham depois do commit. */
+    @Transactional
+    public void revokeAll(UUID userId) {
+        sessions.deleteByUser(userId);
+        events.publishEvent(new SessionsRevokedEvent(userId));
     }
 
     /** @param remember cookie persistente até {@code expiresAt}; sem ele o cookie some ao fechar o navegador */

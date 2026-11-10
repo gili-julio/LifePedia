@@ -40,6 +40,7 @@ Imagem Docker: `docker build -t lifepedia-api .` (o `docker-compose.yml` da raiz
 | `AI_MODEL` | `gemini-3.5-flash-lite` | Modelo do Gemini |
 | `AI_TIMEOUT` | `180s` | Tempo máximo de uma leitura (número puro = segundos) |
 | `AI_DAILY_LIMIT` | `100` | Leituras por dia somando todas as contas |
+| `ADMIN_EMAIL` | vazio | Conta sempre admin (`AdminBootstrap`: ao subir e no cadastro); não perde o acesso nem é bloqueada |
 | `AI_BASE_URL` | API do Google | Endereço da API; só para apontar a um servidor falso em teste |
 | `STORAGE_DIR` | `data/uploads` (no compose: `/data/uploads`, volume `lifepedia-uploads`) | Pasta das imagens (`users/`, `groups/`, `plan-items/`, cada uma com `<chave>.jpg`) |
 
@@ -86,6 +87,32 @@ e `sort=campo,asc|desc` (campos da lista de cada rota; outro campo → `400`). R
 | PUT / DELETE | `/api/users/me/image` | Foto de perfil: multipart `file` (JPEG/PNG até 1 MB, 64–4096 px), regravada como JPEG ≤ 512 px · remover. A anterior sai do disco |
 | GET | `/api/users/{id}/image?v=` | Foto de qualquer usuário (só logado); cache privado de 30 dias. `imageUrl` vem em `/me` e em todo `UserSummary` (membros, convites, autorias) |
 
+### Administração (`/api/admin`, só admin)
+
+Sem login **401**; sem admin **403** (`AdminAccess` na cadeia de segurança, conferido no banco a cada requisição, e de novo
+no controller). Toda escrita grava em `admin_audit_log`.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/overview` | `{totalUsers, newUsers7, newUsers30, activeUsers7, activeUsers30, admins, blocked, signupsDaily (30), signupsWeekly (26)}` (dias no fuso `TIME_ZONE`, sem buraco) |
+| GET | `/modules` | `{totalUsers, modules: [{key, users, items}]}` (mais usado primeiro; tarefas e notas de grupo contam para quem criou) |
+| GET | `/ai` | Importação pelo site: `enabled`, `model`, `timeoutSeconds`, `dailyLimit`, `last24h`, `running`, `users30`, `avgDurationMs`, `outcomes` (30 dias) e `daily` (concluídas x falhas) |
+| GET | `/status` | Versão e data da build, uptime, Java, fuso, memória, banco (`up`, latência, versão, tamanho, migration), recursos ligados e tarefas agendadas (última execução, situação, próxima) |
+| GET | `/users?q=&filter=ALL\|ADMIN\|BLOCKED&page=&size=&sort=createdAt\|lastSeenAt\|name,asc\|desc` | Paginado: `{id, name, username, email, imageUrl, createdAt, lastSeenAt, admin, blocked, fixedAdmin, self}` |
+| GET | `/users/{id}` | Detalhe: Google, senha, termos, `blockedAt`, sessões ativas, aparelhos com push e `counts` por módulo (nunca conteúdo) · `404` |
+| PUT | `/users/{id}/admin` | `{admin}` · `400` tirar o próprio ou o do `ADMIN_EMAIL` |
+| PUT | `/users/{id}/blocked` | `{blocked}`; bloquear apaga as sessões (`SessionsRevokedEvent` fecha o stream do chat) · `400` a própria conta ou a do `ADMIN_EMAIL` |
+| DELETE | `/users/{id}/sessions` | Encerra todas as sessões → `204` · `400` as próprias |
+| GET | `/audit?page=&size=` | Registro das ações (mais nova primeiro) |
+| GET / POST | `/announcements` | Lista paginada · `{message (até 500), level INFO\|WARNING, endsAt?}` → `201` (`400` fim no passado ou além de 90 dias; `409` já há 3 no ar) |
+| DELETE | `/announcements/{id}` | Encerra o aviso → `204` |
+| POST | `/broadcast` | `{title (até 80), body (até 300), audience ALL\|ADMINS}` → `{recipients}`; notificação `SYSTEM_MESSAGE` com push para contas não bloqueadas · `429` acima de 5 por dia |
+
+Para todos os logados: `GET /api/announcements` → avisos no ar `[{id, message, level, endsAt}]`.
+
+Conta bloqueada (`users.blocked_at`): login e Google → `403`; o `jwtDecoder` recusa token de conta bloqueada. Último
+acesso: `users.last_seen_at`, gravado pelo `LastSeenTracker` (interceptor em `/api/**`) no máximo a cada 10 min.
+
 ### Conta (`/api/account`)
 
 | Método | Rota | Descrição |
@@ -129,7 +156,7 @@ grupo (`data`: `groupName`, `taskId`, `taskTitle`, `date` se houver e `actorName
 sua), `TASK_COMMENT` (+ `preview`, até 100 caracteres) e `TASK_OVERDUE` (aviso diário às 8h, sem ator).
 `TASK_REMINDER` (lembrete; pessoal ou de grupo, sem ator): `taskId`, `taskTitle`, `date`, `time` (`HH:mm`), `minutes`
 e `groupName` (só grupo). Amizade: `FRIEND_REQUEST` (`actorName`, `actorUsername`, `requestId`) e `FRIEND_ACCEPTED`
-(`actorName`, `actorUsername`).
+(`actorName`, `actorUsername`). `SYSTEM_MESSAGE` (aviso da administração): `title`, `body`.
 
 **Push**: toda notificação vira também push (texto em `PushTexts`, link para a tela) e cada mensagem nova do chat vai
 para os outros membros (tag por grupo, a última substitui). O envio roda depois do commit, numa thread virtual, e
@@ -440,6 +467,9 @@ src/main/java/com/lifepedia/api/
 ├── account/       exportar (JSON + XlsxWriter), importar (MERGE/REPLACE) e excluir a conta
 ├── user/          entidade User (@username), /api/users/me (ver/editar perfil, foto em UserImageStore, aceite dos termos:
 │                 LegalTerms), UserRegisteredEvent
+├── admin/         painel: AdminAccess (regra de acesso), AdminBootstrap (ADMIN_EMAIL), usuários (AdminUserService),
+│                  números (AdminStats, SQL só de contagem), status (AdminStatusService), avisos (Announcement),
+│                  notificação em massa, auditoria (AuditEntry/AuditService)
 ├── notification/  notificações (tipo + dados JSON), contador de não lidas; push/ (Web Push: inscrições, PushCrypto
 │                 aes128gcm + VAPID, PushTexts, envio pelo PushGateway)
 ├── group/         grupos, membros, convites, link de convite, imagens (GroupImageStore), GroupAccess,

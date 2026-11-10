@@ -91,6 +91,14 @@ compartilham usuário, autenticação, design e padrões.
   no cadastro, no perfil e nas próprias páginas). O cadastro exige marcar "Tenho 18 anos ou mais, li e aceito"; quem
   entra pelo Google ou chega depois de uma versão nova vê um aviso que bloqueia o app até aceitar (ou sair). A versão e
   a data do aceite ficam na conta. Controlador e contato de privacidade: `features/legal/legal.ts` (web).
+- **Administração** (`/admin`, só admins; *Dashboard* no menu do perfil): a conta do `ADMIN_EMAIL` é sempre admin
+  (não perde o acesso nem pode ser bloqueada); os outros admins são dados ou tirados por um admin no painel (ninguém tira
+  o próprio acesso). Abas: **Visão geral** (usuários, novos e ativos em 7/30 dias pelo último acesso, cadastros por dia
+  ou semana, uso da IA da importação com resultado de cada leitura, pessoas por módulo), **Usuários** (busca, filtro,
+  ordem, cadastro, último acesso, toggle de admin com confirmação; detalhe só com dados de cadastro e quantidades, nunca
+  o conteúdo; bloquear conta e encerrar sessões), **Avisos** (faixa no topo do app para todos, até 3 no ar, com
+  duração; notificação em massa com push para todos ou só admins, até 5 por dia), **Auditoria** (quem fez o quê) e
+  **Sistema** (versão, memória, banco, recursos ligados e tarefas agendadas).
 - **@username**: obrigatório e único (3 a 30 caracteres: letras minúsculas, números, ponto e `_`). Contas antigas sem
   ele recebem um aviso ao abrir o app e vão para **Meu perfil** até completar o cadastro.
 - **Notificações**: no menu do perfil (avatar com contador): convite para grupo
@@ -441,6 +449,7 @@ VPS de 4 GB com o Coolify) e `COOKIE_SECURE` sempre ligado.
    | `VAPID_SUBJECT` | com o push: contato, ex.: `https://app.seudominio.com.br` ou `mailto:...` |
    | `AI_API_KEY` | opcional: chave do Gemini para a importação pelo site (ver abaixo); vazia = só o agente da pessoa |
    | `AI_MODEL` / `AI_TIMEOUT` / `AI_DAILY_LIMIT` | opcionais: modelo (`gemini-3.5-flash-lite`), tempo máximo da leitura (`180s`) e leituras por dia somando todas as contas (`100`) |
+   | `ADMIN_EMAIL` | opcional: e-mail da conta que é sempre admin (painel `/admin`); vazio = nenhuma fixa |
    | `DB_USER` | opcional, padrão `lifepedia` |
 
 4. Deploy. O primeiro build demora (Maven e npm baixam tudo).
@@ -512,6 +521,7 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Busca de usuários | Convite de grupo (só admins) e adicionar amigo: mín. 2 caracteres, até 10 resultados, devolve apenas nome, @username e foto (nunca e-mail) |
 | Chat do grupo | Só membros leem, escrevem e recebem o stream (não membro → **404**); editar/apagar só a própria mensagem (403). O stream SSE é por usuário logado e só recebe mensagens de grupos de que ele é membro no envio. Texto puro (sem HTML), até 2.000 caracteres, 30 mensagens/min por pessoa |
 | Amigos | Perfil e conquistas de alguém só para quem é amigo (senão **404**); conquistas financeiras nunca aparecem para amigos (só contagem, nunca valores). Pedidos: 30/h por usuário, até 50 sem resposta; aceitar só quem recebeu |
+| Administração | Rotas `/api/admin/**` barradas na cadeia do Spring Security (`AdminAccess`, confere no banco a cada requisição: tirar o admin vale na hora) e de novo no controller; sem login **401**, sem admin **403**. O front só esconde o menu e a rota (`RequireAdmin`, que reconfere a conta). Primeiro admin só pelo `ADMIN_EMAIL` (fixo: não perde o acesso nem é bloqueado); os outros só por outro admin, nunca o próprio. Bloquear apaga as sessões (token vale nada na hora, stream do chat fecha) e impede login; o detalhe da conta mostra só cadastro e contagens. Toda ação fica em `admin_audit_log` |
 | Rede | Portas só em `127.0.0.1`; banco com senha aleatória; API e nginx rodam **sem root**; `no-new-privileges` |
 | Navegador | CSP restritiva (única origem externa: `accounts.google.com/gsi`, para o botão do Google), `Cross-Origin-Opener-Policy: same-origin-allow-popups` (popup do Google), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, sem versão do servidor |
 | Notificações push | Web Push com chaves VAPID (a privada só no ambiente). O conteúdo vai **cifrado de ponta a ponta** até o aparelho (RFC 8291): o serviço de push do navegador (Google, Mozilla, Apple, Microsoft) não lê o texto. A API só envia para esses serviços (lista fixa, `https` na porta 443, sem redirecionamento). Cada aparelho fica ligado à **sessão de login**: sair, sessão vencida ou excluir a conta param o envio; outra pessoa no mesmo navegador não herda o push. Com o app em foco nada aparece. O texto da notificação aparece na tela de bloqueio, conforme o aparelho |

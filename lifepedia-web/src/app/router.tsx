@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { RequireAdmin } from '@/features/admin/RequireAdmin'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { RegisterPage } from '@/features/auth/RegisterPage'
 import { GuestOnly, RequireAuth } from '@/features/auth/RouteGuards'
@@ -125,6 +126,15 @@ export const router = createBrowserRouter([
           {
             path: '/perfil',
             lazy: async () => ({ Component: (await import('@/features/auth/ProfilePage')).ProfilePage }),
+          },
+          {
+            element: <RequireAdmin />,
+            children: [
+              {
+                path: '/admin',
+                lazy: async () => ({ Component: (await import('@/features/admin/pages/AdminPage')).AdminPage }),
+              },
+            ],
           },
         ],
       },

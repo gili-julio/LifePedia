@@ -49,6 +49,10 @@ export function PrivacyPage() {
         <List>
           <li>Sessões de login (identificador e validade), para manter você conectado e permitir sair de qualquer
             aparelho.</li>
+          <li>Data e hora do seu último acesso (atualizada no máximo a cada 10 minutos), para saber quantas contas estão
+            em uso e cuidar da segurança.</li>
+          <li>Resultado de cada leitura pela importação do site (deu certo ou o motivo da falha, quantos arquivos e
+            lançamentos e quanto tempo levou), sem o conteúdo dos arquivos.</li>
           <li>Endereço IP, usado na hora para limitar tentativas de login (proteção contra invasão) e registrado nos
             logs de acesso do servidor (IP, data e hora, página pedida e navegador).</li>
           <li>Se você ativar as notificações no aparelho: o endereço de entrega e as chaves fornecidas pelo navegador.</li>
@@ -100,6 +104,11 @@ export function PrivacyPage() {
             enviado além do link e do nome do produto.</li>
           <li><strong>Banco Central</strong>: nosso servidor baixa dos dados abertos do Banco Central as taxas médias dos
             bancos e os índices de correção (TR, IPCA, INCC) usados nos financiamentos. Nenhum dado seu é enviado.</li>
+          <li><strong>Administradores do LifePedia</strong>: pessoas da equipe com acesso ao painel de administração
+            veem seu nome, @, e-mail, foto, datas de cadastro e de último acesso, a versão dos termos aceita, se a conta
+            usa Google ou notificações e <strong>quantos</strong> itens você tem em cada parte do app. Nunca veem o
+            conteúdo (valores, descrições, tarefas, notas ou mensagens). Podem bloquear uma conta ou encerrar as sessões
+            dela em caso de abuso ou pedido seu, e cada ação fica registrada.</li>
           <li><strong>Autoridades</strong>, somente quando a lei ou uma ordem judicial exigir.</li>
         </List>
         <p>
@@ -126,7 +135,8 @@ export function PrivacyPage() {
         <List>
           <li><strong>Cookie de sessão</strong> (essencial): mantém você conectado. É protegido (HttpOnly, Secure,
             SameSite) e não pode ser lido por scripts.</li>
-          <li><strong>Preferências de tela</strong> (tema, menu recolhido, dias recolhidos na semana, cores da agenda, ocultar valores),
+          <li><strong>Preferências de tela</strong> (tema, menu recolhido, dias recolhidos na semana, cores da agenda, ocultar valores,
+            avisos do sistema que você fechou),
             guardadas só no seu navegador.</li>
         </List>
         <p>Não usamos cookies de publicidade, de análise ou de terceiros, por isso não pedimos consentimento para eles.</p>
@@ -139,6 +149,7 @@ export function PrivacyPage() {
             inscrições de notificação. Em cada grupo, seus itens saem como se você tivesse saído do grupo.</li>
           <li>Sessões vencidas são apagadas todos os dias. Ao sair da conta, o aparelho para de receber notificações.</li>
           <li>Logs de acesso do servidor são mantidos só pelo tempo necessário à segurança ou exigido por lei.</li>
+          <li>O registro das ações dos administradores guarda o seu nome na época, se a ação foi sobre a sua conta.</li>
           <li>Notificações já entregues a outras pessoas guardam o nome que você tinha na época (por exemplo, um convite
             antigo).</li>
         </List>

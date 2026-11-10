@@ -48,6 +48,7 @@ services:
       AI_MODEL: ${AI_MODEL:-gemini-3.5-flash-lite}
       AI_TIMEOUT: ${AI_TIMEOUT:-180s}
       AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-100}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8080}:8080"
     volumes:

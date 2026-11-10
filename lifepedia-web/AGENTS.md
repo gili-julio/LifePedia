@@ -156,6 +156,11 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   escrita para quem usa (sem nomes de tela internos, rota, API ou termos técnicos), sem travessão. "Novo" = até 7
   dias; Início mostra 3, `/novidades` todas.
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
+- **Admin** (`features/admin`): rota `/admin` dentro de `RequireAdmin` (reconfere `/api/users/me` ao abrir e ao voltar
+  para a aba; sem `admin` volta ao início) e item *Dashboard* no `UserMenu` só com `user.admin`. Isso só esconde: quem
+  protege é a API (403). Chaves `['admin', ...]`, consultas sem `retry`. Mudar permissão, bloquear, encerrar sessões,
+  publicar aviso e enviar notificação sempre com `ConfirmAction`. Números e ordem sempre da API. Avisos para todos:
+  `features/announcements` (`AnnouncementBanner` no `AppLayout`); fechados ficam no `localStorage` só pelo id.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
   (perfil, grupos, frequência, notas e financiamentos do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@5`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir

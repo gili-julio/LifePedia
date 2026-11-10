@@ -28,6 +28,18 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'avisos-e-administracao',
+    date: '2026-11-09',
+    title: 'Avisos do sistema e painel de administração',
+    modules: ['Geral', 'Notificações', 'Conta', 'Privacidade'],
+    details: [
+      'Avisos importantes, como manutenções, agora aparecem numa faixa no topo do app. Dá para fechar cada um.',
+      'Você pode receber notificações da equipe do LifePedia com novidades e comunicados.',
+      'A equipe ganhou um painel para acompanhar o uso do app e cuidar das contas. Ela vê só dados de cadastro e quantidades, nunca o que você registra.',
+      'A Política de privacidade foi atualizada: agora guardamos a data do seu último acesso e explicamos o que a administração pode ver.',
+    ],
+  },
+  {
     id: 'importar-pelo-site',
     date: '2026-11-01',
     title: 'Importe extratos e faturas direto pelo site',

@@ -7,6 +7,7 @@ import {
   FileWarningIcon,
   HeartHandshakeIcon,
   LandmarkIcon,
+  MegaphoneIcon,
   type LucideIcon,
   MessageCircleIcon,
   RepeatIcon,
@@ -148,6 +149,8 @@ export function notificationContent(n: AppNotification): Content {
       }
     case 'IMPORT_FAILED':
       return { text: 'Não foi possível ler seus documentos', link: IMPORT_LINK, icon: FileWarningIcon }
+    case 'SYSTEM_MESSAGE':
+      return { text: <>{strong(n.data.title)}: {n.data.body}</>, link: '/', icon: MegaphoneIcon }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
   }

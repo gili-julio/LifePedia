@@ -15,6 +15,7 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +46,14 @@ public class NotificationService {
     public void notify(UUID userId, NotificationType type, UUID actorId, UUID groupId, Map<String, String> data) {
         repository.save(new Notification(userId, type, actorId, groupId, json.writeValueAsString(data)));
         push.send(List.of(userId), PushTexts.of(type, data, groupId));
+    }
+
+    /** A mesma notificação para várias pessoas (aviso da administração), com push depois do commit. */
+    @Transactional
+    public void notifyAll(Collection<UUID> userIds, NotificationType type, UUID actorId, Map<String, String> data) {
+        String payload = json.writeValueAsString(data);
+        repository.saveAll(userIds.stream().map(id -> new Notification(id, type, actorId, null, payload)).toList());
+        push.send(userIds, PushTexts.of(type, data, null));
     }
 
     @Transactional(readOnly = true)

@@ -85,6 +85,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   automática (`auto`) nunca cria nem toma o aparelho de outra pessoa.
 - **PWA** (`lifepedia-web/public/sw.js`): o service worker só guarda a página offline. Nunca coloque em cache
   resposta de `/api` nem telas (dados sensíveis ficariam no aparelho depois de sair).
+- **Admin**: rota nova de administração sempre sob `/api/admin/` (já protegida por `AdminAccess`) e com `admin(jwt)` no
+  controller. Nunca devolva conteúdo do usuário (valores, textos) no painel: só cadastro e contagens.
 - Mudou algo de segurança? Atualize a seção **Segurança** do `README.md` da raiz e o `SecurityIntegrationTest`.
 
 ## Contrato API ↔ Web
@@ -122,6 +124,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Financiamentos: `FinancingKind` (e prazos padrão/máximo), `ItemCondition`, `CorrectionIndex`,
     `FinancingMath.AmortizationSystem/ExtraMode`, `FinancingDtos.Scenario/CostWhen`, `FinancingCost.Frequency` ↔
     `features/financing/types.ts` (+ `MONTHS_LIMIT` em `labels.ts`)
+  - Administração: `AdminDtos` (`UserFilter`, `Audience`), `AuditEntry.Action`, `Announcement.Level`, `AiUsage.Outcome`,
+    chaves de `AdminStats` (`MODULES`, `USER_COUNTS`) ↔ `features/admin/types.ts` + textos em `features/admin/labels.ts`
   - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
@@ -144,6 +148,17 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   completa (seleção, importação). **Nada de ordenar ou paginar no front.**
 - **Valor de fixo no mês** = ajuste do mês (`recurring_adjustments`), se houver; senão o cadastrado. API
   (`SummaryService.amountIn`) e web (`features/finance/fixed.ts` → `valueIn`) seguem a mesma regra.
+- **Administração** (`/api/admin/**`, só admin): `AdminAccess` na cadeia de segurança (sem login 401, sem admin 403,
+  conferido no banco a cada requisição) + nova checagem no `AdminController`. `UserResponse.admin` mostra o menu
+  *Dashboard*; o front nunca decide acesso sozinho. `ADMIN_EMAIL` (`AdminBootstrap`) = admin fixo (ao subir e ao se
+  cadastrar; não perde o acesso nem é bloqueado). `GET /overview`, `/modules`, `/ai`, `/status`; `GET /users` (paginado:
+  `q`, `filter` `ALL|ADMIN|BLOCKED`, `sort` `createdAt|lastSeenAt|name`), `GET /users/{id}` (só cadastro e contagens),
+  `PUT /users/{id}/admin {admin}`, `PUT /users/{id}/blocked {blocked}` (bloquear apaga as sessões), `DELETE
+  /users/{id}/sessions`; `GET /audit`; `GET/POST /announcements`, `DELETE /announcements/{id}` (encerra);
+  `POST /broadcast {title, body, audience}` (notificação `SYSTEM_MESSAGE`, 5/dia por admin). Todos: `GET
+  /api/announcements` (avisos no ar). Conta bloqueada: login/Google 403 e `jwtDecoder` recusa o token (sessão +
+  `blocked_at`). Último acesso em `users.last_seen_at` (`LastSeenTracker`, no máximo a cada 10 min). Toda ação de admin
+  grava `AuditService.record` na mesma transação. Uso da IA em `ai_usage` (`AiUsageLog`, só o resultado).
 - **Usuário**: `username` obrigatório; `profileComplete=false` (conta antiga sem username) → o front bloqueia com
   aviso e leva a `/perfil` (`PUT /api/users/me`).
 - **Notificações**: `NotificationService.notify(userId, type, actorId, groupId, data)`; `data` são strings gravadas

@@ -10,3 +10,5 @@ lifepedia:
   # Os testes chamam os agendamentos direto (TaskOverdueJob.notifyOverdue, TaskReminderJob.remind).
   scheduling:
     enabled: false
+  admin:
+    email: admin-fixo@lifepedia.dev

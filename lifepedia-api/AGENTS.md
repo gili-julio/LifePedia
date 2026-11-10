@@ -49,6 +49,12 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   (`java.net.http`; `GeminiClientTest` com servidor local). Testes de integração usam `@MockitoBean GeminiClient`
   (`ImportAssistantIntegrationTest`), sem rede. Limite `multipart` da API é o da importação; imagens têm 1 MB em
   `Images.uploadBytes`. Tudo fica na memória (`file-size-threshold`): documento não passa pelo disco.
+- **Admin** (`admin/`): acesso por `AdminAccess` (registrado em `SecurityConfig` para `/api/admin/**`) e de novo no
+  `AdminController.admin(jwt)`; nunca use só um dos dois. Números por `AdminStats` (`JdbcClient`, só `count`, nunca
+  conteúdo; tabela nova de módulo? Inclua em `MODULES` e `USER_COUNTS` e no `features/admin/labels.ts`). Ação de admin =
+  `AuditService.record` na mesma transação. Bloqueio e "encerrar sessões" por `TokenService.revokeAll` (publica
+  `SessionsRevokedEvent`). `last_seen_at` só pelo `UserRepository.touchLastSeen` (nativo; a entidade não grava a coluna).
+  Uso da IA só por `AiUsageLog.record`. Teste em `AdminIntegrationTest` (o perfil de teste fixa `lifepedia.admin.email`).
 - **Banco** (`finance/bank`): `BankRef` é `@Embedded` em ocasionais, fixos e itens de grupo; valide com `BankRef.clean`
   antes de gravar e passe nos `sync` do `GroupFinanceSync`. Soma por banco só em `BankReport`, nunca em SQL solto.
   Banco novo no catálogo = valor em `Bank` + entrada e logo no web (`src/lib/banks.ts`).

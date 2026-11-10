@@ -1,5 +1,6 @@
 package com.lifepedia.api.config;
 
+import com.lifepedia.api.admin.AdminAccess;
 import com.lifepedia.api.auth.TokenService;
 import com.lifepedia.api.auth.UserSessionRepository;
 import com.lifepedia.api.shared.RateLimiter;
@@ -54,8 +55,8 @@ public class SecurityConfig {
     private static final String AUTH_CONFIG = "/api/auth/config";
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimiter rateLimiter, AuthProperties authProperties)
-            throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimiter rateLimiter, AuthProperties authProperties,
+                                            AdminAccess adminAccess) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -64,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_PATHS.toArray(String[]::new)).permitAll()
                         .requestMatchers(HttpMethod.GET, AUTH_CONFIG).permitAll()
                         .requestMatchers("/actuator/health", "/error").permitAll()
+                        .requestMatchers("/api/admin/**").access(adminAccess)
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(Customizer.withDefaults()))
                 .addFilterBefore(new SecurityFilters.RequireCustomHeaderFilter(), BearerTokenAuthenticationFilter.class)
@@ -95,8 +97,8 @@ public class SecurityConfig {
     }
 
     /**
-     * Além de assinatura, validade e emissor: a sessão ({@code sid}) ainda existe. Logout e conta excluída apagam a
-     * sessão, então o token antigo dá 401.
+     * Além de assinatura, validade e emissor: a sessão ({@code sid}) ainda existe e a conta não está bloqueada. Logout,
+     * conta excluída e bloqueio apagam a sessão, então o token antigo dá 401.
      */
     @Bean
     JwtDecoder jwtDecoder(SecretKey jwtSecretKey, JwtProperties properties, UserSessionRepository sessions) {
@@ -104,7 +106,7 @@ public class SecurityConfig {
         OAuth2TokenValidator<Jwt> sessionActive = jwt -> {
             try {
                 UUID sid = UUID.fromString(jwt.getClaimAsString(TokenService.SESSION_CLAIM));
-                if (sessions.existsByIdAndExpiresAtAfter(sid, Instant.now())) return OAuth2TokenValidatorResult.success();
+                if (sessions.isActive(sid, Instant.now())) return OAuth2TokenValidatorResult.success();
             } catch (IllegalArgumentException | NullPointerException ignored) {
                 // sid ausente ou inválido
             }

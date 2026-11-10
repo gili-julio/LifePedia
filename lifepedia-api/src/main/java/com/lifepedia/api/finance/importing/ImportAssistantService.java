@@ -8,6 +8,9 @@ import com.lifepedia.api.finance.recurring.RecurringEntryService;
 import com.lifepedia.api.finance.transaction.TransactionService;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.RateLimiter;
+import com.lifepedia.api.finance.importing.ImportDraftService.Completion;
+import com.lifepedia.api.shared.ai.AiUsage.Outcome;
+import com.lifepedia.api.shared.ai.AiUsageLog;
 import com.lifepedia.api.shared.ai.GeminiClient;
 import com.lifepedia.api.shared.ai.GeminiClient.AiException;
 import com.lifepedia.api.shared.ai.GeminiClient.Attachment;
@@ -53,12 +56,14 @@ public class ImportAssistantService {
     private final TransactionService transactions;
     private final RateLimiter rateLimiter;
     private final Clock clock;
+    private final AiUsageLog usage;
     private final Semaphore running = new Semaphore(MAX_RUNNING);
     private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
 
     public ImportAssistantService(GeminiClient gemini, AiProperties properties, ImportDraftService drafts,
                                   CategoryService categories, RecurringEntryService recurring,
-                                  TransactionService transactions, RateLimiter rateLimiter, Clock clock) {
+                                  TransactionService transactions, RateLimiter rateLimiter, Clock clock,
+                                  AiUsageLog usage) {
         this.gemini = gemini;
         this.properties = properties;
         this.drafts = drafts;
@@ -67,6 +72,7 @@ public class ImportAssistantService {
         this.transactions = transactions;
         this.rateLimiter = rateLimiter;
         this.clock = clock;
+        this.usage = usage;
     }
 
     public AssistantConfig config(UUID userId) {
@@ -94,7 +100,7 @@ public class ImportAssistantService {
             requireAttempt(userId);
             String prompt = prompt(userId);
             DraftResponse draft = drafts.start(userId, documents.size());
-            executor.execute(() -> read(draft.id(), prompt, documents));
+            executor.execute(() -> read(userId, draft.id(), prompt, documents));
             started = true;
             return draft;
         } finally {
@@ -102,16 +108,24 @@ public class ImportAssistantService {
         }
     }
 
-    private void read(UUID draftId, String prompt, List<Attachment> documents) {
+    private void read(UUID userId, UUID draftId, String prompt, List<Attachment> documents) {
+        long start = System.nanoTime();
+        Completion done = null;
         try {
-            drafts.complete(draftId, gemini.generateJson(prompt, documents));
+            done = drafts.complete(draftId, gemini.generateJson(prompt, documents)).orElse(null);
         } catch (AiException e) {
             drafts.fail(draftId, message(e));
+            done = new Completion(Outcome.valueOf(e.failure().name()), 0);
         } catch (RuntimeException e) {
             log.error("Falha na leitura {}: {}", draftId, e.getClass().getSimpleName());
             drafts.fail(draftId, "Não consegui terminar a leitura. Tente de novo.");
+            done = new Completion(Outcome.ERROR, 0);
         } finally {
             running.release();
+            if (done != null) {
+                usage.record(userId, AiUsageLog.IMPORT, done.outcome(), documents.size(), done.items(),
+                        Duration.ofNanos(System.nanoTime() - start).toMillis());
+            }
         }
     }
 

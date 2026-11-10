@@ -9,6 +9,8 @@ import com.lifepedia.api.notification.NotificationService;
 import com.lifepedia.api.notification.NotificationType;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
+import com.lifepedia.api.shared.ai.AiUsage.Outcome;
+import com.lifepedia.api.shared.ai.AiUsageLog;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -37,11 +39,14 @@ public class ImportDraftService {
     private final ImportDraftRepository repository;
     private final NotificationService notifications;
     private final JsonMapper json;
+    private final AiUsageLog usage;
 
-    public ImportDraftService(ImportDraftRepository repository, NotificationService notifications, JsonMapper json) {
+    public ImportDraftService(ImportDraftRepository repository, NotificationService notifications, JsonMapper json,
+                              AiUsageLog usage) {
         this.repository = repository;
         this.notifications = notifications;
         this.json = json;
+        this.usage = usage;
     }
 
     @Transactional(readOnly = true)
@@ -101,19 +106,23 @@ public class ImportDraftService {
         end(draft);
     }
 
+    /** @return resultado para o registro de uso; vazio se a leitura já tinha sido encerrada */
     @Transactional
-    public void complete(UUID id, String text) {
-        repository.findById(id).filter(draft -> draft.getStatus() == Status.RUNNING).ifPresent(draft -> {
+    public Optional<Completion> complete(UUID id, String text) {
+        return repository.findById(id).filter(draft -> draft.getStatus() == Status.RUNNING).map(draft -> {
             int items = itemCount(text);
             if (items == 0) {
                 failed(draft, "Não encontrei lançamentos nos documentos.");
-            } else if (items > MAX_ITEMS) {
-                failed(draft, "São " + items + " lançamentos; envie no máximo " + MAX_ITEMS + " de cada vez.");
-            } else {
-                draft.ready(text, items);
-                notifications.notify(draft.getUserId(), NotificationType.IMPORT_READY, null, null,
-                        Map.of("draftId", id.toString(), "items", String.valueOf(items)));
+                return new Completion(Outcome.EMPTY, 0);
             }
+            if (items > MAX_ITEMS) {
+                failed(draft, "São " + items + " lançamentos; envie no máximo " + MAX_ITEMS + " de cada vez.");
+                return new Completion(Outcome.TOO_MANY, items);
+            }
+            draft.ready(text, items);
+            notifications.notify(draft.getUserId(), NotificationType.IMPORT_READY, null, null,
+                    Map.of("draftId", id.toString(), "items", String.valueOf(items)));
+            return new Completion(Outcome.SUCCESS, items);
         });
     }
 
@@ -125,7 +134,10 @@ public class ImportDraftService {
     /** Leitura perdida (a API reiniciou no meio): sem isso a tela ficaria presa em "lendo". */
     @Transactional
     public void failStale(OffsetDateTime before) {
-        repository.findByStatusAndCreatedAtBefore(Status.RUNNING, before).forEach(draft -> failed(draft, STOPPED));
+        repository.findByStatusAndCreatedAtBefore(Status.RUNNING, before).forEach(draft -> {
+            failed(draft, STOPPED);
+            usage.record(draft.getUserId(), AiUsageLog.IMPORT, Outcome.STOPPED, draft.getFileCount(), 0, 0);
+        });
     }
 
     /** Revisão esquecida perde o conteúdo; a linha fechada sai depois da janela do limite mensal. */
@@ -134,6 +146,10 @@ public class ImportDraftService {
         repository.findByStatusAndUpdatedAtBefore(Status.REVIEW, now.minus(KEEP_REVIEW)).forEach(this::end);
         repository.findByStatusAndUpdatedAtBefore(Status.FAILED, now.minus(KEEP_REVIEW)).forEach(this::end);
         repository.deleteClosed(Status.CLOSED, now.minus(ImportQuota.MONTH).minusDays(1));
+    }
+
+    /** Fim de uma leitura: resultado e lançamentos encontrados. */
+    public record Completion(Outcome outcome, int items) {
     }
 
     private Optional<ImportDraft> open(UUID userId) {

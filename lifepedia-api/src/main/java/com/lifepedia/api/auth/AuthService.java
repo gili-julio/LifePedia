@@ -196,6 +196,9 @@ public class AuthService {
     }
 
     private AuthResponse toResponse(User user, boolean remember) {
+        if (user.isBlocked()) {
+            throw new BusinessException(HttpStatus.FORBIDDEN, "Esta conta está bloqueada. Fale com o suporte.");
+        }
         TokenService.IssuedToken token = tokenService.issue(user, remember);
         return new AuthResponse(token.value(), token.expiresAt(), token.remember(), UserResponse.from(user));
     }

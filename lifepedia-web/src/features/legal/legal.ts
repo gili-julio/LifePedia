@@ -1,5 +1,5 @@
 /** Versão vigente dos Termos e da Política (data de publicação); espelha `user/LegalTerms.VERSION` da API. */
-export const LEGAL_VERSION = '2026-11-01'
+export const LEGAL_VERSION = '2026-11-09'
 
 /** Controlador dos dados (LGPD, art. 5º, VI) e canal do titular / encarregado (art. 41). */
 export const CONTROLLER = {

@@ -39,6 +39,17 @@ public class User extends BaseEntity {
     @Column(name = "terms_accepted_at")
     private OffsetDateTime termsAcceptedAt;
 
+    @Column(nullable = false)
+    private boolean admin;
+
+    /** Conta bloqueada por um admin: não entra; nulo = liberada. */
+    @Column(name = "blocked_at")
+    private OffsetDateTime blockedAt;
+
+    /** Último acesso (gravado no máximo a cada {@code LastSeenTracker.INTERVAL}). */
+    @Column(name = "last_seen_at", insertable = false, updatable = false)
+    private OffsetDateTime lastSeenAt;
+
     protected User() {
     }
 
@@ -121,6 +132,34 @@ public class User extends BaseEntity {
 
     public OffsetDateTime getTermsAcceptedAt() {
         return termsAcceptedAt;
+    }
+
+    public boolean isAdmin() {
+        return admin;
+    }
+
+    public void setAdmin(boolean admin) {
+        this.admin = admin;
+    }
+
+    public boolean isBlocked() {
+        return blockedAt != null;
+    }
+
+    public OffsetDateTime getBlockedAt() {
+        return blockedAt;
+    }
+
+    public void setBlocked(boolean blocked) {
+        blockedAt = blocked ? (blockedAt == null ? OffsetDateTime.now() : blockedAt) : null;
+    }
+
+    public OffsetDateTime getLastSeenAt() {
+        return lastSeenAt;
+    }
+
+    public String getTermsVersion() {
+        return termsVersion;
     }
 
     /** URL da foto com versão (cache); nula sem foto. */

@@ -14,6 +14,8 @@ export type User = {
   hasPassword: boolean
   /** Aceitou a versão vigente dos Termos e da Política (`LegalGate` pede quando false) */
   termsAccepted: boolean
+  /** Acesso ao painel `/admin` (a API confere de novo em cada chamada) */
+  admin: boolean
 }
 
 /** O token fica no cookie, não no corpo. */

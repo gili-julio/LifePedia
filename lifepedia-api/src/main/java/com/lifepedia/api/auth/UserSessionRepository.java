@@ -10,10 +10,19 @@ import java.util.UUID;
 
 public interface UserSessionRepository extends JpaRepository<UserSession, UUID> {
 
-    boolean existsByIdAndExpiresAtAfter(UUID id, Instant now);
+    /** Sessão viva e conta não bloqueada. */
+    @Query("select count(s) > 0 from UserSession s, User u where s.id = :id and s.expiresAt > :now "
+            + "and u.id = s.userId and u.blockedAt is null")
+    boolean isActive(UUID id, Instant now);
+
+    long countByUserIdAndExpiresAtAfter(UUID userId, Instant now);
 
     @Transactional
     @Modifying
     @Query("delete from UserSession s where s.expiresAt < :now")
     int deleteExpired(Instant now);
+
+    @Modifying
+    @Query("delete from UserSession s where s.userId = :userId")
+    int deleteByUser(UUID userId);
 }

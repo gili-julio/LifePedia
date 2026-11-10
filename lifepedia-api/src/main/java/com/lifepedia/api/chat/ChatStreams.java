@@ -1,5 +1,6 @@
 package com.lifepedia.api.chat;
 
+import com.lifepedia.api.auth.SessionsRevokedEvent;
 import com.lifepedia.api.chat.ChatDtos.ChatEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,6 +53,13 @@ public class ChatStreams {
     @TransactionalEventListener
     public void onMessage(ChatEvent event) {
         deliver(event.recipients(), event);
+    }
+
+    /** Sessões encerradas: fecha as conexões abertas da pessoa (o token delas já não vale). */
+    @TransactionalEventListener
+    public void onSessionsRevoked(SessionsRevokedEvent event) {
+        Deque<SseEmitter> emitters = byUser.remove(event.userId());
+        if (emitters != null) emitters.forEach(SseEmitter::complete);
     }
 
     /** Mantém a conexão viva atrás de proxies (nginx/Traefik fecham conexão parada). */

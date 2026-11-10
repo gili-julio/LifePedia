@@ -14,6 +14,7 @@ export type NotificationType =
   | 'FINANCING_COST_DUE'
   | 'IMPORT_READY'
   | 'IMPORT_FAILED'
+  | 'SYSTEM_MESSAGE'
 
 export type AppNotification = {
   id: string

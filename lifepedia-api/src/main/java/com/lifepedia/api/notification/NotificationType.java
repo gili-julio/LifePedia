@@ -29,5 +29,7 @@ public enum NotificationType {
     /** Leitura dos documentos pronta para revisar. data: draftId, items */
     IMPORT_READY,
     /** Leitura dos documentos falhou. data: draftId */
-    IMPORT_FAILED
+    IMPORT_FAILED,
+    /** Mensagem da administração para todos (ou só admins). data: title, body */
+    SYSTEM_MESSAGE
 }

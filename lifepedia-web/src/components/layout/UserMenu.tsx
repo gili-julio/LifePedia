@@ -1,4 +1,14 @@
-import { BellIcon, ChevronsUpDownIcon, DownloadIcon, LogOutIcon, MonitorIcon, MoonIcon, SunIcon, UserRoundIcon } from 'lucide-react'
+import {
+  BellIcon,
+  ChevronsUpDownIcon,
+  DownloadIcon,
+  LayoutDashboardIcon,
+  LogOutIcon,
+  MonitorIcon,
+  MoonIcon,
+  SunIcon,
+  UserRoundIcon,
+} from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useNavigate } from 'react-router'
 import { UserAvatar } from '@/components/UserAvatar'
@@ -79,6 +89,11 @@ export function UserMenu({ unread, onOpenNotifications, onInstall }: {
             <DropdownMenuItem onClick={() => navigate('/perfil')}>
               <UserRoundIcon /> Meu perfil
             </DropdownMenuItem>
+            {user.admin && (
+              <DropdownMenuItem onClick={() => navigate('/admin')}>
+                <LayoutDashboardIcon /> Dashboard
+              </DropdownMenuItem>
+            )}
             {onInstall && (
               <DropdownMenuItem onClick={install}>
                 <DownloadIcon /> Instalar app
