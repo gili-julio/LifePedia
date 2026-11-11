@@ -1,6 +1,7 @@
 package com.lifepedia.api.user;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -9,14 +10,18 @@ import java.util.UUID;
  * @param googleLinked    conta Google vinculada
  * @param hasPassword     false = conta criada pelo Google, entra só por ele
  * @param admin           acesso ao painel de administração
+ * @param preferences     menu só com ícones e módulos escondidos (valem em todos os aparelhos)
  */
 public record UserResponse(UUID id, String name, String username, String email, String imageUrl,
                            OffsetDateTime createdAt, boolean profileComplete, boolean googleLinked, boolean hasPassword,
-                           boolean termsAccepted, boolean admin) {
+                           boolean termsAccepted, boolean admin, Preferences preferences) {
+
+    public record Preferences(boolean sidebarIcons, List<AppModule> hiddenModules) {
+    }
 
     public static UserResponse from(User user) {
         return new UserResponse(user.getId(), user.getName(), user.getUsername(), user.getEmail(), user.imageUrl(),
                 user.getCreatedAt(), user.isProfileComplete(), user.getGoogleSub() != null, user.hasPassword(),
-                user.hasAcceptedTerms(), user.isAdmin());
+                user.hasAcceptedTerms(), user.isAdmin(), new Preferences(user.isSidebarIcons(), user.hiddenModules()));
     }
 }

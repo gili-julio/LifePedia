@@ -2,6 +2,7 @@ import {
   AlarmClockIcon,
   BellIcon,
   BellRingIcon,
+  Building2Icon,
   CircleCheckIcon,
   FileCheckIcon,
   FileWarningIcon,
@@ -29,6 +30,11 @@ type Content = {
   link: string
   /** Ícone quando não há imagem */
   icon: LucideIcon
+}
+
+/** Projeto de arquitetura. */
+function projectLink(n: AppNotification) {
+  return `/arquitetura/${encodeURIComponent(n.data.projectId ?? '')}`
 }
 
 /** Link que abre a tarefa: aba Tarefas do grupo ou Tarefas pessoais. */
@@ -151,6 +157,19 @@ export function notificationContent(n: AppNotification): Content {
       return { text: 'Não foi possível ler seus documentos', link: IMPORT_LINK, icon: FileWarningIcon }
     case 'SYSTEM_MESSAGE':
       return { text: <>{strong(n.data.title)}: {n.data.body}</>, link: '/', icon: MegaphoneIcon }
+    case 'ARCHITECTURE_SHARED':
+      return {
+        text: <>{strong(n.data.actorName)} compartilhou o projeto {strong(n.data.projectName)}
+          {n.data.groupName ? <> com o grupo {strong(n.data.groupName)}</> : ' com você'}</>,
+        link: projectLink(n),
+        icon: Building2Icon,
+      }
+    case 'ARCHITECTURE_COMMENT':
+      return {
+        text: <>{strong(n.data.actorName)} comentou em {strong(n.data.projectName)}: “{n.data.preview}”</>,
+        link: projectLink(n),
+        icon: MessageCircleIcon,
+      }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
   }

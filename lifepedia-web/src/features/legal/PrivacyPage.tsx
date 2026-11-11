@@ -43,7 +43,13 @@ export function PrivacyPage() {
             contratos que você cadastra (valor, taxa, prazo, banco, amortizações extras e gastos do bem).</li>
           <li>Grupos: nome, imagem, membros, itens financeiros que você leva, planejamento (com links e fotos de produtos),
             financiamentos do grupo (com a parte de cada um), notas do grupo e mensagens do chat.</li>
+          <li>Arquitetura: projetos (nome, descrição, latitude e direção do norte), as maquetes 3D que você envia (já
+            convertidas e comprimidas no seu aparelho; o arquivo original do SketchUp não é enviado), a foto de capa, as
+            versões, comentários presos na maquete, vistas salvas, variantes de acabamento (cores e texturas escolhidas),
+            cômodos marcados (nome, área e contorno), luzes da vista noturna, anexos (imagens e PDFs), com quem você
+            compartilhou e os links públicos que criou.</li>
           <li>Amigos, pedidos de amizade, conquistas e notificações.</li>
+          <li>Preferências do menu: formato no computador e módulos que você escondeu.</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
         <List>
@@ -88,6 +94,12 @@ export function PrivacyPage() {
             ou escreve no grupo. Amigos veem seu perfil e suas conquistas (nunca valores financeiros). Qualquer pessoa
             com conta pode encontrar você pelo nome ou @ ao convidar ou adicionar amigos (só nome, @ e foto, nunca o
             e-mail).</li>
+          <li><strong>Projetos de arquitetura</strong>: só quem você escolher. Amigos e membros dos grupos com quem você
+            compartilha veem o projeto, a maquete, as versões, os anexos, os comentários (com nome e foto de quem
+            escreveu) e quem enviou cada versão; conforme a permissão, também comentam ou editam. Um <strong>link
+            público</strong> deixa qualquer pessoa que o receber ver, sem conta, a maquete atual, as vistas salvas, as variantes, os cômodos e as luzes dela, o nome
+            e a descrição do projeto e o seu nome, até a data de validade ou até você apagar o link. Quem recebe pode
+            repassar o link: compartilhe com cuidado.</li>
           <li><strong>Hospedagem</strong>: o provedor de servidor onde o LifePedia funciona armazena os dados em nosso
             nome, como operador.</li>
           <li><strong>Google</strong>: se você usar o botão do Google, a página carrega o script do Google e o Google
@@ -145,8 +157,11 @@ export function PrivacyPage() {
       <Section title="7. Por quanto tempo guardamos">
         <List>
           <li>Seus dados ficam enquanto sua conta existir. Você pode apagar itens a qualquer momento.</li>
-          <li><strong>Ao excluir a conta</strong>, apagamos na hora seus dados, fotos, mensagens do chat, sessões e
+          <li><strong>Ao excluir a conta</strong>, apagamos na hora seus dados, fotos, projetos e maquetes, mensagens do chat, sessões e
             inscrições de notificação. Em cada grupo, seus itens saem como se você tivesse saído do grupo.</li>
+          <li>Projetos de arquitetura ficam até você excluí-los (maquetes, anexos e capa saem do servidor junto). Envios de
+            maquete que não terminaram são descartados em até 2 horas, e links públicos vencidos são apagados depois de 30
+            dias.</li>
           <li>Sessões vencidas são apagadas todos os dias. Ao sair da conta, o aparelho para de receber notificações.</li>
           <li>Logs de acesso do servidor são mantidos só pelo tempo necessário à segurança ou exigido por lei.</li>
           <li>O registro das ações dos administradores guarda o seu nome na época, se a ação foi sobre a sua conta.</li>

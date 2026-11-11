@@ -15,6 +15,7 @@ import { PushCard } from '@/features/notifications/PushCard'
 import { api, ApiError } from '@/lib/api'
 import { useAuth } from './auth-context'
 import { GoogleAccount } from './GoogleAccount'
+import { MenuPreferences } from './MenuPreferences'
 import { ProfilePhoto } from './ProfilePhoto'
 import type { ProfileRequest, User } from './types'
 import { usernameSchema } from './username'
@@ -108,6 +109,7 @@ export function ProfilePage() {
       </Card>
 
       <GoogleAccount />
+      {!incomplete && <MenuPreferences />}
       {!incomplete && <PushCard />}
       {!incomplete && <AccountSections />}
       <LegalLinks />

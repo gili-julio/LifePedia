@@ -50,6 +50,10 @@ lifepedia:
   storage:
     # Imagens (perfis, grupos e itens do planejamento). No Docker: volume em /data/uploads.
     dir: ${STORAGE_DIR:data/uploads}
+  architecture:
+    # Espaço de cada conta para maquetes 3D e anexos dos projetos dela, e tamanho máximo de uma maquete (já comprimida).
+    quota: ${ARCHITECTURE_QUOTA:300MB}
+    max-model: ${ARCHITECTURE_MAX_MODEL:100MB}
   auth:
     cookie-name: lifepedia_session
     cookie-secure: ${COOKIE_SECURE:true}

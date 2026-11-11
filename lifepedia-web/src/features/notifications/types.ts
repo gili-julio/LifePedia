@@ -15,6 +15,8 @@ export type NotificationType =
   | 'IMPORT_READY'
   | 'IMPORT_FAILED'
   | 'SYSTEM_MESSAGE'
+  | 'ARCHITECTURE_SHARED'
+  | 'ARCHITECTURE_COMMENT'
 
 export type AppNotification = {
   id: string

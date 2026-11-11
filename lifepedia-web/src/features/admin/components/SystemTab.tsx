@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { formatInstantDate, formatRelative, formatTime } from '@/lib/format'
+import { formatBytes, formatInstantDate, formatRelative, formatTime } from '@/lib/format'
 import { useSystemStatus } from '../api'
-import { formatBytes, formatDuration, JOB_LABEL } from '../labels'
+import { formatDuration, JOB_LABEL } from '../labels'
 import type { JobStatus } from '../types'
 
 const JOB_ICON: Record<JobStatus, ReactNode> = {

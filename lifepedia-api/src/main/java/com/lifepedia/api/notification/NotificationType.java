@@ -31,5 +31,9 @@ public enum NotificationType {
     /** Leitura dos documentos falhou. data: draftId */
     IMPORT_FAILED,
     /** Mensagem da administração para todos (ou só admins). data: title, body */
-    SYSTEM_MESSAGE
+    SYSTEM_MESSAGE,
+    /** Projeto de arquitetura compartilhado. data: actorName, actorUsername, projectId, projectName, role, groupName (grupo) */
+    ARCHITECTURE_SHARED,
+    /** Comentário na maquete. data: actorName, actorUsername, projectId, projectName, preview */
+    ARCHITECTURE_COMMENT
 }

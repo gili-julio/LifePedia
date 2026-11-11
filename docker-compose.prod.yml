@@ -48,6 +48,8 @@ services:
       AI_TIMEOUT: ${AI_TIMEOUT:-180s}
       AI_DAILY_LIMIT: ${AI_DAILY_LIMIT:-100}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ARCHITECTURE_QUOTA: ${ARCHITECTURE_QUOTA:-300MB}
+      ARCHITECTURE_MAX_MODEL: ${ARCHITECTURE_MAX_MODEL:-100MB}
       # Heap proporcional ao limite do container (cabe numa VPS de 4 GB junto com o Coolify).
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
     volumes:

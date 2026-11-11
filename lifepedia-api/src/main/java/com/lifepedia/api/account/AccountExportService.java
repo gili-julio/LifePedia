@@ -10,6 +10,7 @@ import com.lifepedia.api.account.AccountDtos.PlanItemData;
 import com.lifepedia.api.account.AccountDtos.Profile;
 import com.lifepedia.api.account.AccountDtos.RecurringData;
 import com.lifepedia.api.account.AccountDtos.TransactionData;
+import com.lifepedia.api.architecture.ArchitectureService;
 import com.lifepedia.api.attendance.AttendanceService;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.category.Category;
@@ -39,6 +40,7 @@ import com.lifepedia.api.task.TaskOccurrence;
 import com.lifepedia.api.task.TaskTransferService;
 import com.lifepedia.api.user.User;
 import com.lifepedia.api.user.UserService;
+import com.lifepedia.api.user.UserResponse.Preferences;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,6 +77,7 @@ public class AccountExportService {
     private final NoteService notes;
     private final FinancingService financings;
     private final FinancingSimulationService simulations;
+    private final ArchitectureService architecture;
     private final RateLimiter rateLimiter;
 
     public AccountExportService(UserService users, CategoryRepository categories, RecurringEntryRepository recurring,
@@ -83,7 +86,8 @@ public class AccountExportService {
                                 GroupTransactionRepository groupTransactions, GroupRecurringEntryRepository groupRecurring,
                                 PlanItemRepository planItems, TaskTransferService taskTransfer,
                                 AttendanceService attendance, NoteService notes, FinancingService financings,
-                                FinancingSimulationService simulations, RateLimiter rateLimiter) {
+                                FinancingSimulationService simulations, ArchitectureService architecture,
+                                RateLimiter rateLimiter) {
         this.users = users;
         this.categories = categories;
         this.recurring = recurring;
@@ -99,6 +103,7 @@ public class AccountExportService {
         this.notes = notes;
         this.financings = financings;
         this.simulations = simulations;
+        this.architecture = architecture;
         this.rateLimiter = rateLimiter;
     }
 
@@ -128,10 +133,12 @@ public class AccountExportService {
         TaskTransferService.Exported own = taskTransfer.export(userId, AccountExportService::ref);
 
         return new AccountData(AccountDtos.FORMAT, OffsetDateTime.now(),
-                new Profile(user.getName(), user.getUsername(), user.getEmail()),
+                new Profile(user.getName(), user.getUsername(), user.getEmail(),
+                        new Preferences(user.isSidebarIcons(), user.hiddenModules())),
                 cats.stream().map(c -> new CategoryData(ref(c.getId()), c.getName(), c.getType(), c.getColor())).toList(),
                 fixed, occasional, groups(userId, names), own.lists(), own.tags(), own.tasks(), attendance.export(userId),
-                notes.export(userId), financings.export(userId), simulations.export(userId));
+                notes.export(userId), financings.export(userId), simulations.export(userId),
+                architecture.exportData(userId));
     }
 
     /** Planilha com as mesmas informações, para abrir no Excel/Google Planilhas. */

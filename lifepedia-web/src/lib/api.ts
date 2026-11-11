@@ -80,3 +80,56 @@ export async function apiDownload(path: string, fallbackName: string) {
   link.click()
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
+
+/** Progresso de 0 a 1 (nulo quando o tamanho é desconhecido). */
+export type ProgressListener = (fraction: number | null) => void
+
+/** Envia um arquivo cru (não multipart) com progresso; resposta JSON como `api`. */
+export function apiUpload<T>(path: string, body: Blob, method: 'PUT' | 'POST', onProgress?: ProgressListener): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open(method, path)
+    xhr.withCredentials = true
+    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest')
+    xhr.setRequestHeader('Content-Type', body.type || 'application/octet-stream')
+    xhr.upload.onprogress = (e) => onProgress?.(e.lengthComputable ? e.loaded / e.total : null)
+    xhr.onerror = () => reject(new ApiError(0, 'Não foi possível conectar à API. Ela está rodando?'))
+    xhr.onload = () => {
+      if (xhr.status === 401) onUnauthorized?.()
+      let json: unknown = null
+      try {
+        json = xhr.responseText ? JSON.parse(xhr.responseText) : null
+      } catch {
+        json = null
+      }
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(json as T)
+      const problem = json as { detail?: string; errors?: Record<string, string> } | null
+      reject(new ApiError(xhr.status, problem?.detail ?? `Erro inesperado (${xhr.status}).`, problem?.errors ?? {}))
+    }
+    xhr.send(body)
+  })
+}
+
+/** Baixa um arquivo binário da API (ou do link público) com progresso. */
+export async function apiBinary(path: string, onProgress?: ProgressListener): Promise<ArrayBuffer> {
+  const response = await request(path)
+  const total = Number(response.headers.get('Content-Length')) || 0
+  if (!response.body) return response.arrayBuffer()
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let loaded = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    chunks.push(value)
+    loaded += value.length
+    onProgress?.(total ? loaded / total : null)
+  }
+  const out = new Uint8Array(loaded)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.length
+  }
+  return out.buffer
+}

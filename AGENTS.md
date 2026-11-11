@@ -79,7 +79,10 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   portas publicadas, variáveis no painel do Coolify) e atualize a seção **Deploy** do `README.md`.
 - **Front**: respeitar a CSP (sem scripts inline, sem CDN/recursos externos, sem `dangerouslySetInnerHTML`). Única
   exceção: o script/iframe do botão do Google (`accounts.google.com/gsi`, liberado no `nginx.conf` e carregado só por
-  `features/auth/GoogleButton.tsx`).
+  `features/auth/GoogleButton.tsx`). `'wasm-unsafe-eval'` (WebAssembly, não `eval`) e `connect-src blob:` existem só
+  para comprimir/abrir maquetes 3D (`features/architecture`).
+- **Rotas públicas** de dados: só `GET /api/public/architecture/**` (link da maquete: token aleatório de 256 bits,
+  validade, limite por IP; nunca devolve e-mail, comentários nem anexos; leva vistas, variantes, cômodos e luzes).
 - **Push** (`notification/push`): só para hosts de `lifepedia.push.allowed-hosts` (`https`, 443, sem redirect);
   payload sempre cifrado (`PushCrypto`); aparelho só recebe com sessão de login válida (`session_id`); sincronização
   automática (`auto`) nunca cria nem toma o aparelho de outra pessoa.
@@ -112,6 +115,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - `GroupMember.Role` (`ADMIN`/`MEMBER`) ↔ `features/groups/types.ts`; `ShareMode` (`SYNC`/`COPY`) ↔ `features/finance/group/types.ts`
   - `PlanItem.Kind` (`PURCHASE`/`INVESTMENT`) e meses da média (0, 3, 6, 12) ↔ `features/planning/types.ts`
   - Regra do @username (`user/Usernames.java`) ↔ `features/auth/username.ts`
+  - Módulos que dá para esconder (`user/AppModule`) ↔ `features/auth/types.ts` (`AppModule`) + textos em
+    `features/auth/preferences.ts` (`MODULES`) + `module` dos itens em `components/layout/nav-items.ts`
   - Parcela no nome ("Loja (3/10)": `finance/Installments.java`) ↔ `features/finance/installments.ts`
   - Nomes de categoria de investimento (`finance/category/InvestmentCategories.java`) ↔ textos que citam "Investir"/"Investimento" no front
   - Versão dos termos (`user/LegalTerms.VERSION`) ↔ `features/legal/legal.ts` (`LEGAL_VERSION`)
@@ -126,6 +131,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
     `features/financing/types.ts` (+ `MONTHS_LIMIT` em `labels.ts`)
   - Administração: `AdminDtos` (`UserFilter`, `Audience`), `AuditEntry.Action`, `Announcement.Level`, `AiUsage.Outcome`,
     chaves de `AdminStats` (`MODULES`, `USER_COUNTS`) ↔ `features/admin/types.ts` + textos em `features/admin/labels.ts`
+  - Arquitetura: `ArchRole` (`VIEW`/`COMMENT`/`EDIT`/`OWNER`), `ArchAttachment.Kind` (`IMAGE`/`PDF`) e DTOs de
+    `ArchitectureDtos` ↔ `features/architecture/types.ts` (+ textos em `labels.ts`)
   - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
@@ -160,7 +167,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   `blocked_at`). Último acesso em `users.last_seen_at` (`LastSeenTracker`, no máximo a cada 10 min). Toda ação de admin
   grava `AuditService.record` na mesma transação. Uso da IA em `ai_usage` (`AiUsageLog`, só o resultado).
 - **Usuário**: `username` obrigatório; `profileComplete=false` (conta antiga sem username) → o front bloqueia com
-  aviso e leva a `/perfil` (`PUT /api/users/me`).
+  aviso e leva a `/perfil` (`PUT /api/users/me`). **Preferências** da conta em `UserResponse.preferences`
+  (`sidebarIcons`, `hiddenModules`), gravadas por `PUT /api/users/me/preferences` (valem em todos os aparelhos): módulo
+  escondido some do menu e do Início, mas a rota continua abrindo e nada é apagado.
 - **Notificações**: `NotificationService.notify(userId, type, actorId, groupId, data)`; `data` são strings gravadas
   no envio (nomes da época). O front monta o texto por `type`; o push usa o texto de `notification/push/PushTexts`
   (espelho de `notification-content.tsx`: **mudou um, mude o outro**).
@@ -196,11 +205,12 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@5`, anexo; importa `@1` a `@5`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@6`, anexo; importa `@1` a `@6`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
-  `profile`, `groups`, `commitments` (frequência, desde o `@3`), `notes` (desde o `@4`), `financings` e `financingSimulations` (desde o `@5`) são só registro. Mudou o formato? Crie `@6` e mantenha a importação dos anteriores (usuários guardam
+  `profile`, `groups`, `commitments` (frequência, desde o `@3`), `notes` (desde o `@4`), `financings` e `financingSimulations` (desde o `@5`) e `architecture` (projetos com versões,
+  vistas, nomes dos anexos, das variantes e dos cômodos, mais os comentários da pessoa; sem os arquivos 3D, desde o `@6`) são só registro. Mudou o formato? Crie `@7` e mantenha a importação dos anteriores (usuários guardam
   arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -288,6 +298,29 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   `lifepedia-api/.../finance/importing/ImportPrompt.java`, parser em `lifepedia-web/src/features/finance/import/parse.ts`). Mudou o formato? Crie `@5`
   e mantenha o parser aceitando os anteriores (`@1` usa só `description`, `@2` não tem `source`/`invoiceMonth`, `@3` não tem
   `bank`; usuários podem ter prompts antigos salvos).
+- **Arquitetura** (`/api/architecture`): projeto do dono (`arch_projects.user_id`) compartilhado por `arch_shares` com
+  um amigo (`user_id`) ou um grupo do dono (`group_id`, vale para todos os membros na hora da leitura) e papel
+  `VIEW < COMMENT < EDIT` (o maior vale; `OWNER` só o dono). Acesso sempre por `ArchitectureAccess.require` (sem acesso
+  **404**, papel menor **403**). **A maquete nunca é `.skp`**: o navegador lê a exportação do SketchUp (`.dae`, `.glb`,
+  `.gltf`, `.fbx`, `.obj` ou `.zip`), aplica unidade/posição (chão em y = 0, centro em x/z = 0, metros) e gera **GLB
+  comprimido** (texturas WebP até 2048 px, geometria meshopt). Envio em dois passos: `POST /projects/{id}/versions
+  {sizeBytes, label, note, sourceName, sourceBytes}` reserva o espaço (versão `PENDING`, conta na cota; some em 2 h sem
+  arquivo) e `PUT /versions/{id}/model` com o GLB cru (`model/gltf-binary`, até o tamanho reservado; vira `READY`, número
+  novo e versão atual). `GET /projects` (`owned`, `shared` com `sharedVia`, `usage`), `POST`/`GET`/`PUT`/`DELETE
+  /projects/{id}`, `PUT/GET /projects/{id}/cover` (foto da maquete tirada no envio), `GET /versions/{id}/model`, `PUT
+  /versions/{id}`, `DELETE /versions/{id}`, `PUT /projects/{id}/current {versionId}`, comentários (`GET
+  ?versionId`, `POST {versionId, body, point}`, `PUT /{id}/resolved`, `DELETE`; ponto em metros no espaço do GLB),
+  vistas (`POST {name, position, target}`, `DELETE`), anexos (`GET`, `POST` multipart `file` + `name`: imagem até 1 MB
+  regravada ou PDF até 15 MB; `GET /{id}/file`, `DELETE`), compartilhamento (só dono: `GET /shares`, `GET
+  /share-options`, `PUT|DELETE /shares/users/{userId}` e `/shares/groups/{groupId}` com `{role}`, `POST /links {days}`,
+  `DELETE /links/{id}`; quem recebeu direto sai com `DELETE /shares/me`). Link público: `GET
+  /api/public/architecture/{token}` e `/{token}/model` (sem login; só versão atual, vistas e a cena dela). Espaço por dono
+  (`ARCHITECTURE_QUOTA`, maquetes + anexos + reservas) e tamanho por maquete (`ARCHITECTURE_MAX_MODEL`). Notificações
+  `ARCHITECTURE_SHARED` e `ARCHITECTURE_COMMENT` (dono e quem edita). **Cena da versão** (`GET
+  /projects/{id}/scene?versionId`): variantes (`materials` = índice do material no GLB → `{color, texture, scale}`;
+  `texture` = id da biblioteca do front, `viewer/textures.ts`), cômodos (ponto, teto, área e contorno achados no navegador)
+  e luzes; `POST/PUT/DELETE /variants`, `/rooms`, `/lights` só com `EDIT`. O índice do material é estável por versão (o
+  GLB não muda depois de enviado).
 
 ## Checklist: novo módulo
 

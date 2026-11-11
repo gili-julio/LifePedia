@@ -41,8 +41,10 @@ Imagem Docker: `docker build -t lifepedia-api .` (o `docker-compose.yml` da raiz
 | `AI_TIMEOUT` | `180s` | Tempo máximo de uma leitura (número puro = segundos) |
 | `AI_DAILY_LIMIT` | `100` | Leituras por dia somando todas as contas |
 | `ADMIN_EMAIL` | vazio | Conta sempre admin (`AdminBootstrap`: ao subir e no cadastro); não perde o acesso nem é bloqueada |
+| `ARCHITECTURE_QUOTA` | `300MB` | Espaço de cada conta para maquetes e anexos dos projetos dela (inclui versões reservadas) |
+| `ARCHITECTURE_MAX_MODEL` | `100MB` | Tamanho máximo de uma maquete (GLB já comprimido no navegador) |
 | `AI_BASE_URL` | API do Google | Endereço da API; só para apontar a um servidor falso em teste |
-| `STORAGE_DIR` | `data/uploads` (no compose: `/data/uploads`, volume `lifepedia-uploads`) | Pasta das imagens (`users/`, `groups/`, `plan-items/`, cada uma com `<chave>.jpg`) |
+| `STORAGE_DIR` | `data/uploads` (no compose: `/data/uploads`, volume `lifepedia-uploads`) | Pasta dos arquivos (`users/`, `groups/`, `plan-items/`, `notes/` com `<chave>.jpg`; `architecture/` com `<chave>.glb`, `.jpg` e `.pdf`) |
 
 Limites de segurança ficam em `lifepedia.auth.*` no `application.yml` (tentativas por IP, bloqueio por e-mail).
 
@@ -83,6 +85,7 @@ e `sort=campo,asc|desc` (campos da lista de cada rota; outro campo → `400`). R
 | GET | `/api/users/me` | Usuário logado (`username`, `profileComplete`: false = falta dado obrigatório, `googleLinked`, `hasPassword`) |
 | PUT / DELETE | `/api/users/me/google` | `{credential}` vincula a conta Google (`409` se já é de outro usuário ou se já há outra vinculada) · desvincula (`400` em conta sem senha) |
 | PUT | `/api/users/me` | `{name, username}` — completa/edita o perfil · `409` se o username é de outro |
+| PUT | `/api/users/me/preferences` | `{sidebarIcons, hiddenModules: [FINANCE\|FINANCING\|TASKS\|AGENDA\|ATTENDANCE\|NOTES\|GROUPS\|FRIENDS\|ARCHITECTURE]}` → `UserResponse` (menu só com ícones e módulos escondidos do menu e do Início; repetidos viram um) |
 | PUT | `/api/users/me/terms` | `{version}` → `UserResponse` com `termsAccepted: true` (conta criada pelo Google ou termos novos) · `400` se não é a versão vigente (`LegalTerms.VERSION`) |
 | PUT / DELETE | `/api/users/me/image` | Foto de perfil: multipart `file` (JPEG/PNG até 1 MB, 64–4096 px), regravada como JPEG ≤ 512 px · remover. A anterior sai do disco |
 | GET | `/api/users/{id}/image?v=` | Foto de qualquer usuário (só logado); cache privado de 30 dias. `imageUrl` vem em `/me` e em todo `UserSummary` (membros, convites, autorias) |
@@ -117,9 +120,9 @@ acesso: `users.last_seen_at`, gravado pelo `LastSeenTracker` (interceptor em `/a
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@5` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos) e `financingSimulations` (pedidos salvos), só registro · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@6` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) e `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), só registro · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
-| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1`, `@2`, `@3` ou `@4`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
+| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@6`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
 | DELETE | `/` | `{password, confirmation: "EXCLUIR"}` → `204` + cookie apagado · `400` senha errada · `429` após 5 erros |
 
@@ -156,7 +159,10 @@ grupo (`data`: `groupName`, `taskId`, `taskTitle`, `date` se houver e `actorName
 sua), `TASK_COMMENT` (+ `preview`, até 100 caracteres) e `TASK_OVERDUE` (aviso diário às 8h, sem ator).
 `TASK_REMINDER` (lembrete; pessoal ou de grupo, sem ator): `taskId`, `taskTitle`, `date`, `time` (`HH:mm`), `minutes`
 e `groupName` (só grupo). Amizade: `FRIEND_REQUEST` (`actorName`, `actorUsername`, `requestId`) e `FRIEND_ACCEPTED`
-(`actorName`, `actorUsername`). `SYSTEM_MESSAGE` (aviso da administração): `title`, `body`.
+(`actorName`, `actorUsername`). `SYSTEM_MESSAGE` (aviso da administração): `title`, `body`. Arquitetura:
+`ARCHITECTURE_SHARED` (`actorName`, `actorUsername`, `projectId`, `projectName`, `role`, `groupName` quando foi para um
+grupo) e `ARCHITECTURE_COMMENT` (`actorName`, `actorUsername`, `projectId`, `projectName`, `preview`; vai para o dono e
+quem pode editar).
 
 **Push**: toda notificação vira também push (texto em `PushTexts`, link para a tela) e cada mensagem nova do chat vai
 para os outros membros (tag por grupo, a última substitui). O envio roda depois do commit, numa thread virtual, e
@@ -391,6 +397,40 @@ todo na API (`FinancingMath`).
 intervalo de datas: a consulta ordenada leva mais de 10 s) e os índices (SGS 7811 TR, 433 IPCA, 7456 INCC);
 `FinancingReminderJob` (8h) manda `FINANCING_DUE`/`FINANCING_COST_DUE` `reminderDays` antes do vencimento.
 
+### Arquitetura (`/api/architecture`)
+
+Projeto do dono, compartilhado com amigos e grupos do dono com papel `VIEW` (ver), `COMMENT` (+ comentar) ou `EDIT`
+(+ versões, anexos, vistas, variantes, cômodos, luzes, editar dados; usa o espaço do dono). Sem acesso → `404`; papel menor → `403`; compartilhar e
+excluir o projeto só o dono. A maquete é um **GLB** gerado e comprimido no navegador (o `.skp` não é lido), em metros.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/projects` | `{owned, shared (com role e sharedVia = grupo), usage {usedBytes, quotaBytes, maxModelBytes}}`, mexidos por último primeiro |
+| POST | `/projects` | `{name ≤120, description?, latitude? (-90..90), northDegrees? (0..359)}` → detalhe · até 20 por conta |
+| GET / PUT / DELETE | `/projects/{id}` | Detalhe (`role`, `versions` prontas da mais nova, `views`, `attachments`, `openComments`, `usage` para quem edita) · editar (`EDIT`) · excluir tudo e os arquivos (dono) |
+| PUT / GET | `/projects/{id}/cover` | Capa (multipart `file`, JPEG/PNG até 1 MB, regravada com 960 px) · imagem |
+| POST | `/projects/{id}/versions` | `{sizeBytes, label?, note?, sourceName?, sourceBytes?}` → `201 {id, uploadUrl}`: reserva o espaço (versão `PENDING`; some em 2 h sem arquivo) · `400` acima do limite da maquete ou sem espaço · `409` com 3 envios em andamento · até 30 versões |
+| PUT | `/versions/{id}/model` | Corpo = o GLB cru (`model/gltf-binary`), até o tamanho reservado, só quem reservou → versão pronta, número novo e atual · `400` se não for GLB 2.0 inteiro · `409` já enviada · 20/h |
+| GET | `/versions/{id}/model` | O GLB (cache privado longo, ETag) |
+| PUT / DELETE | `/versions/{id}` | `{label, note}` · excluir (comentários juntos; a atual passa a ser a mais nova) |
+| PUT | `/projects/{id}/current` | `{versionId}` |
+| GET / POST | `/projects/{id}/comments` | `?versionId=` (em ordem) · `{versionId, body ≤1000, point [x,y,z]}` (`COMMENT`; 20/min; até 500 por versão) |
+| PUT / DELETE | `/projects/{id}/comments/{commentId}[/resolved]` | `{resolved}` · excluir: quem escreveu ou quem edita |
+| POST / DELETE | `/projects/{id}/views[/{viewId}]` | `{name ≤60, position [x,y,z], target [x,y,z]}` (`EDIT`, até 30) |
+| GET | `/projects/{id}/scene?versionId=` | Cena da versão: `{variants, rooms, lights}` (`VIEW`) |
+| POST / PUT / DELETE | `/projects/{id}/variants[/{variantId}]` | `{versionId, name ≤60, materials: {"<índice do material>": {color "#rrggbb"?, texture?, scale 0,05..20?}}}` (até 300 materiais; PUT sem `versionId`) · `EDIT`, até 20 por versão |
+| POST / PUT / DELETE | `/projects/{id}/rooms[/{roomId}]` | `{versionId, name ≤60, point [x,y,z], ceiling?, area? (m²), outline [[x,z]...] ≤128}` (achado no navegador) · renomear `{name}` · `EDIT`, até 60 por versão |
+| POST / DELETE | `/projects/{id}/lights[/{lightId}]` | `{versionId, point, color "#rrggbb", intensity 0,1..5}` · `EDIT`, até 40 por versão |
+| GET / POST | `/projects/{id}/attachments` | Lista · multipart `file` + `name`: imagem (até 1 MB, regravada com 2048 px) ou PDF (até 15 MB) (`EDIT`, até 60, conta no espaço) |
+| GET / DELETE | `/projects/{id}/attachments/{attachmentId}[/file]` | Arquivo inline (PDF com `Content-Security-Policy: sandbox`) · excluir (`EDIT`) |
+| GET | `/projects/{id}/shares` · `/share-options` | Pessoas, grupos e links ativos · amigos e grupos do dono que ainda não têm acesso (dono) |
+| PUT / DELETE | `/projects/{id}/shares/users/{userId}` · `/shares/groups/{groupId}` | `{role}` (só amigo aceito / grupo de que o dono é membro; avisa na 1ª vez) · tirar o acesso · até 50 |
+| DELETE | `/projects/{id}/shares/me` | Quem recebeu direto sai do projeto |
+| POST / DELETE | `/projects/{id}/links[/{linkId}]` | `{days 1..365}` → `{id, token, expiresAt}` (até 5 ativos) · apagar (para na hora) |
+| GET | `/api/public/architecture/{token}` · `/{token}/model` | **Sem login**: nome, descrição, nome do dono, versão atual, vistas e a cena dela (`scene`: variantes, cômodos e luzes) · o GLB · `404` vencido/apagado · 120 por IP a cada 10 min |
+
+`ArchitectureCleanupJob` (a cada hora) apaga reservas vencidas e links vencidos há mais de 30 dias.
+
 ### Financeiro
 
 | Método | Rota | Descrição |
@@ -475,6 +515,9 @@ src/main/java/com/lifepedia/api/
 ├── group/         grupos, membros, convites, link de convite, imagens (GroupImageStore), GroupAccess,
 │                  GroupMemberRemovedEvent, GroupDeletedEvent, atividade (GroupActivityInterceptor), atalhos/fixar
 ├── friend/        pedidos de amizade, amigos, perfil do amigo
+├── architecture/  projetos com maquete 3D: acesso por papel (ArchitectureAccess), versões e espaço (ArchitectureService),
+│                  arquivos (ArchitectureFiles: GLB conferido, capa, anexos), compartilhamento e link público
+│                  (ArchShareService, PublicModelController), comentários/vistas/anexos (ArchCollabService), variantes/cômodos/luzes (ArchSceneService), limpeza
 ├── chat/          chat do grupo: mensagens (cursor), leitura/não lidas, stream SSE (ChatStreams, em memória)
 ├── achievement/   conquistas (Achievement: níveis; AchievementService: contagens + níveis gravados; AchievementProgress)
 ├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda (e choque de horário),

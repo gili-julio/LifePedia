@@ -8,7 +8,7 @@ atualizada**). Aqui ficam só as regras do front. Mudou tela, rota, estrutura ou
 
 React 19 · TypeScript 6 · Vite 8 · Tailwind CSS v4 (sem `tailwind.config`, tema em `src/index.css`) ·
 shadcn/ui (estilo `radix-maia`: cantos bem arredondados, botões em pílula) · fonte Manrope (`@fontsource-variable/manrope`) · React Router 8 (data router) · TanStack Query 5 · React Hook Form + Zod 4 ·
-Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · Tiptap 3 + lowlight (editor das notas) · next-themes · sonner · lucide-react. Lint com oxlint.
+Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · Tiptap 3 + lowlight (editor das notas) · three.js + three-mesh-bvh + gltf-transform + meshoptimizer + fflate (maquetes 3D) · next-themes · sonner · lucide-react. Lint com oxlint.
 
 ## Convenções
 
@@ -26,8 +26,10 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Sessão**: cookie HttpOnly controlado pela API. **Nunca** guarde token/dados sensíveis em `localStorage`,
   `sessionStorage` ou estado global persistido.
 - **CSP** (nginx): só scripts do próprio site (exceção única: `accounts.google.com/gsi` para o botão do Google, só via
-  `GoogleButton`, que carrega o script quando há Client ID). Nada de script inline, CDN, fontes/imagens externas ou
-  `dangerouslySetInnerHTML`. Dependências entram pelo npm e são empacotadas pelo Vite.
+  `GoogleButton`, que carrega o script quando há Client ID). `'wasm-unsafe-eval'` e `connect-src blob:` só para as
+  maquetes 3D (WebAssembly do meshopt e texturas lidas de arquivos locais); `eval`/`new Function` continuam barrados. Nada de script inline, CDN, fontes/imagens externas ou
+  `dangerouslySetInnerHTML`. Dependências entram pelo npm e são empacotadas pelo Vite. Fontes nunca são embutidas
+  como `data:` URL (`build.assetsInlineLimit` no `vite.config.ts`), pois a CSP só aceita `font-src 'self'`.
 - **Categorias** vêm da API (`useCategoryLookup()`); nunca fixe lista de categorias no código. Use `CategorySelect`,
   `CategoryBadge` e `ColorDot` para exibi-las.
 - **Totais**: sempre do `/summary` (componente `TotalCard`); não somar no front. Totais e indicadores usam
@@ -132,7 +134,8 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   `mailto`, nova aba, `noopener noreferrer`; imagem só `isNoteImage` (foto da API daquela nota). Checklist da prévia
   (lado a lado) escuta o `change` nativo (o checkbox é criado pelo editor, fora do React) e inverte no texto
   (`toggleTask`). Menus "/" e `[[` em `suggestions.ts` (`SuggestionMenu` posicionado no cursor); `[[Nome]]` só é
-  destacado (`WikiLinks`, decoração), o texto não muda. Modo (visual/markdown/lado a lado) no `localStorage` (só
+  destacado (`WikiLinks`, decoração), o texto não muda. "Lado a lado" em tela menor que `lg` aparece como Visual
+  (`effective`; antes virava Markdown e a nota parecia sem formatação). Modo (visual/markdown/lado a lado) no `localStorage` (só
   preferência de tela). Foto: `shrinkImage` (1600 px, JPEG até 1 MB) e `uploadNoteImage`. Estilo do conteúdo em
   `.note-content` (`index.css`). Modelos prontos em `templates.ts` (item de lista com texto: markdown não guarda item
   vazio). Outras telas só levam para a lista por URL (`/notas?tarefa=` / `?compromisso=`), sem importar o módulo.
@@ -155,15 +158,46 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   primeiro; `modules` só com os valores de `ChangeModule`); toda entrega que o usuário percebe adiciona uma entrada,
   escrita para quem usa (sem nomes de tela internos, rota, API ou termos técnicos), sem travessão. "Novo" = até 7
   dias; Início mostra 3, `/novidades` todas.
-- **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
 - **Admin** (`features/admin`): rota `/admin` dentro de `RequireAdmin` (reconfere `/api/users/me` ao abrir e ao voltar
   para a aba; sem `admin` volta ao início) e item *Dashboard* no `UserMenu` só com `user.admin`. Isso só esconde: quem
   protege é a API (403). Chaves `['admin', ...]`, consultas sem `retry`. Mudar permissão, bloquear, encerrar sessões,
   publicar aviso e enviar notificação sempre com `ConfirmAction`. Números e ordem sempre da API. Avisos para todos:
   `features/announcements` (`AnnouncementBanner` no `AppLayout`); fechados ficam no `localStorage` só pelo id.
+- **Arquitetura** (`features/architecture`): chaves `['architecture', ...]`; mutações invalidam o módulo e as
+  notificações. Papel sempre da API (`canAct(role, 'EDIT')` só esconde botões). **Conversão no navegador**
+  (`convert/convert.ts`, importado com `import()` só ao enviar; constantes e tipos em `convert/options.ts`): arquivos
+  soltos ou `.zip` (`fflate`), loaders do three (texturas pelo nome via `LoadingManager.setURLModifier`, nunca de fora;
+  espera as texturas terminarem contando `itemStart`/`itemEnd` do manager; `.dae` lido como texto e passado por
+  `keepComponentNames`, senão o ColladaLoader troca "Porta"/"Cadeira" por `instance_N`), materiais viram `MeshStandardMaterial` dos dois lados, unidade/posição (chão em y = 0,
+  centro em x/z = 0, metros), `GLTFExporter` (texturas até 2048 px) e gltf-transform (`dedup`, `prune`, `weld`, WebP no
+  canvas, `meshopt` em `high`). O UV do SketchUp repete a textura fora de 0 a 1 e assim não comprime: `normalizeTexcoords`
+  leva o UV de cada material para 0 a 1 e guarda a repetição em `KHR_texture_transform`. Nunca use `textureCompress` do gltf-transform: o `ndarray-pixels` é trocado por um stub no
+  `vite.config.ts` (gera código com `new Function`, barrado pela CSP). Envio: reserva + `apiUpload` (GLB cru com
+  progresso); download por `apiBinary` (com progresso). **Visualizador**: `viewer/ModelViewer.ts` (three.js puro, sem
+  React; desenha só quando algo muda). Ao abrir, `viewer/optimize.ts` junta as malhas por tipo de peça e material e as
+  arestas por cor (exportação do SketchUp traz dezenas de milhares de malhas: 20 mil chamadas de desenho viram ~100),
+  guarda em cada vértice a peça de onde veio (`objectOf`, para a ficha) e acha a câmera salva no arquivo (vista inicial).
+  Nomes vêm do JSON do GLB (`parser.json.nodes`; o loader tira pontos e barras). Tipo, nome e link por
+  `viewer/categories.ts` (palavras no nome do componente; o `.dae` não leva as etiquetas do SketchUp); andares por
+  `levels.ts` (pisos com parede em cima). Materiais por `materials.ts` (`MaterialTable`): variante = índice do material
+  no GLB → cor/textura, modos realista/branca/raio-x e destaque; textura da biblioteca (`textures.ts`, desenhada no
+  canvas, sem imagem de fora) usa o canal de UV 1 com projeção de caixa em metros (`ensureBoxUv`). Comparar desenha os
+  dois lados com `setScissor` (outra versão é um segundo modelo sem colisão). Cômodos por raios logo acima das portas
+  (`detectRoom`); luzes da noite = teto dos cômodos + as colocadas (até 16). Minimapa (`minimap.ts`) = corte das
+  paredes a 1,2 m calculado da geometria, centrado em quem anda. Clique que não acha a maquete avisa (`onMiss`). Colisão e cliques num BVH do que está visível, montado no worker do
+  `three-mesh-bvh` (`pickReady`; a tela não trava); raios com `raycastFirst` sem corte. Sol por `sun.ts`; sombra com
+  `shadowSide = FrontSide`, senão a superfície de dois lados escurece inteira. Textura que o modelo pede e não veio
+  (`LoadedModel.missing`) aparece como aviso no envio, com *Adicionar pasta/arquivos*; soltar pasta entra nas
+  subpastas (`convert/dropped-files.ts`). Tela cheia = a página inteira (`documentElement`) com a maquete `fixed` por cima; sem a API de tela cheia
+  (iPhone, ou recusada) a maquete ocupa a janela mesmo assim. Só a maquete em tela cheia escondia menus, diálogos e
+  avisos (são desenhados no `body`). `ModelStage` monta as ferramentas (painéis e popovers em
+  `components/stage/`) e serve também à prévia (sem `scene`) e ao link público (cena só para ver: `actions` só com
+  `EDIT`); comandos de fora por `controlRef` (`pickTool`). Comentários, vistas e pins usam pontos em metros no espaço do GLB. Página pública
+  `/maquete/:token` fica fora do `RequireAuth`.
+- **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos, frequência, notas e financiamentos do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@5`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência, notas, financiamentos e arquitetura do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@6`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.
@@ -210,6 +244,10 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   `hooks/use-mobile.ts` foi ajustado para 1024px) e gaveta abaixo disso. Com a sidebar aberta o conteúdo perde
   256px: grades de 4 colunas só em `xl`. Coisa que precisa existir com a gaveta fechada (notificações, toasts)
   fica no `AppLayout`, não dentro da sidebar.
+  Item com `module` some quando a pessoa o esconde no perfil (`visibleSections` + `useHiddenModules`; o Início esconde
+  os cartões do módulo e não busca os dados dele). Formato da sidebar vem da conta (`preferences.sidebarIcons` no
+  `defaultOpen` do `SidebarProvider`; o cookie `sidebar_state` não é mais lido): Ctrl+B e a borda trocam só até
+  recarregar; o perfil (`MenuPreferences`) grava e aplica na hora.
 - **PWA**: manifest e ícones em `public/`; `public/sw.js` só guarda a página offline (`offline.html`/`offline.js`).
   Nunca ponha em cache resposta de `/api` nem telas. Mudou algo que o service worker guarda? Troque o nome do
   `CACHE` (o antigo é apagado ao ativar). Instalar app, cor da barra e recarga após deploy em `lib/pwa.ts`. Atalhos do

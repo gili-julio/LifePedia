@@ -13,6 +13,7 @@ export type ChangeModule =
   | 'Notificações'
   | 'Conta'
   | 'Privacidade'
+  | 'Arquitetura'
 
 export type Change = {
   id: string
@@ -27,6 +28,55 @@ export type Change = {
 
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
+  {
+    id: 'menu-do-seu-jeito',
+    date: '2026-11-10',
+    title: 'Menu do seu jeito e correções nas notas e na maquete',
+    modules: ['Geral', 'Notas', 'Arquitetura', 'Privacidade'],
+    details: [
+      'No perfil, em Menu, escolha o formato no computador: completo, como antes, ou só com ícones, que libera espaço na tela. A escolha vale em todos os seus aparelhos.',
+      'Desligue os módulos que você não usa: eles somem do menu e do Início, e nada é apagado.',
+      'Notas com checklist voltam a abrir formatadas no celular e no tablet, mesmo depois de usar o modo lado a lado no computador.',
+      'No modo Markdown das notas, um aviso explica que a formatação aparece como símbolos.',
+      'A maquete em tela cheia agora mostra comentários, menus e avisos, e no iPhone ocupa a tela toda.',
+    ],
+  },
+  {
+    id: 'maquete-acabamentos-comodos',
+    date: '2026-11-10',
+    title: 'Maquete: acabamentos, cômodos, noite e passeio pela casa',
+    modules: ['Arquitetura', 'Privacidade'],
+    details: [
+      'Teste cores e texturas de paredes, pisos e móveis: toque na superfície ou escolha na lista de materiais. Há texturas prontas de madeira, pisos, pedras, tijolo e tecidos, e as combinações podem ser salvas como variantes.',
+      'Compare lado a lado, arrastando a divisória: o original e uma variante, ou duas versões da casa.',
+      'Veja a maquete realista, como maquete branca ou em raio-x, com as paredes transparentes.',
+      'Toque numa peça para ver o nome, o tipo, as medidas, o material e o link de compra quando ele vem no nome.',
+      'Marque os cômodos tocando no piso: o app acha as paredes e calcula a área. Depois é só tocar no nome para ir até lá.',
+      'Ao caminhar, o modo fantasma atravessa paredes e portas fechadas e deixa subir e descer, e uma planta pequena mostra onde você está.',
+      'A noite acende uma luz no teto de cada cômodo, e quem edita pode colocar outras.',
+      'Separe a casa por andar e por tipo de peça (portas, janelas, móveis, louças, eletrodomésticos).',
+      'Faça um tour animado pelas vistas salvas e baixe uma foto em alta da vista atual.',
+      'Ficou mais fácil comentar: use Novo comentário ao lado da maquete. Tocar fora da casa agora avisa.',
+      'A compressão guarda as texturas ocupando menos espaço e mantém os nomes dos componentes do SketchUp.',
+      'A Política de privacidade agora cita as variantes, os cômodos e as luzes, que também aparecem no link público.',
+    ],
+  },
+  {
+    id: 'arquitetura-maquete-3d',
+    date: '2026-11-10',
+    title: 'Arquitetura: a maquete 3D da casa no app',
+    modules: ['Arquitetura', 'Notificações', 'Privacidade'],
+    details: [
+      'Novo item Arquitetura no fim do menu: crie um projeto e envie a maquete exportada do SketchUp. Ela é comprimida no seu aparelho antes de subir e ocupa bem menos espaço.',
+      'Gire, aproxime, ande por dentro da casa como se estivesse lá, meça distâncias, corte na altura para ver a planta de cima e esconda partes como o telhado.',
+      'Veja como o sol entra e onde fica a sombra em cada mês e horário.',
+      'Guarde versões da maquete, salve vistas favoritas, comente pontos da casa e junte renders, fotos e plantas em PDF.',
+      'Compartilhe com amigos ou grupos (só ver, comentar ou editar) ou por um link com validade, que abre sem precisar de conta.',
+      'Maquetes grandes abrem mais rápido e a navegação fica fluida, começando na última vista salva no SketchUp.',
+      'Ao enviar, o app avisa se alguma textura ficou de fora (madeira, pisos, tecidos) e deixa adicionar a pasta delas.',
+      'A Política de privacidade foi atualizada para explicar como guardamos e compartilhamos os projetos.',
+    ],
+  },
   {
     id: 'avisos-e-administracao',
     date: '2026-11-09',

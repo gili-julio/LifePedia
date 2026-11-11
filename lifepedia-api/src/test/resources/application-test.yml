@@ -12,3 +12,7 @@ lifepedia:
     enabled: false
   admin:
     email: admin-fixo@lifepedia.dev
+  # Espaço pequeno para testar o limite com arquivos de teste.
+  architecture:
+    quota: 1MB
+    max-model: 600KB

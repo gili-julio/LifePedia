@@ -6,6 +6,7 @@ import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { SidebarInset, SidebarProvider, useSidebar } from '@/components/ui/sidebar'
 import { AnnouncementBanner } from '@/features/announcements/AnnouncementBanner'
+import { useAuth } from '@/features/auth/auth-context'
 import { ProfileGate } from '@/features/auth/ProfileGate'
 import { LegalGate } from '@/features/legal/LegalGate'
 import { useChatStream } from '@/features/chat/use-chat-stream'
@@ -20,12 +21,8 @@ import { IosInstallDialog } from './IosInstallDialog'
 import { findActiveNav } from './nav-items'
 import { useDynamicLinks } from './use-dynamic-links'
 
-/** A sidebar grava se está aberta no cookie `sidebar_state`; recolhida, volta recolhida. */
-function sidebarStartsOpen() {
-  return !document.cookie.split('; ').includes('sidebar_state=false')
-}
-
 export function AppLayout() {
+  const { user } = useAuth()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [iosStepsOpen, setIosStepsOpen] = useState(false)
   const installer = useInstallApp()
@@ -39,7 +36,8 @@ export function AppLayout() {
   useDevicePush()
 
   return (
-    <SidebarProvider defaultOpen={sidebarStartsOpen()}>
+    // Formato do menu vem da conta (perfil); Ctrl+B e a borda trocam só até recarregar.
+    <SidebarProvider defaultOpen={!user?.preferences.sidebarIcons}>
       <AppSidebar unread={unread} onOpenNotifications={() => setNotificationsOpen(true)} onInstall={onInstall} />
       <SidebarInset className="min-w-0">
         <TopBar unread={unread} />

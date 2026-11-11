@@ -1,4 +1,5 @@
 import {
+  Building2Icon,
   CalendarCheck2Icon,
   CalendarClockIcon,
   CalendarDaysIcon,
@@ -26,6 +27,7 @@ import {
   WalletIcon,
   type LucideIcon,
 } from 'lucide-react'
+import type { AppModule } from '@/features/auth/types'
 
 export type NavLink = {
   /** Caminho, podendo ter `?aba=` (ativo só com essa aba). */
@@ -45,6 +47,8 @@ export type NavItem = Omit<NavLink, 'icon'> & {
   children?: NavLink[]
   /** Subitens vindos da API (antes dos fixos). */
   dynamic?: 'groups'
+  /** Módulo que a pessoa pode esconder no perfil (sem ele, sempre aparece) */
+  module?: AppModule
 }
 
 export type NavSection = {
@@ -65,6 +69,7 @@ export const NAV_SECTIONS: NavSection[] = [
         to: '/financeiro',
         label: 'Financeiro',
         icon: WalletIcon,
+        module: 'FINANCE',
         children: [
           { to: '/financeiro', label: 'Visão geral', end: true, icon: LayoutDashboardIcon },
           { to: '/financeiro/fixos', label: 'Fixos', icon: RepeatIcon },
@@ -74,7 +79,7 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/financeiro/categorias', label: 'Categorias', icon: TagsIcon },
         ],
       },
-      { to: '/financiamentos', label: 'Financiamentos', icon: LandmarkIcon },
+      { to: '/financiamentos', label: 'Financiamentos', icon: LandmarkIcon, module: 'FINANCING' },
     ],
   },
   {
@@ -84,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
         to: '/tarefas',
         label: 'Tarefas',
         icon: ListTodoIcon,
+        module: 'TASKS',
         children: [
           { to: '/tarefas', label: 'Hoje', end: true, icon: SunIcon },
           { to: '/tarefas?aba=semana', label: 'Semana', icon: CalendarDaysIcon },
@@ -93,9 +99,9 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/tarefas?aba=concluidas', label: 'Concluídas', icon: CircleCheckIcon },
         ],
       },
-      { to: '/agenda', label: 'Agenda', icon: CalendarRangeIcon },
-      { to: '/frequencia', label: 'Frequência', icon: CalendarCheck2Icon },
-      { to: '/notas', label: 'Notas', icon: NotebookPenIcon },
+      { to: '/agenda', label: 'Agenda', icon: CalendarRangeIcon, module: 'AGENDA' },
+      { to: '/frequencia', label: 'Frequência', icon: CalendarCheck2Icon, module: 'ATTENDANCE' },
+      { to: '/notas', label: 'Notas', icon: NotebookPenIcon, module: 'NOTES' },
     ],
   },
   {
@@ -106,12 +112,14 @@ export const NAV_SECTIONS: NavSection[] = [
         label: 'Grupos',
         icon: UsersIcon,
         dynamic: 'groups',
+        module: 'GROUPS',
         children: [{ to: '/grupos', label: 'Ver todos', end: true, icon: LayoutGridIcon }],
       },
       {
         to: '/amigos',
         label: 'Amigos',
         icon: HeartHandshakeIcon,
+        module: 'FRIENDS',
         children: [
           { to: '/amigos', label: 'Meus amigos', icon: UsersRoundIcon },
           { to: '/amigos?aba=pedidos', label: 'Pedidos', icon: UserPlusIcon },
@@ -120,7 +128,17 @@ export const NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
+  {
+    title: 'Casa',
+    items: [{ to: '/arquitetura', label: 'Arquitetura', icon: Building2Icon, module: 'ARCHITECTURE' }],
+  },
 ]
+
+/** Seções com os itens que a pessoa não escondeu (seção sem item some). */
+export function visibleSections(hidden: ReadonlySet<AppModule>): NavSection[] {
+  return NAV_SECTIONS.map((section) => ({ ...section, items: section.items.filter((i) => !i.module || !hidden.has(i.module)) }))
+    .filter((section) => section.items.length > 0)
+}
 
 /**
  * Se o link está ativo na localização atual. Com `byTab` (irmãos que apontam para abas da mesma página), a aba da

@@ -7,6 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { absenceTone, remainingLabel, TONE_BAR, TONE_TEXT } from '@/features/attendance/absences'
 import { useCommitments } from '@/features/attendance/api'
 import { useAuth } from '@/features/auth/auth-context'
+import { useHiddenModules } from '@/features/auth/preferences'
+import type { AppModule } from '@/features/auth/types'
 import { useSummary } from '@/features/finance/api'
 import { useFinancingOverview } from '@/features/financing/api'
 import { useNotes } from '@/features/notes/api'
@@ -30,25 +32,38 @@ function taskLink(item: TaskItem) {
   return item.groupId ? `/grupos/${item.groupId}?aba=tarefas&tarefa=${id}` : `/tarefas?tarefa=${id}`
 }
 
+/** Módulos com cartão no Início. */
+const HOME_MODULES: AppModule[] = ['TASKS', 'ATTENDANCE', 'FINANCE', 'FINANCING', 'NOTES']
+
 /** Início: resumo de tarefas de hoje, hábitos, frequência, o mês no financeiro, financiamentos, notas e as mudanças recentes do sistema. */
 export function HomePage() {
   const { user } = useAuth()
   const today = todayIso()
   const firstName = user?.name.trim().split(/\s+/)[0] ?? ''
+  const hidden = useHiddenModules()
+  const show = (module: AppModule) => !hidden.has(module)
+  const any = HOME_MODULES.some(show)
   return (
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-semibold tracking-tight">Olá{firstName && `, ${firstName}`}</h1>
         <p className="text-sm text-muted-foreground first-letter:uppercase">{longDate.format(new Date(`${today}T12:00:00`))}</p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <TasksCard today={today} />
-        <HabitsCard />
-        <AttendanceCard />
-        <FinanceCard />
-        <FinancingsCard />
-        <NotesCard />
-      </div>
+      {/* Módulo escondido no perfil não aparece (nem busca os dados); `grid-flow-dense` fecha os buracos. */}
+      {any ? (
+        <div className="grid gap-4 lg:grid-flow-dense lg:grid-cols-3">
+          {show('TASKS') && <TasksCard today={today} />}
+          {show('TASKS') && <HabitsCard />}
+          {show('ATTENDANCE') && <AttendanceCard />}
+          {show('FINANCE') && <FinanceCard />}
+          {show('FINANCING') && <FinancingsCard />}
+          {show('NOTES') && <NotesCard />}
+        </div>
+      ) : (
+        <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+          Os módulos do Início estão desligados. <Link to="/perfil" className="font-medium text-foreground underline-offset-2 hover:underline">Ligue no perfil</Link>.
+        </p>
+      )}
       <section aria-labelledby="recent-changes" className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <h2 id="recent-changes" className="text-lg font-semibold tracking-tight">Mudanças recentes no sistema</h2>

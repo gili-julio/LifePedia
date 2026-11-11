@@ -80,6 +80,17 @@ class SecurityIntegrationTest extends ApiTestSupport {
     }
 
     @Test
+    void publicModelLinkIsReadOnlyAndIgnoresStaleCookie() {
+        String path = "/api/public/architecture/" + "a".repeat(43);
+        assertThat(mvc.get().uri(path)).hasStatus(404);
+        assertThat(mvc.get().uri(path + "/model").cookie(new Cookie("lifepedia_session", "vencido"))).hasStatus(404);
+        assertThat(mvc.post().uri(path).header(CSRF, "x")).hasStatus(401);
+        assertThat(mvc.get().uri("/api/architecture/projects")).hasStatus(401);
+        assertThat(mvc.put().uri("/api/architecture/versions/" + UUID.randomUUID() + "/model").header(CSRF, "x")
+                .contentType("model/gltf-binary").content(new byte[20])).hasStatus(401);
+    }
+
+    @Test
     void groupsNotificationsAndImagesRequireLogin() {
         for (String uri : new String[]{"/api/groups", "/api/groups/invites", "/api/notifications",
                 "/api/groups/" + UUID.randomUUID() + "/image", "/api/groups/join/qualquer",

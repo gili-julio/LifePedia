@@ -28,10 +28,11 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar'
 import { GroupAvatar } from '@/features/groups/components/GroupAvatar'
+import { useHiddenModules } from '@/features/auth/preferences'
 import { usePinGroup } from '@/features/groups/api'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
-import { isLinkActive, itemLinks, linksByTab, NAV_SECTIONS, type NavItem, type NavLink } from './nav-items'
+import { isLinkActive, itemLinks, linksByTab, type NavItem, type NavLink, visibleSections } from './nav-items'
 import { useDynamicLinks } from './use-dynamic-links'
 import { UserMenu } from './UserMenu'
 
@@ -43,6 +44,7 @@ export function AppSidebar({ unread, onOpenNotifications, onInstall }: {
   onInstall?: () => void
 }) {
   const dynamic = useDynamicLinks()
+  const sections = visibleSections(useHiddenModules())
   return (
     <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
@@ -55,7 +57,7 @@ export function AppSidebar({ unread, onOpenNotifications, onInstall }: {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        {NAV_SECTIONS.map((section, index) => (
+        {sections.map((section, index) => (
           <SidebarGroup key={section.title ?? index}>
             {section.title && <SidebarGroupLabel>{section.title}</SidebarGroupLabel>}
             <SidebarMenu>

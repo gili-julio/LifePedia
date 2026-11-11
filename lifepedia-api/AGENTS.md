@@ -55,6 +55,17 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `AuditService.record` na mesma transação. Bloqueio e "encerrar sessões" por `TokenService.revokeAll` (publica
   `SessionsRevokedEvent`). `last_seen_at` só pelo `UserRepository.touchLastSeen` (nativo; a entidade não grava a coluna).
   Uso da IA só por `AiUsageLog.record`. Teste em `AdminIntegrationTest` (o perfil de teste fixa `lifepedia.admin.email`).
+- **Arquitetura** (`architecture/`): acesso só por `ArchitectureAccess.require(projeto, usuário, papel mínimo)` (dono,
+  compartilhamento direto ou por grupo do qual a pessoa é membro na hora; o maior papel vale). Arquivos só por
+  `ArchitectureFiles` (`architecture/` no `STORAGE_DIR`, chave aleatória + extensão do `Type`; `receiveModel` copia o
+  corpo cru com teto e confere o GLB; `save` apaga se a transação falhar; `deleteAfterCommit`). Upload da maquete:
+  reserva em transação → arquivo fora de transação → fecha a versão numa transação (`TransactionTemplate`), apagando o
+  arquivo se ela falhar. Espaço do dono (`ArchProjectRepository.usedBytes`: versões, inclusive reservadas, + anexos) por
+  `ArchitectureService.requireRoom`. Conta excluída: `deleteUserFilesAfterCommit` (o banco apaga em cascata). Rota
+  pública só em `PublicModelController` (`/api/public/architecture/{token}`, liberada em `SecurityConfig`, sem ler o
+  cookie, limite por IP). Cena por versão (`ArchSceneService`: variantes com os ajustes em JSON validado por `MaterialOverride`, cômodos com o
+  contorno em JSON, luzes; FK em cascata com a versão) entra no link público (`sceneOf`) e no arquivo da conta (só os
+  nomes). Teste em `ArchitectureIntegrationTest` (perfil de teste: espaço de 1 MB e maquete de 600 KB).
 - **Banco** (`finance/bank`): `BankRef` é `@Embedded` em ocasionais, fixos e itens de grupo; valide com `BankRef.clean`
   antes de gravar e passe nos `sync` do `GroupFinanceSync`. Soma por banco só em `BankReport`, nunca em SQL solto.
   Banco novo no catálogo = valor em `Bank` + entrada e logo no web (`src/lib/banks.ts`).
@@ -159,7 +170,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@4`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@4`; frequência e notas só como registro); mudou o arquivo ⇒ `@5` e importação dos
+  (`lifepedia/account@6`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@6`; frequência, notas, financiamentos e arquitetura só como registro); mudou o arquivo ⇒ `@7` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para

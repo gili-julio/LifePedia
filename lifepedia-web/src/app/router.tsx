@@ -124,6 +124,14 @@ export const router = createBrowserRouter([
             }),
           },
           {
+            path: '/arquitetura',
+            lazy: async () => ({ Component: (await import('@/features/architecture/pages/ArchitecturePage')).ArchitecturePage }),
+          },
+          {
+            path: '/arquitetura/:projectId',
+            lazy: async () => ({ Component: (await import('@/features/architecture/pages/ProjectPage')).ProjectPage }),
+          },
+          {
             path: '/perfil',
             lazy: async () => ({ Component: (await import('@/features/auth/ProfilePage')).ProfilePage }),
           },
@@ -142,6 +150,10 @@ export const router = createBrowserRouter([
   },
   // Públicas, com ou sem sessão.
   { path: '/privacidade', lazy: async () => ({ Component: (await import('@/features/legal/PrivacyPage')).PrivacyPage }) },
+  {
+    path: '/maquete/:token',
+    lazy: async () => ({ Component: (await import('@/features/architecture/pages/PublicModelPage')).PublicModelPage }),
+  },
   { path: '/termos', lazy: async () => ({ Component: (await import('@/features/legal/TermsPage')).TermsPage }) },
   { path: '*', element: <Navigate to="/" replace /> },
 ])

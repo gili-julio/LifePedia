@@ -72,6 +72,28 @@ class UserProfileIntegrationTest extends ApiTestSupport {
     }
 
     @Test
+    void preferencesAreSavedPerAccount() {
+        String bearer = registerAndGetBearer();
+        assertThat(send("GET", bearer, "/api/users/me", null)).bodyJson().satisfies(json -> {
+            assertThat(json).extractingPath("$.preferences.sidebarIcons").isEqualTo(false);
+            assertThat(json).extractingPath("$.preferences.hiddenModules").asArray().isEmpty();
+        });
+        assertThat(send("PUT", bearer, "/api/users/me/preferences", """
+                {"sidebarIcons":true,"hiddenModules":["NOTES","FINANCING","NOTES"]}""")).bodyJson().satisfies(json -> {
+            assertThat(json).extractingPath("$.preferences.sidebarIcons").isEqualTo(true);
+            assertThat(json).extractingPath("$.preferences.hiddenModules").asArray().containsExactly("FINANCING", "NOTES");
+        });
+        assertThat(send("PUT", bearer, "/api/users/me/preferences", """
+                {"sidebarIcons":true,"hiddenModules":["NADA"]}""")).hasStatus(400);
+        assertThat(send("PUT", bearer, "/api/users/me/preferences", """
+                {"hiddenModules":[]}""")).hasStatus(400);
+        assertThat(send("GET", bearer, "/api/account/export", null)).bodyJson()
+                .extractingPath("$.profile.preferences.hiddenModules[0]").isEqualTo("FINANCING");
+        assertThat(mvc.put().uri("/api/users/me/preferences").header("X-Requested-With", "XMLHttpRequest")
+                .contentType("application/json").content("{\"sidebarIcons\":false,\"hiddenModules\":[]}").exchange()).hasStatus(401);
+    }
+
+    @Test
     void legacyAccountCompletesProfile() {
         String username = newUsername();
         String bearer = registerAndGetBearer("Maria", username);

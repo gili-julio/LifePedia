@@ -6,6 +6,10 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Entity
 @Table(name = "users")
@@ -43,6 +47,12 @@ public class User extends BaseEntity {
     private boolean admin;
 
     /** Conta bloqueada por um admin: não entra; nulo = liberada. */
+    @Column(name = "sidebar_icons", nullable = false)
+    private boolean sidebarIcons;
+
+    @Column(name = "hidden_modules", nullable = false, length = 400)
+    private String hiddenModules = "";
+
     @Column(name = "blocked_at")
     private OffsetDateTime blockedAt;
 
@@ -165,5 +175,20 @@ public class User extends BaseEntity {
     /** URL da foto com versão (cache); nula sem foto. */
     public String imageUrl() {
         return imageKey == null ? null : "/api/users/" + getId() + "/image?v=" + imageKey;
+    }
+
+    public boolean isSidebarIcons() {
+        return sidebarIcons;
+    }
+
+    /** Módulos escondidos, na ordem do enum (nome desconhecido, de versão antiga, é ignorado). */
+    public List<AppModule> hiddenModules() {
+        List<String> names = Arrays.asList(hiddenModules.split(","));
+        return Arrays.stream(AppModule.values()).filter(m -> names.contains(m.name())).toList();
+    }
+
+    public void setPreferences(boolean sidebarIcons, Collection<AppModule> hidden) {
+        this.sidebarIcons = sidebarIcons;
+        this.hiddenModules = hidden.stream().distinct().sorted().map(Enum::name).collect(Collectors.joining(","));
     }
 }

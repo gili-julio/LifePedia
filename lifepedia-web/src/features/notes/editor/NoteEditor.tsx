@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { ApiError } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { toggleTask, unescapeWikiLinks } from '../markdown'
@@ -34,6 +35,7 @@ type Props = {
 /** Editor da nota: visual (grava markdown), markdown puro ou os dois lado a lado; modo lembrado no aparelho. */
 export function NoteEditor({ value, onChange, readOnly = false, refs, onOpenLink, onUploadImage }: Props) {
   const [mode, setMode] = useState<EditorMode>(readMode)
+  const narrow = useIsMobile()
   const fileInput = useRef<HTMLInputElement>(null)
   const textarea = useRef<HTMLTextAreaElement>(null)
   const visual = useRef<Editor | null>(null)
@@ -80,7 +82,8 @@ export function NoteEditor({ value, onChange, readOnly = false, refs, onOpenLink
     if (file) void upload(file)
   }
 
-  const effective: EditorMode = readOnly ? 'visual' : mode
+  // "Lado a lado" só cabe em tela grande: em tela menor a prévia ficava escondida e a nota aparecia só em markdown.
+  const effective: EditorMode = readOnly || (mode === 'split' && narrow) ? 'visual' : mode
 
   return (
     <div className="space-y-2">
@@ -88,9 +91,9 @@ export function NoteEditor({ value, onChange, readOnly = false, refs, onOpenLink
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div role="radiogroup" aria-label="Como ver a nota" className="flex rounded-full bg-muted p-0.5">
             {MODES.map((m) => (
-              <button key={m.mode} type="button" role="radio" aria-checked={mode === m.mode} onClick={() => changeMode(m.mode)}
+              <button key={m.mode} type="button" role="radio" aria-checked={effective === m.mode} onClick={() => changeMode(m.mode)}
                 className={cn('flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium text-muted-foreground transition-colors motion-reduce:transition-none',
-                  mode === m.mode && 'bg-background text-foreground shadow-sm', m.desktopOnly && 'hidden lg:flex')}>
+                  effective === m.mode && 'bg-background text-foreground shadow-sm', m.desktopOnly && 'hidden lg:flex')}>
                 <m.icon className="size-3.5" aria-hidden /> {m.label}
               </button>
             ))}
@@ -99,6 +102,12 @@ export function NoteEditor({ value, onChange, readOnly = false, refs, onOpenLink
             <Button type="button" variant="ghost" size="sm" onClick={() => fileInput.current?.click()}>Inserir imagem</Button>
           )}
         </div>
+      )}
+      {effective === 'markdown' && (
+        <p className="text-xs text-muted-foreground">
+          Modo Markdown: a formatação aparece como símbolos (<code>- [ ]</code>, <code>##</code>, <code>**</code>). Toque em
+          Visual para ver a nota formatada.
+        </p>
       )}
       <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onFile} />
 
@@ -254,8 +263,8 @@ function MarkdownField({ value, onChange, textareaRef }: {
 function readMode(): EditorMode {
   try {
     const saved = localStorage.getItem(MODE_KEY)
-    if (saved === 'split') return window.matchMedia('(min-width: 1024px)').matches ? 'split' : 'markdown'
-    return saved === 'markdown' ? saved : 'visual'
+    // "Lado a lado" em tela pequena vira Visual na hora de mostrar (`effective`); fica guardado para a tela grande.
+    return saved === 'markdown' || saved === 'split' ? saved : 'visual'
   } catch {
     return 'visual'
   }

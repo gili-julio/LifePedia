@@ -20,6 +20,7 @@ export type Overview = {
 /** Espelha as chaves de `AdminStats.MODULES`. */
 export type ModuleKey =
   | 'FINANCE' | 'TASKS' | 'NOTES' | 'ATTENDANCE' | 'FINANCING' | 'GROUPS' | 'CHAT' | 'FRIENDS' | 'AI_IMPORT' | 'PUSH'
+  | 'ARCHITECTURE'
 
 export type Modules = { totalUsers: number; modules: { key: ModuleKey; users: number; items: number }[] }
 
@@ -76,7 +77,7 @@ export type AdminUser = {
 /** Espelha as colunas de `AdminStats.USER_COUNTS`. */
 export type UserCountKey =
   | 'transactions' | 'recurring' | 'tasks' | 'notes' | 'commitments' | 'financings' | 'groups' | 'friends' | 'messages'
-  | 'ai_imports'
+  | 'ai_imports' | 'architecture'
 
 export type AdminUserDetail = {
   user: AdminUser

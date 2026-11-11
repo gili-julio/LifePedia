@@ -12,6 +12,7 @@ export const MODULE_LABEL: Record<ModuleKey, { label: string; items: string }> =
   FRIENDS: { label: 'Amigos', items: 'amizades' },
   AI_IMPORT: { label: 'Importação pelo site', items: 'leituras' },
   PUSH: { label: 'Notificações no aparelho', items: 'aparelhos' },
+  ARCHITECTURE: { label: 'Arquitetura', items: 'projetos' },
 }
 
 export const COUNT_LABEL: Record<UserCountKey, string> = {
@@ -25,6 +26,7 @@ export const COUNT_LABEL: Record<UserCountKey, string> = {
   friends: 'Amigos',
   messages: 'Mensagens no chat',
   ai_imports: 'Leituras por IA (30 dias)',
+  architecture: 'Projetos de arquitetura',
 }
 
 /** Resultado de uma leitura (espelha `AiUsage.Outcome`). */
@@ -70,18 +72,6 @@ export function formatDuration(seconds: number) {
   if (h) return `${h} h ${m} min`
   if (m) return `${m} min`
   return `${seconds} s`
-}
-
-/** Bytes → "12,3 MB". */
-export function formatBytes(bytes: number) {
-  const units = ['B', 'KB', 'MB', 'GB']
-  let value = bytes
-  let unit = 0
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024
-    unit++
-  }
-  return `${value.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} ${units[unit]}`
 }
 
 export function percent(part: number, total: number) {

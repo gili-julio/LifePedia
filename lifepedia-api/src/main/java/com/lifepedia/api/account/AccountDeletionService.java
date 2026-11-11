@@ -3,6 +3,7 @@ package com.lifepedia.api.account;
 import com.lifepedia.api.account.AccountDtos.DeleteRequest;
 import com.lifepedia.api.account.AccountDtos.DeletionPreview;
 import com.lifepedia.api.account.AccountDtos.GroupImpact;
+import com.lifepedia.api.architecture.ArchitectureService;
 import com.lifepedia.api.auth.AuthService;
 import com.lifepedia.api.finance.category.CategoryRepository;
 import com.lifepedia.api.finance.group.GroupRecurringEntryRepository;
@@ -49,13 +50,15 @@ public class AccountDeletionService {
     private final PlanItemRepository planItems;
     private final TaskRepository tasks;
     private final NoteService notes;
+    private final ArchitectureService architecture;
 
     public AccountDeletionService(AuthService auth, UserService userService, UserRepository users, GroupService groups,
                                   GroupMemberRepository members, NotificationService notifications,
                                   CategoryRepository categories, TransactionRepository transactions,
                                   RecurringEntryRepository recurring, GroupTransactionRepository groupTransactions,
                                   GroupRecurringEntryRepository groupRecurring, PlanItemRepository planItems,
-                                  TaskRepository tasks, NoteService notes) {
+                                  TaskRepository tasks, NoteService notes,
+                                  ArchitectureService architecture) {
         this.auth = auth;
         this.userService = userService;
         this.users = users;
@@ -70,6 +73,7 @@ public class AccountDeletionService {
         this.planItems = planItems;
         this.tasks = tasks;
         this.notes = notes;
+        this.architecture = architecture;
     }
 
     @Transactional(readOnly = true)
@@ -101,6 +105,7 @@ public class AccountDeletionService {
         }
         userService.deleteImageAfterCommit(user);
         notes.deleteUserImagesAfterCommit(userId);
+        architecture.deleteUserFilesAfterCommit(userId);
         users.delete(user);
         users.flush();
     }

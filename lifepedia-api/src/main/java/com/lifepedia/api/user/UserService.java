@@ -3,6 +3,7 @@ package com.lifepedia.api.user;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.shared.image.ImageFile;
+import com.lifepedia.api.user.UserDtos.PreferencesRequest;
 import com.lifepedia.api.user.UserDtos.UpdateProfileRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,13 @@ public class UserService {
         requireAvailable(username, id);
         user.setName(request.name().trim());
         user.setUsername(username);
+        return UserResponse.from(user);
+    }
+
+    @Transactional
+    public UserResponse updatePreferences(UUID id, PreferencesRequest request) {
+        User user = find(id);
+        user.setPreferences(request.sidebarIcons(), request.hiddenModules());
         return UserResponse.from(user);
     }
 

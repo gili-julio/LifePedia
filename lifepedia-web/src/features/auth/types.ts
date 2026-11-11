@@ -16,7 +16,13 @@ export type User = {
   termsAccepted: boolean
   /** Acesso ao painel `/admin` (a API confere de novo em cada chamada) */
   admin: boolean
+  /** Menu só com ícones (computador) e módulos escondidos do menu e do Início; valem em todos os aparelhos */
+  preferences: { sidebarIcons: boolean; hiddenModules: AppModule[] }
 }
+
+/** Espelha `AppModule` da API. */
+export type AppModule = 'FINANCE' | 'FINANCING' | 'TASKS' | 'AGENDA' | 'ATTENDANCE' | 'NOTES' | 'GROUPS' | 'FRIENDS'
+  | 'ARCHITECTURE'
 
 /** O token fica no cookie, não no corpo. */
 export type AuthResponse = {

@@ -53,6 +53,8 @@ public class SecurityConfig {
     private static final Set<String> PUBLIC_AUTH_PATHS = Set.of("/api/auth/login", "/api/auth/register", "/api/auth/google",
             "/api/auth/logout");
     private static final String AUTH_CONFIG = "/api/auth/config";
+    /** Link público da maquete (arquitetura): só GET, token aleatório no caminho, limite por IP no controller. */
+    private static final String PUBLIC_MODELS = "/api/public/architecture/";
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimiter rateLimiter, AuthProperties authProperties,
@@ -64,6 +66,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, PUBLIC_AUTH_PATHS.toArray(String[]::new)).permitAll()
                         .requestMatchers(HttpMethod.GET, AUTH_CONFIG).permitAll()
+                        .requestMatchers(HttpMethod.GET, PUBLIC_MODELS + "**").permitAll()
                         .requestMatchers("/actuator/health", "/error").permitAll()
                         .requestMatchers("/api/admin/**").access(adminAccess)
                         .anyRequest().authenticated())
@@ -78,7 +81,8 @@ public class SecurityConfig {
     BearerTokenResolver bearerTokenResolver(AuthProperties properties) {
         DefaultBearerTokenResolver headerResolver = new DefaultBearerTokenResolver();
         return request -> {
-            if (PUBLIC_AUTH_PATHS.contains(request.getRequestURI()) || AUTH_CONFIG.equals(request.getRequestURI())) return null;
+            String uri = request.getRequestURI();
+            if (PUBLIC_AUTH_PATHS.contains(uri) || AUTH_CONFIG.equals(uri) || uri.startsWith(PUBLIC_MODELS)) return null;
             String fromHeader = headerResolver.resolve(request);
             if (fromHeader != null) return fromHeader;
             Cookie cookie = WebUtils.getCookie(request, properties.cookieName());

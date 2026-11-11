@@ -1,15 +1,15 @@
 import type { UserSummary } from '@/features/groups/types'
 
 /** Versão do arquivo exportado; espelha `AccountDtos.FORMAT` da API. */
-export const ACCOUNT_FORMAT = 'lifepedia/account@5'
+export const ACCOUNT_FORMAT = 'lifepedia/account@6'
 /** Versões que a importação aceita (o `@1` não tem tarefas; o `@2` não tem frequência; o `@3` não tem notas; o `@4` não tem financiamentos). */
-export const IMPORTABLE_FORMATS = ['lifepedia/account@1', 'lifepedia/account@2', 'lifepedia/account@3', 'lifepedia/account@4', ACCOUNT_FORMAT]
+export const IMPORTABLE_FORMATS = ['lifepedia/account@1', 'lifepedia/account@2', 'lifepedia/account@3', 'lifepedia/account@4', 'lifepedia/account@5', ACCOUNT_FORMAT]
 
 /** Arquivo exportado (só os campos que o front lê; o resto vai inteiro para a API). */
 export type AccountFile = {
   format: string
   exportedAt?: string
-  profile?: { name: string; username: string | null; email: string }
+  profile?: { name: string; username: string | null; email: string; preferences?: { sidebarIcons: boolean; hiddenModules: string[] } }
   categories: unknown[]
   recurring: unknown[]
   transactions: unknown[]

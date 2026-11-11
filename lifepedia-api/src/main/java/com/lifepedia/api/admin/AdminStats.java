@@ -47,6 +47,7 @@ class AdminStats {
               (select count(*) from friendships where status = 'ACCEPTED')
             union all select 'AI_IMPORT', count(distinct user_id), count(*) from ai_usage where feature = :feature
             union all select 'PUSH', count(distinct user_id), count(*) from push_subscriptions where session_id is not null
+            union all select 'ARCHITECTURE', count(distinct user_id), count(*) from arch_projects
             ) m order by users desc, k
             """;
 
@@ -61,7 +62,8 @@ class AdminStats {
                    (select count(*) from friendships where status = 'ACCEPTED'
                       and (requester_id = :id or addressee_id = :id)) as friends,
                    (select count(*) from group_messages where user_id = :id) as messages,
-                   (select count(*) from ai_usage where user_id = :id and created_at >= :since) as ai_imports
+                   (select count(*) from ai_usage where user_id = :id and created_at >= :since) as ai_imports,
+                   (select count(*) from arch_projects where user_id = :id) as architecture
             """;
 
     private final JdbcClient jdbc;

@@ -1,5 +1,6 @@
 package com.lifepedia.api.account;
 
+import com.lifepedia.api.architecture.ArchitectureDtos.ArchitectureExport;
 import com.lifepedia.api.attendance.AttendanceDtos.CommitmentData;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.financing.FinancingDtos.FinancingData;
@@ -10,6 +11,7 @@ import com.lifepedia.api.planning.PlanItem;
 import com.lifepedia.api.task.TaskDtos.LabelData;
 import com.lifepedia.api.task.TaskDtos.TaskData;
 import com.lifepedia.api.user.UserDtos.UserSummary;
+import com.lifepedia.api.user.UserResponse.Preferences;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -31,10 +33,10 @@ import java.util.UUID;
 public final class AccountDtos {
 
     /** Versão do arquivo exportado; mudou o formato? Crie {@code @4} e mantenha a importação das anteriores. */
-    public static final String FORMAT = "lifepedia/account@5";
+    public static final String FORMAT = "lifepedia/account@6";
     /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência; {@code @3}: sem notas). */
     public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2",
-            "lifepedia/account@3", "lifepedia/account@4", FORMAT);
+            "lifepedia/account@3", "lifepedia/account@4", "lifepedia/account@5", FORMAT);
 
     private AccountDtos() {
     }
@@ -62,7 +64,8 @@ public final class AccountDtos {
     /**
      * Arquivo de exportação. Categorias, fixos, listas e etiquetas são ligados pelo {@code ref}; {@code groups} e
      * {@code commitments} (frequência, desde o {@code @3}), {@code notes} (desde o {@code @4}), {@code financings} e
-     * {@code financingSimulations} (desde o {@code @5}) são só registro (não importam).
+     * {@code financingSimulations} (desde o {@code @5}) e {@code architecture} (desde o {@code @6}) são só registro
+     * (não importam).
      *
      * @param profile ignorado na importação
      * @param tasks   tarefas pessoais (nulo no {@code @1}: a importação não mexe nas tarefas)
@@ -84,10 +87,12 @@ public final class AccountDtos {
             List<CommitmentData> commitments,
             List<NoteData> notes,
             List<FinancingData> financings,
-            List<SimulationData> financingSimulations) {
+            List<SimulationData> financingSimulations,
+            ArchitectureExport architecture) {
     }
 
-    public record Profile(String name, String username, String email) {
+    /** @param preferences menu e módulos escondidos (só registro, desde o {@code @6}) */
+    public record Profile(String name, String username, String email, Preferences preferences) {
     }
 
     public record CategoryData(

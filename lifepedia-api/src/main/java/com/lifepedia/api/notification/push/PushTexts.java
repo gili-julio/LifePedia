@@ -53,6 +53,10 @@ public final class PushTexts {
             case IMPORT_FAILED -> new PushMessage(APP, "Não foi possível ler seus documentos", IMPORT_LINK, importTag(type, data), false);
             case SYSTEM_MESSAGE -> new PushMessage(data.getOrDefault("title", APP), data.getOrDefault("body", ""), "/",
                     "system:" + data.getOrDefault("title", ""), false);
+            case ARCHITECTURE_SHARED -> new PushMessage(title, actor + " compartilhou o projeto " + project(data)
+                    + (group == null ? " com você" : " com o grupo"), projectLink(data), projectTag(type, data), false);
+            case ARCHITECTURE_COMMENT -> new PushMessage(APP, actor + " comentou em " + project(data) + ": “"
+                    + data.getOrDefault("preview", "") + "”", projectLink(data), projectTag(type, data), false);
         };
     }
 
@@ -60,6 +64,18 @@ public final class PushTexts {
     public static PushMessage chat(UUID groupId, String groupName, String author, String body) {
         String text = body.length() > 140 ? body.substring(0, 139) + "…" : body;
         return new PushMessage(groupName, author + ": " + text, "/grupos/" + groupId + "?aba=chat", "chat:" + groupId, true);
+    }
+
+    private static String project(Map<String, String> data) {
+        return data.getOrDefault("projectName", "");
+    }
+
+    private static String projectLink(Map<String, String> data) {
+        return "/arquitetura/" + URLEncoder.encode(data.getOrDefault("projectId", ""), StandardCharsets.UTF_8);
+    }
+
+    private static String projectTag(NotificationType type, Map<String, String> data) {
+        return type.name() + ":" + data.getOrDefault("projectId", "");
     }
 
     private static String importTag(NotificationType type, Map<String, String> data) {

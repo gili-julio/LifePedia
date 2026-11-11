@@ -4,6 +4,7 @@ import com.lifepedia.api.auth.AuthDtos.GoogleLinkRequest;
 import com.lifepedia.api.auth.AuthService;
 import com.lifepedia.api.shared.CurrentUser;
 import com.lifepedia.api.shared.image.Images;
+import com.lifepedia.api.user.UserDtos.PreferencesRequest;
 import com.lifepedia.api.user.UserDtos.TermsRequest;
 import com.lifepedia.api.user.UserDtos.UpdateProfileRequest;
 import jakarta.validation.Valid;
@@ -55,6 +56,11 @@ public class UserController {
     @DeleteMapping("/me/image")
     public UserResponse removeImage(@AuthenticationPrincipal Jwt jwt) {
         return service.removeImage(CurrentUser.id(jwt));
+    }
+
+    @PutMapping("/me/preferences")
+    public UserResponse updatePreferences(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PreferencesRequest request) {
+        return service.updatePreferences(CurrentUser.id(jwt), request);
     }
 
     @PutMapping("/me/terms")

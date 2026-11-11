@@ -8,7 +8,13 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
+      // Usa `new Function` ao carregar (barrado pela CSP); só o textureCompress do gltf-transform precisa dele.
+      'ndarray-pixels': path.resolve(import.meta.dirname, './src/features/architecture/convert/ndarray-pixels-stub.ts'),
     },
+  },
+  build: {
+    // Fonte nunca vira data: URL (a CSP do nginx só aceita font-src 'self').
+    assetsInlineLimit: (file) => (/\.(woff2?|ttf|otf)$/.test(file) ? false : undefined),
   },
   server: {
     port: 5173,

@@ -4,7 +4,7 @@ package com.lifepedia.api.user;
 public final class LegalTerms {
 
     /** Data de publicação. Texto mudou de forma relevante? Nova data aqui e no front: todos aceitam de novo. */
-    public static final String VERSION = "2026-11-09";
+    public static final String VERSION = "2026-11-10";
 
     private LegalTerms() {
     }
