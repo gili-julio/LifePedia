@@ -1,5 +1,6 @@
 package com.lifepedia.api.admin;
 
+import com.lifepedia.api.admin.AdminDtos.ServiceLimit;
 import com.lifepedia.api.admin.AdminDtos.ActiveAnnouncement;
 import com.lifepedia.api.admin.AdminDtos.AdminRequest;
 import com.lifepedia.api.admin.AdminDtos.AdminUser;
@@ -34,6 +35,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.UUID;
 
 /** Painel de administração. A cadeia de segurança já barra quem não é admin ({@link AdminAccess}); aqui confere de novo. */
@@ -74,6 +76,12 @@ public class AdminController {
     public AiOverview ai(@AuthenticationPrincipal Jwt jwt) {
         admin(jwt);
         return service.ai();
+    }
+
+    @GetMapping("/limits")
+    public List<ServiceLimit> limits(@AuthenticationPrincipal Jwt jwt) {
+        admin(jwt);
+        return service.limits();
     }
 
     @GetMapping("/status")

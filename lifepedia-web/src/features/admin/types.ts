@@ -20,7 +20,7 @@ export type Overview = {
 /** Espelha as chaves de `AdminStats.MODULES`. */
 export type ModuleKey =
   | 'FINANCE' | 'TASKS' | 'NOTES' | 'ATTENDANCE' | 'FINANCING' | 'GROUPS' | 'CHAT' | 'FRIENDS' | 'AI_IMPORT' | 'PUSH'
-  | 'ARCHITECTURE' | 'DEV' | 'INTEGRATIONS' | 'AI_DAILY'
+  | 'ARCHITECTURE' | 'DEV' | 'INTEGRATIONS' | 'AI_DAILY' | 'DELIVERIES' | 'SIMULATOR'
 
 export type Modules = { totalUsers: number; modules: { key: ModuleKey; users: number; items: number }[] }
 
@@ -77,7 +77,7 @@ export type AdminUser = {
 /** Espelha as colunas de `AdminStats.USER_COUNTS`. */
 export type UserCountKey =
   | 'transactions' | 'recurring' | 'tasks' | 'notes' | 'commitments' | 'financings' | 'groups' | 'friends' | 'messages'
-  | 'ai_imports' | 'architecture' | 'dev' | 'integrations'
+  | 'ai_imports' | 'architecture' | 'dev' | 'integrations' | 'deliveries' | 'simulations'
 
 export type AdminUserDetail = {
   user: AdminUser
@@ -128,3 +128,14 @@ export type AnnouncementRequest = { message: string; level: AnnouncementLevel; e
 export type Audience = 'ALL' | 'ADMINS'
 
 export type BroadcastRequest = { title: string; body: string; audience: Audience }
+
+/** Espelha `AdminDtos.ServiceLimit`. */
+export type LimitKey = 'TRACK17' | 'TRACK17_DAILY' | 'GEMINI_IMPORT' | 'GEMINI_DAILY' | 'GOOGLE_CALENDAR'
+export type ServiceLimit = {
+  key: LimitKey
+  configured: boolean
+  period: 'TOTAL' | 'DAY' | 'PEOPLE'
+  used: number | null
+  limit: number | null
+  error: string | null
+}

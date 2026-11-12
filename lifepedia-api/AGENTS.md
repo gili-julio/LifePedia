@@ -54,7 +54,9 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   conteúdo; tabela nova de módulo? Inclua em `MODULES` e `USER_COUNTS` e no `features/admin/labels.ts`). Ação de admin =
   `AuditService.record` na mesma transação. Bloqueio e "encerrar sessões" por `TokenService.revokeAll` (publica
   `SessionsRevokedEvent`). `last_seen_at` só pelo `UserRepository.touchLastSeen` (nativo; a entidade não grava a coluna).
-  Uso da IA só por `AiUsageLog.record`. Teste em `AdminIntegrationTest` (o perfil de teste fixa `lifepedia.admin.email`).
+  Uso da IA só por `AiUsageLog.record`. Limites dos serviços (`AdminService.limits`, sem transação: lê a cota do 17TRACK
+  pela fachada `delivery/TrackingQuota`); serviço novo com cota = linha em `limits` + chave em `LimitKey`/`LIMIT_LABEL` no
+  web. Teste em `AdminIntegrationTest` (o perfil de teste fixa `lifepedia.admin.email`).
 - **Arquitetura** (`architecture/`): acesso só por `ArchitectureAccess.require(projeto, usuário, papel mínimo)` (dono,
   compartilhamento direto ou por grupo do qual a pessoa é membro na hora; o maior papel vale). Arquivos só por
   `ArchitectureFiles` (`architecture/` no `STORAGE_DIR`, chave aleatória + extensão do `Type`; `receiveModel` copia o
@@ -80,6 +82,22 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskLinks.createPersonal`/`completePersonal`; concluir publica `task/TaskDoneEvent` e `DevTaskListener` fecha a issue
   depois do commit (thread virtual). Aviso só se o repositório já sincronizou antes (`synced_at`). Prompt do daily só em
   `DevDailyPrompt`; uso por `AiUsageLog.DEV_DAILY`.
+- **Simulador** (`finance/simulation`): conta só em `FinanceSimulator` (puro, em `double`, saída em `BigDecimal`;
+  `FinanceSimulatorTest`): base mês a mês, ganhos e gastos livres, investimento por aporte (cada aporte é um lote com a
+  própria idade para o IR regressivo), inflação. `SimulatorService.run`/`compare` ficam **fora de transação** (as taxas
+  podem ser buscadas no Banco Central na hora); base pelo `SummaryService.history` (meses futuros trazem os fixos com
+  fim e ajustes). Taxas só pela fachada `financing/MarketRates` (CDI e Selic são valores de `CorrectionIndex` com
+  `correction = false`: `FinancingService` recusa como correção). Simulação salva guarda só o `Input` em JSON. Teste em
+  `SimulatorIntegrationTest` (`@MockitoBean BcbClient`).
+- **Entregas** (`delivery/`): ver = dono ou membro do grupo da entrega (`visible`, senão 404); mudar = só o dono (`own`,
+  membro → 403). HTTP só por `Track17Client` (17TRACK v2.4, 40 códigos por chamada, 3 por segundo: pausa de 400 ms) e
+  `CepClient` (ViaCEP), via `SafeHttpClient`, fora de transação; `DeliverySyncService.sync` evita a mesma entrega em duas
+  sincronizações ao mesmo tempo e grava tudo numa transação depois. Leitura do `track_info` só em `TrackSnapshot.parse`
+  (puro, `TrackSnapshotTest`: status, eventos, transportadora com link só `http(s)`, previsão, taxa pelo texto). Aviso
+  `DELIVERY_UPDATE` só quando muda (`notified_status`), nunca na 1ª leitura; parada uma vez (`stall_warned`, volta a
+  valer quando chega evento novo). Fotos por `DeliveryImageStore` (`STORAGE_DIR/deliveries`); conta excluída apaga
+  (`deleteUserImagesAfterCommit`). Saiu do grupo → `onMemberRemoved` descompartilha. Cota para o admin pela fachada
+  `TrackingQuota`. Teste em `DeliveryIntegrationTest` com `@MockitoBean Track17Client` e `CepClient`.
 - **Banco** (`finance/bank`): `BankRef` é `@Embedded` em ocasionais, fixos e itens de grupo; valide com `BankRef.clean`
   antes de gravar e passe nos `sync` do `GroupFinanceSync`. Soma por banco só em `BankReport`, nunca em SQL solto.
   Banco novo no catálogo = valor em `Bank` + entrada e logo no web (`src/lib/banks.ts`).
@@ -184,7 +202,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@7`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@7`; frequência, notas, financiamentos, arquitetura, Dev e integrações só como registro); mudou o arquivo ⇒ `@8` e importação dos
+  (`lifepedia/account@8`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@8`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações e entregas só como registro); mudou o arquivo ⇒ `@9` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para

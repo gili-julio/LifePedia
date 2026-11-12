@@ -11,6 +11,7 @@ import type {
   BroadcastRequest,
   Modules,
   Overview,
+  ServiceLimit,
   SystemStatus,
   UserFilter,
 } from './types'
@@ -24,6 +25,7 @@ const keys = {
   modules: ['admin', 'modules'] as const,
   ai: ['admin', 'ai'] as const,
   status: ['admin', 'status'] as const,
+  limits: ['admin', 'limits'] as const,
   users: (params: object) => ['admin', 'users', params] as const,
   user: (id: string) => ['admin', 'user', id] as const,
   audit: (params: ListParams) => ['admin', 'audit', params] as const,
@@ -44,6 +46,10 @@ export function useAdminAi() {
 
 export function useSystemStatus() {
   return useQuery({ queryKey: keys.status, queryFn: () => api<SystemStatus>('/api/admin/status'), retry: false, staleTime: 0 })
+}
+
+export function useAdminLimits() {
+  return useQuery({ queryKey: keys.limits, queryFn: () => api<ServiceLimit[]>('/api/admin/limits'), retry: false, staleTime: 0 })
 }
 
 export function useAdminUsers(params: ListParams & { q: string; filter: UserFilter }) {

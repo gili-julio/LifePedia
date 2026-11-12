@@ -164,6 +164,17 @@ class AdminIntegrationTest extends ApiTestSupport {
     }
 
     /** Conta do {@code ADMIN_EMAIL}: cadastra na 1ª vez, depois entra. */
+    @Test
+    void showsTheLimitsOfExternalServices() {
+        String admin = fixedAdmin();
+        assertThat(send("GET", admin, "/api/admin/limits", null)).bodyJson().satisfies(json -> {
+            assertThat(json).extractingPath("$[?(@.key == 'TRACK17')].configured").asArray().containsExactly(false);
+            assertThat(json).extractingPath("$[?(@.key == 'GEMINI_IMPORT')].period").asArray().containsExactly("DAY");
+            assertThat(json).extractingPath("$[?(@.key == 'GOOGLE_CALENDAR')].limit").asArray().containsExactly(100);
+        });
+        assertThat(send("GET", registerAndGetBearer(), "/api/admin/limits", null)).hasStatus(403);
+    }
+
     private String fixedAdmin() {
         MvcTestResult result = mvc.post().uri("/api/auth/register").header("X-Auth-Mode", "token").header(CSRF, "test")
                 .contentType(MediaType.APPLICATION_JSON)

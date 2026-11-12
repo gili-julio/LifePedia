@@ -19,7 +19,7 @@ compartilham usuário, autenticação, design e padrões.
 | **Usuários** | ✅ v1.3 | Cadastro com **@username** único e obrigatório, login (sessão em cookie HttpOnly, **lembrar de mim** por 30 dias), **entrar/cadastrar com o Google** e vincular no perfil, **notificações** (também **push** no celular/computador), **exportar/importar dados** e **excluir conta** |
 | **Grupos** | ✅ v1.3 | Grupos com nome e **imagem** (recorte antes de salvar), convites diretos (aceitar/recusar) ou por **link**, admins e membros, **chat** em tempo real (responder, editar, apagar, não lidas na sidebar), **atalhos na sidebar** (até 3 fixados ou com atividade recente) e **planejamento** (compras e investimentos com prazo, simulação, cenários e "e se") |
 | **Amigos** | ✅ v1.0 | Pedidos de amizade por nome ou @username (aceitar/recusar/cancelar), perfil do amigo e **conquistas** com níveis (tarefas, hábitos, amigos, grupos, lançamentos) |
-| **Financeiro** | ✅ v1.3 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **investimentos** (fora das despesas, somam na reserva do grupo), **adiantar/adiar parcelas**, **importação de extrato/fatura com IA, pelo site ou com o seu agente** e **finanças em grupo** |
+| **Financeiro** | ✅ v1.3 | Ganhos e despesas **fixos** (mensais), lançamentos **ocasionais**, **categorias personalizáveis com cor**, comparativo do mês, histórico, gastos por categoria, **investimentos** (fora das despesas, somam na reserva do grupo), **adiantar/adiar parcelas**, **importação de extrato/fatura com IA, pelo site ou com o seu agente** e **finanças em grupo**; **simulador** do saldo dos próximos meses (fixos + média dos ocasionais, ganhos e gastos livres) com **investimento** (CDI, Selic, IPCA+, prefixado ou poupança, taxas do Banco Central, IR regressivo), **saldo atual x simulado**, **aportado x rendimento**, valores em **reais de hoje**, salvar e **comparar** até 3 |
 | **Financiamentos** | ✅ v1.0 | **Simulador** sem pedir juros (casa, apartamento, carro, moto ou outro bem, novo ou usado): cenários com as **taxas médias dos bancos** do Banco Central, **ranking por banco**, **SAC x Price**, prazos lado a lado, **gastos padrão** editáveis (ITBI, cartório, seguros, IOF, tarifas, IPVA...), **CET**, **FGTS**, **cabe na renda**, gráfico e tabela de parcelas (CSV); **simulações salvas**; **financiamentos em andamento** com saldo, % quitado, **quitar hoje**, **amortização extra** (prévia e registro), **correção por índice** (TR/IPCA/INCC), **gastos do bem** com aviso, **parcelas nos fixos** (valor de cada mês), **financiamento do grupo** com a parte de cada um, atalho no **planejamento** e card no **Início** |
 | **Tarefas** | ✅ v1.1 | Tarefas pessoais e **em grupo** para hoje, outros dias ou sem data, **atrasadas**, **repetição** (a cada N dias/semanas/meses/anos, dias da semana, dia do mês, a partir da conclusão), prioridade, horário e duração, **subtarefas**, **listas** e **etiquetas**; **agenda** em grade de horários (dia/semana, pessoal e no grupo); no grupo, **vários responsáveis** ou **todos**, "basta um" ou "cada um conclui a sua", **rodízio**, **comentários** e avisos; **levar tarefa pessoal para um grupo**; **semana** (arrastar muda o dia), **hábitos** (sequência e % do mês), **lembretes** e **ligação com fixos do financeiro** |
 | **Notas** | ✅ v1.0 | Anotações em **markdown** com editor visual (barra, menu "/", checklist, tabela, código com cores, fotos), modo **markdown** e **lado a lado**, salvar automático, **pastas**, **etiquetas**, cor/ícone, **fixar**, **arquivar**, **lixeira** (30 dias), **modelos**, links `[[Nome]]` entre notas, ligação com **tarefa** ou **compromisso**, **notas do grupo** com atividade, baixar `.md` e card no **Início** |
@@ -27,6 +27,7 @@ compartilham usuário, autenticação, design e padrões.
 | **Arquitetura** | ✅ v1.0 | **Maquete 3D** da casa exportada do SketchUp (.dae, .glb, .fbx ou .obj, ou um .zip com as texturas; o .skp não abre fora do SketchUp), **comprimida no navegador** antes de subir; visualizador com girar/zoom, **caminhar** por dentro (colisão com paredes, degraus, joystick no celular, **modo fantasma** que atravessa paredes e voa, **minimapa** da planta), **corte**, **planta** de cima e **andares**, **partes por tipo** (paredes, portas, janelas, móveis, louças...), **ficha da peça** (nome, medidas, material e link), **provador de acabamentos** (cor ou textura por material, **biblioteca de texturas**, **variantes** salvas), **visual** realista, maquete branca ou raio-x, **comparar lado a lado** (variantes e versões), **cômodos** com área, **noite com luzes**, **medir** em metros, **sol e sombra** por mês e hora, **vistas salvas** com **tour**, **foto em alta** e **tela cheia**; **versões** (trocar e comparar), **comentários presos na maquete** (resolver/reabrir), **anexos** (renders, fotos, plantas em PDF), **espaço por conta** e **compartilhar** com amigos, grupos (só ver, comentar ou editar) ou **link público** com validade |
 | **Dev** | ✅ v1.0 | **Projetos de trabalho** (ex.: Sebito, Gertec, Nut) com **atalhos** (board, homologação, produção, documentação) e os **repositórios** do GitLab/GitHub de cada um; painel **Hoje no dev** (reuniões do Google Agenda, seus MRs, revisões pedidas, pipelines quebradas e issues); **issues viram tarefas** (concluem sozinhas ao fechar; opcional: concluir fecha a issue); **raias automáticas** por etiqueta (MR aberto → "esperando MR", aceito → "livre para testes"); **resumo do daily** com IA; **atividade** (commits, MRs e revisões por dia); avisos de pipeline falhou, MR aprovado, aceito, comentado e revisão pedida |
 | **Integrações** | ✅ v1.0 | Central para ligar **Google Agenda** (OAuth só leitura, várias contas), **GitLab** (gitlab.com ou da empresa, token pessoal), **GitHub** (token) e **Duolingo** (perfil público): o que cada um traz, **passo a passo**, várias contas com apelido e cor, situação de cada conta, **sincronizar agora**, histórico, aviso de token vencendo ou recusado e desligar (apaga o que veio dela); eventos na **Agenda**; ofensiva do Duolingo no Início e nas **conquistas** |
+| **Entregas** | ✅ v1.0 | Cole o **código de rastreio** da compra (Correios, AliExpress, Shopee, Mercado Livre, Jadlog, Loggi... pelo **17TRACK**) com nome e **foto**; **barra de etapas** (postado, em trânsito, saiu para entrega, entregue), **linha do tempo** com todos os eventos, **previsão**, dias em trânsito e aviso de **parada há X dias**; **aviso de taxa/imposto** com link para pagar; **push** quando sai para entrega, é entregue, chega para retirar ou tem problema; **endereços** salvos com apelido e **CEP** que preenche o resto (também em *Meu perfil*); **compartilhar com um grupo** (membros veem o andamento e o apelido e a cidade do endereço); entregues vão para o **histórico** depois de 7 dias; "chega hoje" no Início |
 | Metas | 💡 ideia | Objetivos pessoais e financeiros com acompanhamento |
 | Saúde | 💡 ideia | Consultas, exames, medicamentos, hábitos |
 | Documentos | 💡 ideia | Documentos importantes, vencimentos, lembretes |
@@ -321,6 +322,40 @@ compartilham usuário, autenticação, design e padrões.
 - **Grupo** (aba *Financiamentos*): todos veem e editam; a parte de cada membro (%, soma 100, igual ao criar); excluir
   só quem cadastrou ou admin. Quem sai do grupo deixa de ter parte.
 
+### Simulador do financeiro - conceitos
+
+- **Onde**: *Financeiro → Simulador* (só pessoal; grupos continuam com o Planejamento). Toda a conta é da API.
+- **Base de cada mês**: fixos daquele mês (com fim e ajustes, ou seja, parcelas acabam) + média dos ocasionais dos últimos
+  3, 6 ou 12 meses completos que têm lançamentos (como no Planejamento). Investimento em categoria "Investir" conta como
+  sobra. *Sem mudanças* = saldo de hoje + base, mês a mês.
+- **Ganhos e gastos livres**: valor por mês de um mês até outro (ou até o fim) ou só uma vez.
+- **Investimento**: já investido + aporte por mês (sai do saldo, opcional), rendendo % do CDI, % da Selic, IPCA + taxa,
+  prefixado ou poupança (0,5% + TR com a Selic acima de 8,5% ao ano; senão 70% da Selic + TR). CDI, Selic, IPCA e TR são
+  a média dos últimos 12 meses do Banco Central (SGS 4391, 4390, 433 e 7811; sem dados, valores padrão e aviso). IR
+  regressivo por aporte (22,5% até 6 meses, 20% até 1 ano, 17,5% até 2 anos, 15% depois); poupança isenta.
+- **Resultado**: saldo no fim (simulado = em conta + investimento líquido), diferença para *sem mudanças*, rendimento,
+  aportado, IR se resgatar tudo, 1º mês negativo; gráficos *saldo sem mudanças x simulado* e *aportado x rendimento*.
+  *Reais de hoje* divide cada mês pela inflação projetada (IPCA) acumulada.
+- **Salvas**: guardam só o que foi digitado (até 50); ao abrir, refazem com os lançamentos e taxas do dia. Marque 2 ou
+  3 para comparar o saldo simulado no mesmo gráfico.
+
+### Entregas - conceitos
+
+- **Cadastro**: código de rastreio (letras, números e hífen, 6 a 40; espaços somem e vira maiúsculo), nome do item, foto
+  (opcional), endereço salvo (o padrão já vem marcado) e, se quiser, um grupo. A transportadora é descoberta pelo
+  17TRACK.
+- **Rastreio**: ao cadastrar, a API registra o código no 17TRACK e lê os eventos; depois, a cada hora (até sair para
+  entrega ou ser entregue), ou à mão em *Atualizar agora* (no máximo a cada 5 min). Guarda até 80 eventos (o mais novo
+  primeiro), situação, transportadora, origem e previsão.
+- **Etapas**: postado → em trânsito → saiu para entrega (ou disponível para retirada) → entregue. Problema (tentativa
+  sem sucesso, exceção, rastreio expirado) aparece em vermelho na etapa onde parou.
+- **Avisos** (dono e membros do grupo; nunca na 1ª leitura): saiu para entrega, para retirar, entregue, problema,
+  **aguardando pagamento** (taxa/imposto, pelo texto do último evento: "aguardando pagamento", "tributado"...) e
+  **parada** há 7 dias sem novidade (uma vez por parada).
+- **Histórico**: entregue há mais de 7 dias vai para o histórico sozinho (4h); dá para arquivar e desarquivar à mão.
+- **Endereços**: apelido, quem recebe, CEP (busca no ViaCEP), rua, número, complemento, bairro, cidade e UF; um é o
+  padrão. Também em *Meu perfil*. Apagar um endereço deixa as entregas sem endereço.
+
 ### Notas - conceitos
 
 - **Nota** (menu *Organização → Notas*, ou aba *Notas* do grupo): título e texto em **markdown** (até 200 mil
@@ -455,6 +490,7 @@ VPS de 4 GB com o Coolify) e `COOKIE_SECURE` sempre ligado.
    | `ADMIN_EMAIL` | opcional: e-mail da conta que é sempre admin (painel `/admin`); vazio = nenhuma fixa |
    | `ARCHITECTURE_QUOTA` / `ARCHITECTURE_MAX_MODEL` | opcionais: espaço de cada conta para maquetes e anexos (`300MB`) e tamanho máximo de uma maquete comprimida (`100MB`); os arquivos ficam no volume de uploads |
    | `INTEGRATIONS_KEY` | opcional: chave AES (32 bytes em base64, `openssl rand -base64 32`) que cifra os tokens das contas ligadas (GitLab, GitHub, Google Agenda); vazia = só o Duolingo. **Não perca nem troque**: os tokens salvos deixam de abrir |
+   | `TRACK17_API_KEY` | opcional: chave da API do **17TRACK** (rastreio das entregas, ver abaixo); vazia = entregas salvas sem atualização automática |
    | `GOOGLE_CLIENT_SECRET` / `APP_URL` | opcionais: Google Agenda nas integrações (ver abaixo) e o endereço público do site para a volta do Google (vazio = 1ª origem do `CORS_ORIGINS`) |
    | `DB_USER` | opcional, padrão `lifepedia` |
 
@@ -489,6 +525,12 @@ e vincular a conta em *Meu perfil*.
 
 **GitLab e GitHub** não precisam de nada no servidor além do `INTEGRATIONS_KEY`: cada pessoa cola o próprio token na
 página *Integrações*. GitLab da empresa precisa abrir na internet (https, porta 443): o servidor não acessa rede interna nem VPN.
+
+**Entregas** (opcional): crie a conta em [api.17track.net](https://api.17track.net), copie a *Security Key* e coloque em
+`TRACK17_API_KEY`. O plano gratuito tem uma **cota de rastreios** (cada código novo gasta 1; consultar de novo não gasta) e
+um teto por dia: o uso aparece em *Dashboard → Sistema → Limites dos serviços*. A API registra o código ao cadastrar e
+consulta as entregas não entregues a cada hora (job a cada 15 min, até 400 por vez, 40 por chamada). Cada pessoa cadastra
+até 15 entregas novas por dia e tem até 60 em andamento.
 
 **Importação pelo site** (opcional): crie a chave no [Google AI Studio](https://aistudio.google.com/apikey), num projeto
 com **cobrança ativa**, e coloque em `AI_API_KEY` (Coolify e, se quiser local, `.env`). A assinatura Google AI (Pro ou de
@@ -545,6 +587,7 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Administração | Rotas `/api/admin/**` barradas na cadeia do Spring Security (`AdminAccess`, confere no banco a cada requisição: tirar o admin vale na hora) e de novo no controller; sem login **401**, sem admin **403**. O front só esconde o menu e a rota (`RequireAdmin`, que reconfere a conta). Primeiro admin só pelo `ADMIN_EMAIL` (fixo: não perde o acesso nem é bloqueado); os outros só por outro admin, nunca o próprio. Bloquear apaga as sessões (token vale nada na hora, stream do chat fecha) e impede login; o detalhe da conta mostra só cadastro e contagens. Toda ação fica em `admin_audit_log` |
 | Arquitetura | Projeto só para o dono e para quem ele compartilhou (amigo aceito ou membro de um grupo do dono); sem acesso → **404**, papel menor → **403** (só ver < comentar < editar; compartilhar e excluir só o dono). Maquete enviada como GLB cru, conferida pela API (cabeçalho, tamanho declarado, bloco JSON) e gravada com nome aleatório; espaço por conta reservado antes do envio. Anexos: imagens regravadas em JPEG; PDF servido com `Content-Security-Policy: sandbox` e `nosniff`. **Link público** (`/maquete/<token>`): única rota de dados sem login (`GET /api/public/architecture/**`), token aleatório de 256 bits, com validade (1 a 365 dias), apagável, limite por IP; mostra só a versão atual e as vistas (nada de comentários, anexos ou e-mail) |
 | Integrações e Dev | Tokens das contas externas **cifrados** (AES-256-GCM, chave `INTEGRATIONS_KEY` só no ambiente), nunca devolvidos nem logados; contas, eventos, repositórios, MRs e issues só do dono (**404** para os outros). Chamadas ao GitLab/GitHub/Google/Duolingo só pelo `SafeHttpClient` (GitLab da empresa: só https, porta 443, IP público). Google: OAuth com `state` cifrado ligado à pessoa (10 min), só `calendar.readonly`; desligar revoga. Limites por pessoa para conectar, sincronizar e buscar repositórios. Resumo do daily: só quando a pessoa pede, com o prompt montado na API |
+| Entregas | Entrega só do dono e, se ele compartilhou com um grupo, dos membros (os outros recebem **404**); só o dono edita, arquiva, troca a foto ou exclui (**403** para membros). Membros veem só o apelido e a cidade do endereço. Ao **17TRACK** vai só o código de rastreio e ao **ViaCEP** só o CEP (os dois pelo `SafeHttpClient`); link da transportadora só `http(s)`. Limites: 15 entregas novas por dia, 60 em andamento, 30 buscas de CEP por minuto e atualizar à mão no máximo a cada 5 min |
 | Rede | Portas só em `127.0.0.1`; banco com senha aleatória; API e nginx rodam **sem root**; `no-new-privileges` |
 | Navegador | CSP restritiva (única origem externa: `accounts.google.com/gsi`, para o botão do Google; `wasm-unsafe-eval` só para o WebAssembly que comprime e abre as maquetes, sem `eval` de JS), `Cross-Origin-Opener-Policy: same-origin-allow-popups` (popup do Google), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, sem versão do servidor |
 | Notificações push | Web Push com chaves VAPID (a privada só no ambiente). O conteúdo vai **cifrado de ponta a ponta** até o aparelho (RFC 8291): o serviço de push do navegador (Google, Mozilla, Apple, Microsoft) não lê o texto. A API só envia para esses serviços (lista fixa, `https` na porta 443, sem redirecionamento). Cada aparelho fica ligado à **sessão de login**: sair, sessão vencida ou excluir a conta param o envio; outra pessoa no mesmo navegador não herda o push. Com o app em foco nada aparece. O texto da notificação aparece na tela de bloqueio, conforme o aparelho |
@@ -569,7 +612,8 @@ Pontos em aberto / recomendações:
   sempre avisa. Depende do formato da página de busca do Buscapé — se mudar, a referência só deixa de aparecer.
 - **Taxas dos financiamentos**: são médias informadas pelos bancos ao Banco Central (com atraso de semanas) e os
   gastos padrão são estimativas; a tela avisa que a proposta real pode mudar. Depende do formato das APIs de dados
-  abertos do Banco Central (Olinda e SGS): se mudar, a simulação cai na taxa padrão e mostra o aviso.
+  abertos do Banco Central (Olinda e SGS): se mudar, a simulação cai na taxa padrão e mostra o aviso. O SGS recusa
+  mais de 20 valores por consulta (HTTP 400).
 - **Textos legais**: escritos a partir do que o sistema faz hoje; não substituem revisão de um advogado. Mudou algo
   que trata dados (novo serviço externo, novo dado, retenção de logs)? Atualize a política e a versão.
 - **Logs do servidor** (nginx/Traefik): têm IP e páginas acessadas; configure a retenção no Coolify/Docker (a política

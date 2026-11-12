@@ -49,5 +49,10 @@ public enum NotificationType {
     /** Comentários novos no MR da pessoa. data: projectId, projectName, repoName, title, number, count */
     DEV_MR_COMMENTED,
     /** Pediram a revisão da pessoa. data: projectId, projectName, repoName, title, number, author */
-    DEV_REVIEW_REQUESTED
+    DEV_REVIEW_REQUESTED,
+    /**
+     * Novidade numa entrega (dono e membros do grupo dela). data: deliveryId, name, status (OUT_FOR_DELIVERY, PICKUP,
+     * DELIVERED, FAILED, EXCEPTION, EXPIRED, TAX = aguardando pagamento, STALLED = parada), text (último evento), days
+     */
+    DELIVERY_UPDATE
 }

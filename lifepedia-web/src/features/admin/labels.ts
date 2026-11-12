@@ -1,5 +1,5 @@
 import { ApiError } from '@/lib/api'
-import type { AuditAction, JobStatus, ModuleKey, UserCountKey } from './types'
+import type { AuditAction, JobStatus, LimitKey, ModuleKey, UserCountKey } from './types'
 
 export const MODULE_LABEL: Record<ModuleKey, { label: string; items: string }> = {
   FINANCE: { label: 'Financeiro', items: 'lançamentos e fixos' },
@@ -16,6 +16,8 @@ export const MODULE_LABEL: Record<ModuleKey, { label: string; items: string }> =
   DEV: { label: 'Dev', items: 'projetos' },
   INTEGRATIONS: { label: 'Integrações', items: 'contas ligadas' },
   AI_DAILY: { label: 'Resumo do daily (IA)', items: 'resumos' },
+  DELIVERIES: { label: 'Entregas', items: 'entregas' },
+  SIMULATOR: { label: 'Simulador do financeiro', items: 'simulações salvas' },
 }
 
 export const COUNT_LABEL: Record<UserCountKey, string> = {
@@ -32,6 +34,8 @@ export const COUNT_LABEL: Record<UserCountKey, string> = {
   architecture: 'Projetos de arquitetura',
   dev: 'Projetos do Dev',
   integrations: 'Contas ligadas',
+  deliveries: 'Entregas',
+  simulations: 'Simulações salvas',
 }
 
 /** Resultado de uma leitura (espelha `AiUsage.Outcome`). */
@@ -59,6 +63,15 @@ export const AUDIT_LABEL: Record<AuditAction, string> = {
   ANNOUNCEMENT_CREATED: 'Publicou um aviso',
   ANNOUNCEMENT_ENDED: 'Encerrou um aviso',
   BROADCAST_SENT: 'Enviou notificação para todos',
+}
+
+/** Serviço externo e o que o limite conta. */
+export const LIMIT_LABEL: Record<LimitKey, { label: string; unit: string; off: string }> = {
+  TRACK17: { label: '17TRACK (plano)', unit: 'rastreios', off: 'Sem TRACK17_API_KEY: entregas sem atualização automática' },
+  TRACK17_DAILY: { label: '17TRACK (hoje)', unit: 'rastreios', off: '' },
+  GEMINI_IMPORT: { label: 'Gemini: importação (24 h)', unit: 'leituras', off: 'Sem AI_API_KEY' },
+  GEMINI_DAILY: { label: 'Gemini: resumo do daily (24 h)', unit: 'resumos', off: 'Sem AI_API_KEY' },
+  GOOGLE_CALENDAR: { label: 'Google Agenda sem verificação', unit: 'pessoas', off: 'Sem GOOGLE_CLIENT_SECRET' },
 }
 
 export const JOB_LABEL: Record<JobStatus, string> = {

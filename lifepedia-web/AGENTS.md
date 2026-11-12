@@ -173,6 +173,19 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   tarefa). Busca de repositório espera 400 ms antes de chamar (`RepoDialog`). Link externo (MR, issue, atalho, chamada)
   sempre `target="_blank" rel="noopener noreferrer"`. Mapa de calor (`ActivityHeatmap`) num tom só (`--primary` misturado
   com `--card`), legenda Menos/Mais e números do dia em texto (`aria-live`) ao passar o mouse ou focar.
+- **Simulador do financeiro** (`features/finance/simulator`): chaves `['finance', 'simulator', ...]` (mutações invalidam
+  só o simulador). **Nenhuma conta no front**: saldo, rendimento, IR, inflação e o líquido de cada mês (`invested`) vêm
+  da API; o front monta o pedido (`form.ts`, campos como texto, saldo aceita "-") e refaz com debounce de 400 ms sobre o
+  pedido em JSON (`keepPreviousData`), como o simulador de financiamentos. Gráficos em `components/charts.tsx` (comparar
+  usa a paleta categórica validada do gráfico de bancos, cor pela posição escolhida). Dinheiro por `useMoney`.
+- **Entregas** (`features/deliveries`): chaves `['deliveries', ...]`; mutações invalidam o módulo e as notificações.
+  Lista recarrega a cada 5 min com a tela aberta. Etapa, problema, dias em trânsito, parada e "chega hoje" sempre da API
+  (`stage`, `problem`, `daysInTransit`, `stalledDays`, `arrivesToday`); textos e ícones das etapas em `labels.ts`
+  (`STALL_DAYS` igual ao aviso da API). Foto por `ImagePicker shape="rect"`, enviada depois de salvar (`useDeliveryImage`).
+  Link da transportadora só o que a API mandou (`http(s)`), nova aba, `noopener noreferrer`. CEP só pela API
+  (`lookupCep`). Dialog de endereço aberto de dentro do de entrega fica **fora** do `<form>` (senão o submit sobe para o
+  formulário de fora). `AddressList` serve à aba Endereços e ao `AddressesProfileCard` do perfil.
+- **Admin, limites**: `LimitsCard` (aba Sistema) lê `useAdminLimits`; texto e unidade de cada chave em `LIMIT_LABEL`.
 - **Arquitetura** (`features/architecture`): chaves `['architecture', ...]`; mutações invalidam o módulo e as
   notificações. Papel sempre da API (`canAct(role, 'EDIT')` só esconde botões). **Conversão no navegador**
   (`convert/convert.ts`, importado com `import()` só ao enviar; constantes e tipos em `convert/options.ts`): arquivos
@@ -207,7 +220,7 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos, frequência, notas, financiamentos e arquitetura do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@6`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações e entregas do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@8`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.

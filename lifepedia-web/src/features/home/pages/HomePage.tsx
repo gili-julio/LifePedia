@@ -1,4 +1,16 @@
-import { AlarmClockIcon, AlertTriangleIcon, ArrowRightIcon, CalendarCheckIcon, ClockIcon, FlameIcon, PinIcon, UsersIcon, WalletIcon } from 'lucide-react'
+import {
+  AlarmClockIcon,
+  AlertTriangleIcon,
+  ArrowRightIcon,
+  BanknoteIcon,
+  CalendarCheckIcon,
+  ClockIcon,
+  FlameIcon,
+  PinIcon,
+  TruckIcon,
+  UsersIcon,
+  WalletIcon,
+} from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -9,6 +21,7 @@ import { useCommitments } from '@/features/attendance/api'
 import { useAuth } from '@/features/auth/auth-context'
 import { useHiddenModules } from '@/features/auth/preferences'
 import type { AppModule } from '@/features/auth/types'
+import { useDeliverySummary } from '@/features/deliveries/api'
 import { useDevToday } from '@/features/dev/api'
 import { useSummary } from '@/features/finance/api'
 import { useFinancingOverview } from '@/features/financing/api'
@@ -35,7 +48,7 @@ function taskLink(item: TaskItem) {
 }
 
 /** Módulos com cartão no Início. */
-const HOME_MODULES: AppModule[] = ['TASKS', 'ATTENDANCE', 'FINANCE', 'FINANCING', 'NOTES', 'DEV']
+const HOME_MODULES: AppModule[] = ['TASKS', 'ATTENDANCE', 'FINANCE', 'FINANCING', 'NOTES', 'DEV', 'DELIVERIES']
 
 /** Início: tarefas de hoje, hábitos, frequência, o mês no financeiro, financiamentos, notas, o dia no Dev, contas ligadas e as mudanças do sistema. */
 export function HomePage() {
@@ -61,6 +74,7 @@ export function HomePage() {
           {show('FINANCING') && <FinancingsCard />}
           {show('NOTES') && <NotesCard />}
           {show('DEV') && <DevCard />}
+          {show('DELIVERIES') && <DeliveriesCard />}
           <AccountsCard />
         </div>
       ) : (
@@ -378,6 +392,46 @@ function DevCard() {
             )}
           </div>
         )}
+    </HomeCard>
+  )
+}
+
+/** Entregas a caminho (só aparece com alguma): as que chegam hoje, taxa pendente e problemas. */
+function DeliveriesCard() {
+  const { data, isError } = useDeliverySummary()
+  if (isError || !data || data.active === 0) return null
+  return (
+    <HomeCard title="Entregas" to="/entregas"
+      description={`${data.active} ${data.active === 1 ? 'entrega a caminho' : 'entregas a caminho'}`}>
+      <div className="space-y-2 text-sm">
+        {data.today.length > 0 ? (
+          <ul className="space-y-1.5">
+            {data.today.slice(0, 4).map((d) => (
+              <li key={d.id}>
+                <Link to={`/entregas/${d.id}`} className="flex items-center gap-2 hover:underline">
+                  <TruckIcon className="size-4 shrink-0 text-data" aria-hidden />
+                  <span className="truncate">{d.name}</span>
+                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                    {d.status === 'OUT_FOR_DELIVERY' ? 'saiu para entrega' : 'chega hoje'}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-muted-foreground">Nada chega hoje.</p>}
+        {data.taxes > 0 && (
+          <p className="flex items-center gap-1.5 text-destructive">
+            <BanknoteIcon className="size-4" aria-hidden />
+            {data.taxes} {data.taxes === 1 ? 'aguarda' : 'aguardam'} pagamento de taxa.
+          </p>
+        )}
+        {data.problems > 0 && (
+          <p className="flex items-center gap-1.5 text-destructive">
+            <AlertTriangleIcon className="size-4" aria-hidden />
+            {data.problems} com problema na entrega.
+          </p>
+        )}
+      </div>
     </HomeCard>
   )
 }

@@ -1,6 +1,8 @@
 package com.lifepedia.api.account;
 
 import com.lifepedia.api.architecture.ArchitectureDtos.ArchitectureExport;
+import com.lifepedia.api.finance.simulation.SimulatorDtos.SavedData;
+import com.lifepedia.api.delivery.DeliveryDtos.DeliveriesExport;
 import com.lifepedia.api.dev.DevDtos.ProjectExport;
 import com.lifepedia.api.integration.IntegrationDtos.AccountExport;
 import com.lifepedia.api.attendance.AttendanceDtos.CommitmentData;
@@ -35,10 +37,11 @@ import java.util.UUID;
 public final class AccountDtos {
 
     /** Versão do arquivo exportado; mudou o formato? Crie {@code @4} e mantenha a importação das anteriores. */
-    public static final String FORMAT = "lifepedia/account@7";
+    public static final String FORMAT = "lifepedia/account@8";
     /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência; {@code @3}: sem notas). */
     public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2",
-            "lifepedia/account@3", "lifepedia/account@4", "lifepedia/account@5", "lifepedia/account@6", FORMAT);
+            "lifepedia/account@3", "lifepedia/account@4", "lifepedia/account@5", "lifepedia/account@6", "lifepedia/account@7",
+            FORMAT);
 
     private AccountDtos() {
     }
@@ -67,7 +70,8 @@ public final class AccountDtos {
      * Arquivo de exportação. Categorias, fixos, listas e etiquetas são ligados pelo {@code ref}; {@code groups} e
      * {@code commitments} (frequência, desde o {@code @3}), {@code notes} (desde o {@code @4}), {@code financings} e
      * {@code financingSimulations} (desde o {@code @5}), {@code architecture} (desde o {@code @6}), {@code devProjects} e
-     * {@code integrations} (desde o {@code @7}; contas sem token) são só registro (não importam).
+     * {@code integrations} (desde o {@code @7}; contas sem token), {@code financeSimulations} e {@code deliveries} (endereços e
+     * entregas, desde o {@code @8}) são só registro (não importam).
      *
      * @param profile ignorado na importação
      * @param tasks   tarefas pessoais (nulo no {@code @1}: a importação não mexe nas tarefas)
@@ -92,7 +96,9 @@ public final class AccountDtos {
             List<SimulationData> financingSimulations,
             ArchitectureExport architecture,
             List<ProjectExport> devProjects,
-            List<AccountExport> integrations) {
+            List<AccountExport> integrations,
+            List<SavedData> financeSimulations,
+            DeliveriesExport deliveries) {
     }
 
     /** @param preferences menu e módulos escondidos (só registro, desde o {@code @6}) */

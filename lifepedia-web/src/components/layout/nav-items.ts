@@ -1,5 +1,6 @@
 import {
   Building2Icon,
+  ChartSplineIcon,
   CalendarCheck2Icon,
   CalendarClockIcon,
   CalendarDaysIcon,
@@ -14,6 +15,7 @@ import {
   LayoutDashboardIcon,
   LayoutGridIcon,
   NotebookPenIcon,
+  PackageIcon,
   PlugZapIcon,
   ListTodoIcon,
   ReceiptTextIcon,
@@ -77,6 +79,7 @@ export const NAV_SECTIONS: NavSection[] = [
           { to: '/financeiro/fixos', label: 'Fixos', icon: RepeatIcon },
           { to: '/financeiro/lancamentos', label: 'Lançamentos', icon: ReceiptTextIcon },
           { to: '/financeiro/bancos', label: 'Bancos', icon: WalletCardsIcon },
+          { to: '/financeiro/simulador', label: 'Simulador', icon: ChartSplineIcon },
           { to: '/financeiro/importar', label: 'Importar com IA', icon: SparklesIcon },
           { to: '/financeiro/categorias', label: 'Categorias', icon: TagsIcon },
         ],
@@ -104,6 +107,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/agenda', label: 'Agenda', icon: CalendarRangeIcon, module: 'AGENDA' },
       { to: '/frequencia', label: 'Frequência', icon: CalendarCheck2Icon, module: 'ATTENDANCE' },
       { to: '/notas', label: 'Notas', icon: NotebookPenIcon, module: 'NOTES' },
+      { to: '/entregas', label: 'Entregas', icon: PackageIcon, module: 'DELIVERIES' },
     ],
   },
   {

@@ -73,6 +73,9 @@ public final class PushTexts {
                     + devItem(data), devLink(data), devTag(type, data), false);
             case DEV_REVIEW_REQUESTED -> new PushMessage(devTitle(data), data.getOrDefault("author", "") + " pediu sua revisão: "
                     + devItem(data), devLink(data), devTag(type, data), false);
+            case DELIVERY_UPDATE -> new PushMessage(data.getOrDefault("name", APP), deliveryText(data),
+                    "/entregas/" + URLEncoder.encode(data.getOrDefault("deliveryId", ""), StandardCharsets.UTF_8),
+                    type.name() + ":" + data.getOrDefault("deliveryId", ""), "OUT_FOR_DELIVERY".equals(data.get("status")));
         };
     }
 
@@ -80,6 +83,20 @@ public final class PushTexts {
     public static PushMessage chat(UUID groupId, String groupName, String author, String body) {
         String text = body.length() > 140 ? body.substring(0, 139) + "…" : body;
         return new PushMessage(groupName, author + ": " + text, "/grupos/" + groupId + "?aba=chat", "chat:" + groupId, true);
+    }
+
+    private static String deliveryText(Map<String, String> data) {
+        return switch (data.getOrDefault("status", "")) {
+            case "OUT_FOR_DELIVERY" -> "Saiu para entrega";
+            case "PICKUP" -> "Chegou e está disponível para retirada";
+            case "DELIVERED" -> "Entregue";
+            case "FAILED" -> "Tentativa de entrega sem sucesso";
+            case "EXCEPTION" -> "Problema na entrega: " + data.getOrDefault("text", "confira o rastreio");
+            case "EXPIRED" -> "O rastreio parou de atualizar";
+            case "TAX" -> "Aguardando pagamento de imposto ou taxa";
+            case "STALLED" -> "Sem novidades há " + data.getOrDefault("days", "") + " dias";
+            default -> data.getOrDefault("text", "Novidade no rastreio");
+        };
     }
 
     private static String provider(Map<String, String> data) {

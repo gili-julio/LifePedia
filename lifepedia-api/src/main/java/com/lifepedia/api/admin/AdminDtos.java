@@ -60,6 +60,17 @@ public final class AdminDtos {
     }
 
     /**
+     * Limite de um serviço externo.
+     *
+     * @param key    {@code TRACK17}, {@code TRACK17_DAILY}, {@code GEMINI_IMPORT}, {@code GEMINI_DAILY}, {@code GOOGLE_CALENDAR}
+     * @param period {@code TOTAL} (plano), {@code DAY} (últimas 24 h) ou {@code PEOPLE} (pessoas)
+     * @param used   nulo se não deu para ler
+     * @param error  por que não deu para ler
+     */
+    public record ServiceLimit(String key, boolean configured, String period, Long used, Long limit, String error) {
+    }
+
+    /**
      * Situação do servidor.
      *
      * @param version versão da build; nula fora do jar

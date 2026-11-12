@@ -80,16 +80,18 @@ public class BcbClient {
         return Optional.empty();
     }
 
-    /** Últimos {@code months} valores mensais do índice. */
+    /** Últimos {@code months} valores mensais do índice (até 20), sem o mês atual (CDI e Selic vêm acumulados até hoje). */
     public List<IndexPoint> index(CorrectionIndex index, int months) {
         if (index == CorrectionIndex.NONE) return List.of();
+        YearMonth current = YearMonth.now(clock);
         try {
             List<IndexPoint> points = new ArrayList<>();
             for (JsonNode row : get(SGS.formatted(index.series(), months)).values()) {
                 BigDecimal rate = decimal(row.get("valor"));
                 String date = row.path("data").asString();
                 if (rate == null || date == null) continue;
-                points.add(new IndexPoint(YearMonth.from(LocalDate.parse(date, SGS_DATE)), rate));
+                YearMonth month = YearMonth.from(LocalDate.parse(date, SGS_DATE));
+                if (month.isBefore(current)) points.add(new IndexPoint(month, rate));
             }
             return points;
         } catch (FetchException | RuntimeException e) {

@@ -81,6 +81,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   exceção: o script/iframe do botão do Google (`accounts.google.com/gsi`, liberado no `nginx.conf` e carregado só por
   `features/auth/GoogleButton.tsx`). `'wasm-unsafe-eval'` (WebAssembly, não `eval`) e `connect-src blob:` existem só
   para comprimir/abrir maquetes 3D (`features/architecture`).
+- **Entregas** (`delivery/`): ao 17TRACK vai só o código de rastreio e ao ViaCEP só o CEP, sempre pelo
+  `SafeHttpClient` (`Track17Client`, `CepClient`) e fora de transação; chave `TRACK17_API_KEY` só no ambiente (cabeçalho
+  `17token`). Nome, foto e endereço nunca saem do servidor. Link da transportadora só `http(s)`.
 - **Contas externas** (`integration/`): token só cifrado (`SecretBox`, AES-256-GCM, `INTEGRATIONS_KEY` no ambiente); nunca
   volta na resposta, nem em log, nem no arquivo da conta. Toda chamada a GitLab/GitHub/Google/Duolingo pelo
   `SafeHttpClient.exchange` (o GitLab da empresa é URL do usuário: só https na 443 e IP público). OAuth do Google com
@@ -143,6 +146,10 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
     `features/integrations/types.ts` (+ textos em `providers.ts`)
   - Dev: `DevDtos.LinkKind`, `DevItem.Kind`, status de `integration/code/Pipelines` e DTOs de `DevDtos` ↔ `features/dev/types.ts`
     (+ textos em `labels.ts`)
+  - Simulador do financeiro: `SimulatorDtos` (`Yield`, `Input`, `Result`...) ↔ `features/finance/simulator/types.ts` (+ textos em `form.ts`)
+  - Entregas: `DeliveryStatus` (e o `stage` de cada um), DTOs de `DeliveryDtos` ↔ `features/deliveries/types.ts` (+ textos e
+    etapas em `labels.ts`); `status` da notificação `DELIVERY_UPDATE` ↔ `deliveryText` em `notification-content.tsx`
+  - Limites do admin: chaves de `AdminDtos.ServiceLimit` ↔ `features/admin/types.ts` (`LimitKey`) + `LIMIT_LABEL`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
   `InvestmentCategories`). `Totals.expense` e `MonthPoint.*Expense` vêm **sem** investimento; `invested` à parte;
@@ -214,15 +221,16 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@7`, anexo; importa `@1` a `@7`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@8`, anexo; importa `@1` a `@8`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
   `profile`, `groups`, `commitments` (frequência, desde o `@3`), `notes` (desde o `@4`), `financings` e `financingSimulations` (desde o `@5`) e `architecture` (projetos com versões,
   vistas, nomes dos anexos, das variantes e dos cômodos, mais os comentários da pessoa; sem os arquivos 3D, desde o `@6`),
   `devProjects` (nome, descrição, atalhos e repositórios) e `integrations` (serviço, apelido, login, endereço; nunca token),
-  desde o `@7`, são só registro. Mudou o formato? Crie `@8` e mantenha a importação dos anteriores (usuários guardam
-  arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
+  desde o `@7`, `financeSimulations` (simulações do financeiro) e `deliveries` (`addresses` + `deliveries`: nome, código,
+  situação, transportadora, apelido do endereço), desde o `@8`, são só registro. Mudou o formato? Crie `@9` e mantenha
+  a importação dos anteriores (usuários guardam arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
   na tarefa (`due_date` = início); as ocorrências são **geradas na leitura** e `task_occurrences` só guarda o que mudou
@@ -358,6 +366,27 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   concluir a tarefa (`TaskDoneEvent`) fecha a issue se `closeIssues`. Avisos (nunca na 1ª sincronização do
   repositório): `DEV_PIPELINE_FAILED`, `DEV_MR_APPROVED`, `DEV_MR_MERGED` (com a raia), `DEV_MR_COMMENTED`,
   `DEV_REVIEW_REQUESTED`.
+- **Simulador do financeiro** (`/api/finance/simulator`): `POST /run?real=` (corpo = `Input`: `months` 1 a 600,
+  `startBalance`, `useFixed`, `averageMonths` 0/3/6/12, `changes` até 30, `investment` opcional) → `Result` (`base`,
+  `rates` em % ao ano, `summary`, `points` mês a mês); `POST /compare?real= {ids}` (2 ou 3 salvas); `GET/POST /saved`,
+  `PUT/DELETE /saved/{id}` (`{name, input}`, até 50). Toda a conta em `FinanceSimulator` (puro); base pelo
+  `SummaryService.history` (meses futuros: fixos com fim e ajustes) e taxas pela fachada `financing/MarketRates`
+  (CDI, Selic, IPCA, TR do SGS, guardados em `financing_index_values`; CDI e Selic nunca entram como correção de
+  financiamento). 120 simulações por minuto por pessoa. `real` divide pela inflação projetada acumulada.
+- **Entregas** (`/api/deliveries`): `GET ?archived=` (suas + compartilhadas com os grupos da pessoa, sem paginação: até
+  60 ativas por dono), `GET /summary` (`active`, `today`, `problems`, `taxes`), `POST {trackingCode, name, addressId?,
+  groupId?}` (registra no 17TRACK e lê na hora; mesmo código → 409; 15 por dia), `GET/PUT/DELETE /{id}`, `PUT
+  /{id}/archive {archived}`, `POST /{id}/refresh` (quem vê; 5 min), `PUT/DELETE/GET /{id}/image`, `GET/POST
+  /addresses`, `PUT/DELETE /addresses/{id}` (até 20; um padrão), `GET /cep/{cep}` (ViaCEP; 404 sem CEP). Ver: dono ou
+  membro do grupo da entrega (senão 404); mudar: só o dono (membro → 403). Membro recebe `address` nulo e
+  `addressShort` (apelido e cidade). `stage`, `problem`, `daysInTransit`, `stalledDays` e `arrivesToday` vêm da API.
+  `DeliverySyncService` (job a cada 15 min, entregas sem sincronizar há 50 min e não entregues; arquiva entregues há 7
+  dias às 4h) registra os códigos novos, lê em lotes de 40 e avisa `DELIVERY_UPDATE` (`status`: `OUT_FOR_DELIVERY`,
+  `PICKUP`, `DELIVERED`, `FAILED`, `EXCEPTION`, `EXPIRED`, `TAX`, `STALLED`) para o dono e os membros do grupo; nunca
+  na 1ª leitura. Quem sai do grupo descompartilha as entregas dele (`GroupMemberRemovedEvent`).
+- **Limites dos serviços** (`GET /api/admin/limits`, só admin): `[{key, configured, period, used, limit, error}]` para
+  17TRACK (plano e dia, pela `getquota`, guardada 5 min), Gemini (importação e daily nas últimas 24 h contra
+  `AI_DAILY_LIMIT`) e Google Agenda (pessoas com conta ligada contra 100, o teto sem verificação).
 
 ## Checklist: novo módulo
 

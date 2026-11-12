@@ -24,6 +24,7 @@ export type NotificationType =
   | 'DEV_MR_MERGED'
   | 'DEV_MR_COMMENTED'
   | 'DEV_REVIEW_REQUESTED'
+  | 'DELIVERY_UPDATE'
 
 export type AppNotification = {
   id: string

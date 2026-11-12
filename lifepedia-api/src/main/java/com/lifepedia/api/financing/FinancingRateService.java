@@ -24,7 +24,8 @@ import java.util.stream.Collectors;
 public class FinancingRateService {
 
     private static final Duration RETRY = Duration.ofHours(1);
-    private static final int INDEX_MONTHS = 24;
+    /** O SGS recusa mais de 20 valores por consulta (HTTP 400). */
+    private static final int INDEX_MONTHS = 20;
 
     /**
      * Taxas da modalidade em % ao mês.
@@ -81,6 +82,11 @@ public class FinancingRateService {
         if (values.isEmpty()) return index.fallback() / 100;
         return values.subList(Math.max(0, values.size() - 12), values.size()).stream()
                 .mapToDouble(v -> v.getRate().doubleValue()).average().orElse(index.fallback()) / 100;
+    }
+
+    /** Há valores do Banco Central guardados (senão a projeção é o padrão do índice). */
+    public boolean known(CorrectionIndex index) {
+        return index == CorrectionIndex.NONE || !values(index).isEmpty();
     }
 
     /** Correção de cada mês (fração): valor real do índice nos meses já divulgados, projeção nos outros. */

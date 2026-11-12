@@ -14,6 +14,7 @@ export const MODULES: { id: AppModule; label: string; hint: string }[] = [
   { id: 'GROUPS', label: 'Grupos', hint: 'Grupos e atalhos no menu' },
   { id: 'FRIENDS', label: 'Amigos', hint: 'Amigos e conquistas' },
   { id: 'DEV', label: 'Dev', hint: 'Projetos de trabalho, MRs e daily' },
+  { id: 'DELIVERIES', label: 'Entregas', hint: 'Rastreio das compras e endereços' },
   { id: 'ARCHITECTURE', label: 'Arquitetura', hint: 'Maquetes 3D' },
 ]
 

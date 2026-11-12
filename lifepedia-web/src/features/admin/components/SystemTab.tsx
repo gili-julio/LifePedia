@@ -6,6 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatBytes, formatInstantDate, formatRelative, formatTime } from '@/lib/format'
 import { useSystemStatus } from '../api'
+import { LimitsCard } from './LimitsCard'
 import { formatDuration, JOB_LABEL } from '../labels'
 import type { JobStatus } from '../types'
 
@@ -72,6 +73,8 @@ export function SystemTab() {
           </CardContent>
         </Card>
       </div>
+
+      <LimitsCard />
 
       <Card>
         <CardHeader><CardTitle>Tarefas agendadas</CardTitle></CardHeader>

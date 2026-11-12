@@ -2,6 +2,7 @@ import {
   AlarmClockIcon,
   BellIcon,
   BellRingIcon,
+  PackageIcon,
   CircleXIcon,
   GitMergeIcon,
   GitPullRequestIcon,
@@ -213,7 +214,24 @@ export function notificationContent(n: AppNotification): Content {
       return { text: <>{n.data.count} comentário(s) novo(s) em {devItem(n)}</>, link: devLink(n), icon: MessageCircleIcon }
     case 'DEV_REVIEW_REQUESTED':
       return { text: <>{strong(n.data.author)} pediu sua revisão: {devItem(n)}</>, link: devLink(n), icon: GitPullRequestIcon }
+    case 'DELIVERY_UPDATE':
+      return { text: <>{strong(n.data.name)}: {deliveryText(n.data)}</>, link: `/entregas/${n.data.deliveryId}`, icon: PackageIcon }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
+  }
+}
+
+/** Espelha `PushTexts.deliveryText`. */
+function deliveryText(data: Record<string, string>) {
+  switch (data.status) {
+    case 'OUT_FOR_DELIVERY': return 'saiu para entrega'
+    case 'PICKUP': return 'chegou e está disponível para retirada'
+    case 'DELIVERED': return 'entregue'
+    case 'FAILED': return 'tentativa de entrega sem sucesso'
+    case 'EXCEPTION': return `problema na entrega: ${data.text ?? 'confira o rastreio'}`
+    case 'EXPIRED': return 'o rastreio parou de atualizar'
+    case 'TAX': return 'aguardando pagamento de imposto ou taxa'
+    case 'STALLED': return `sem novidades há ${data.days} dias`
+    default: return data.text ?? 'novidade no rastreio'
   }
 }

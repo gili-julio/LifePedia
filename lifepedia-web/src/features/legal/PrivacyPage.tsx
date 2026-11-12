@@ -58,6 +58,10 @@ export function PrivacyPage() {
             sua atividade por dia (quantos commits, MRs e revisões) e os eventos do Google Agenda (título, horário, local
             e link da chamada) de 7 dias atrás a 60 dias à frente.</li>
           <li>Duolingo: ofensiva, maior ofensiva, XP e o dia da última lição, lidos do seu perfil público.</li>
+          <li>Entregas: o nome e a foto que você deu ao item, o código de rastreio, os eventos do rastreio (data, local e
+            descrição), a transportadora, a previsão e, se você escolher, o grupo com quem compartilha. Endereços de
+            entrega salvos: apelido, quem recebe (opcional), CEP, rua, número, complemento, bairro, cidade e estado.</li>
+          <li>Simulações do financeiro que você salvar (nome e os valores digitados).</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
         <List>
@@ -132,7 +136,15 @@ export function PrivacyPage() {
             página da loja e, se ela não informar preço ou foto, busca o nome do produto no Buscapé. Nenhum dado seu é
             enviado além do link e do nome do produto.</li>
           <li><strong>Banco Central</strong>: nosso servidor baixa dos dados abertos do Banco Central as taxas médias dos
-            bancos e os índices de correção (TR, IPCA, INCC) usados nos financiamentos. Nenhum dado seu é enviado.</li>
+            bancos e os índices (TR, IPCA, INCC, CDI e Selic) usados nos financiamentos e no simulador. Nenhum dado seu é
+            enviado.</li>
+          <li><strong>17TRACK</strong>: para acompanhar as entregas, enviamos só o <strong>código de rastreio</strong> ao
+            17TRACK, que consulta a transportadora e devolve os eventos. Nome do item, foto e endereço nunca saem do
+            LifePedia. O 17TRACK trata o código conforme a política dele.</li>
+          <li><strong>ViaCEP</strong>: ao buscar um endereço pelo CEP, enviamos só o CEP.</li>
+          <li><strong>Grupos nas entregas</strong>: se você compartilhar uma entrega com um grupo, os membros veem o nome,
+            a foto, o código, o andamento e o apelido e a cidade do endereço (nunca a rua e o número) e recebem os
+            avisos. Quem sai do grupo deixa de ver.</li>
           <li><strong>Administradores do LifePedia</strong>: pessoas da equipe com acesso ao painel de administração
             veem seu nome, @, e-mail, foto, datas de cadastro e de último acesso, a versão dos termos aceita, se a conta
             usa Google ou notificações e <strong>quantos</strong> itens você tem em cada parte do app. Nunca veem o
@@ -154,7 +166,7 @@ export function PrivacyPage() {
 
       <Section title="5. Transferência internacional">
         <p>
-          Google, GitLab, GitHub, Duolingo, os serviços de notificação dos navegadores e o provedor de hospedagem podem processar dados fora do
+          Google, GitLab, GitHub, Duolingo, 17TRACK, os serviços de notificação dos navegadores e o provedor de hospedagem podem processar dados fora do
           Brasil. Nesses casos a transferência ocorre para prestar o serviço que você pediu (art. 33, V e IX), com
           fornecedores que adotam padrões de proteção compatíveis com a LGPD.
         </p>
@@ -182,6 +194,8 @@ export function PrivacyPage() {
           <li>Projetos de arquitetura ficam até você excluí-los (maquetes, anexos e capa saem do servidor junto). Envios de
             maquete que não terminaram são descartados em até 2 horas, e links públicos vencidos são apagados depois de 30
             dias.</li>
+          <li>Entregas ficam até você excluí-las; entregues vão para o histórico uma semana depois. Endereços ficam até
+            você apagá-los (entregas que usavam o endereço ficam sem ele).</li>
           <li>Sessões vencidas são apagadas todos os dias. Ao sair da conta, o aparelho para de receber notificações.</li>
           <li>Logs de acesso do servidor são mantidos só pelo tempo necessário à segurança ou exigido por lei.</li>
           <li>O registro das ações dos administradores guarda o seu nome na época, se a ação foi sobre a sua conta.</li>

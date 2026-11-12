@@ -51,6 +51,8 @@ class AdminStats {
             union all select 'DEV', count(distinct user_id), count(*) from dev_projects
             union all select 'INTEGRATIONS', count(distinct user_id), count(*) from integration_accounts
             union all select 'AI_DAILY', count(distinct user_id), count(*) from ai_usage where feature = :daily
+            union all select 'DELIVERIES', count(distinct user_id), count(*) from deliveries
+            union all select 'SIMULATOR', count(distinct user_id), count(*) from finance_simulations
             ) m order by users desc, k
             """;
 
@@ -68,7 +70,9 @@ class AdminStats {
                    (select count(*) from ai_usage where user_id = :id and created_at >= :since) as ai_imports,
                    (select count(*) from arch_projects where user_id = :id) as architecture,
                    (select count(*) from dev_projects where user_id = :id) as dev,
-                   (select count(*) from integration_accounts where user_id = :id) as integrations
+                   (select count(*) from integration_accounts where user_id = :id) as integrations,
+                   (select count(*) from deliveries where user_id = :id) as deliveries,
+                   (select count(*) from finance_simulations where user_id = :id) as simulations
             """;
 
     private final JdbcClient jdbc;
@@ -134,6 +138,19 @@ class AdminStats {
     long aiLast24h() {
         return jdbc.sql("select count(*) from ai_usage where feature = :feature and created_at >= :since")
                 .param("feature", AiUsageLog.IMPORT).param("since", OffsetDateTime.now(clock).minusDays(1))
+                .query(Long.class).single();
+    }
+
+    /** Usos da IA no recurso nas últimas 24 h (o teto diário é por recurso). */
+    long aiUsedLastDay(String feature) {
+        return jdbc.sql("select count(*) from ai_usage where feature = :feature and created_at >= :since")
+                .param("feature", feature).param("since", OffsetDateTime.now(clock).minusDays(1))
+                .query(Long.class).single();
+    }
+
+    /** Pessoas com Google Agenda ligado (sem verificação do Google, o limite é 100). */
+    long googleCalendarUsers() {
+        return jdbc.sql("select count(distinct user_id) from integration_accounts where provider = 'GOOGLE'")
                 .query(Long.class).single();
     }
 

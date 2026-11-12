@@ -12,6 +12,8 @@ import com.lifepedia.api.account.AccountDtos.RecurringData;
 import com.lifepedia.api.account.AccountDtos.TransactionData;
 import com.lifepedia.api.architecture.ArchitectureService;
 import com.lifepedia.api.dev.DevService;
+import com.lifepedia.api.finance.simulation.SimulatorService;
+import com.lifepedia.api.delivery.DeliveryService;
 import com.lifepedia.api.integration.IntegrationService;
 import com.lifepedia.api.attendance.AttendanceService;
 import com.lifepedia.api.finance.EntryType;
@@ -82,6 +84,8 @@ public class AccountExportService {
     private final ArchitectureService architecture;
     private final DevService dev;
     private final IntegrationService integrations;
+    private final SimulatorService financeSimulator;
+    private final DeliveryService deliveries;
     private final RateLimiter rateLimiter;
 
     public AccountExportService(UserService users, CategoryRepository categories, RecurringEntryRepository recurring,
@@ -91,7 +95,8 @@ public class AccountExportService {
                                 PlanItemRepository planItems, TaskTransferService taskTransfer,
                                 AttendanceService attendance, NoteService notes, FinancingService financings,
                                 FinancingSimulationService simulations, ArchitectureService architecture, DevService dev,
-                                IntegrationService integrations, RateLimiter rateLimiter) {
+                                IntegrationService integrations, SimulatorService financeSimulator,
+                                DeliveryService deliveries, RateLimiter rateLimiter) {
         this.users = users;
         this.categories = categories;
         this.recurring = recurring;
@@ -110,6 +115,8 @@ public class AccountExportService {
         this.architecture = architecture;
         this.dev = dev;
         this.integrations = integrations;
+        this.financeSimulator = financeSimulator;
+        this.deliveries = deliveries;
         this.rateLimiter = rateLimiter;
     }
 
@@ -144,7 +151,8 @@ public class AccountExportService {
                 cats.stream().map(c -> new CategoryData(ref(c.getId()), c.getName(), c.getType(), c.getColor())).toList(),
                 fixed, occasional, groups(userId, names), own.lists(), own.tags(), own.tasks(), attendance.export(userId),
                 notes.export(userId), financings.export(userId), simulations.export(userId),
-                architecture.exportData(userId), dev.exportData(userId), integrations.exportData(userId));
+                architecture.exportData(userId), dev.exportData(userId), integrations.exportData(userId),
+                financeSimulator.exportData(userId), deliveries.exportData(userId));
     }
 
     /** Planilha com as mesmas informações, para abrir no Excel/Google Planilhas. */

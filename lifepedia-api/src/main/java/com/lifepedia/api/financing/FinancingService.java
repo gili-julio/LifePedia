@@ -412,6 +412,9 @@ public class FinancingService {
         f.setDueDay(r.dueDay());
         f.setInsuranceRate(r.insuranceRate() == null ? BigDecimal.ZERO : r.insuranceRate());
         f.setMonthlyFee(r.monthlyFee() == null ? BigDecimal.ZERO : r.monthlyFee());
+        if (r.index() != null && !r.index().isCorrection()) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Índice de correção inválido.");
+        }
         f.setIndex(r.index() == null ? CorrectionIndex.NONE : r.index());
         BankRef bank = BankRef.clean(new BankRef(r.bankCode(), r.bank(), null));
         f.setBankCode(bank == null ? null : bank.code());

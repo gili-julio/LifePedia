@@ -13,6 +13,8 @@ import { AccountSections } from '@/features/account/components/AccountSections'
 import { LegalLinks } from '@/features/legal/LegalLinks'
 import { PushCard } from '@/features/notifications/PushCard'
 import { api, ApiError } from '@/lib/api'
+import { useHiddenModules } from './preferences'
+import { AddressesProfileCard } from '@/features/deliveries/components/AddressesProfileCard'
 import { IntegrationsProfileCard } from '@/features/integrations/components/IntegrationsProfileCard'
 import { useAuth } from './auth-context'
 import { GoogleAccount } from './GoogleAccount'
@@ -35,6 +37,7 @@ export function ProfilePage() {
   const { user, setUser } = useAuth()
   const navigate = useNavigate()
   const incomplete = !!user && !user.profileComplete
+  const hidden = useHiddenModules()
   const form = useForm<FormInput, unknown, FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { name: user?.name ?? '', username: user?.username ?? '' },
@@ -112,6 +115,7 @@ export function ProfilePage() {
       <GoogleAccount />
       {!incomplete && <MenuPreferences />}
       {!incomplete && <IntegrationsProfileCard />}
+      {!incomplete && !hidden.has('DELIVERIES') && <AddressesProfileCard />}
       {!incomplete && <PushCard />}
       {!incomplete && <AccountSections />}
       <LegalLinks />

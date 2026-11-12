@@ -16,6 +16,7 @@ export type ChangeModule =
   | 'Arquitetura'
   | 'Dev'
   | 'Integrações'
+  | 'Entregas'
 
 export type Change = {
   id: string
@@ -30,6 +31,25 @@ export type Change = {
 
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
+  {
+    id: 'entregas-e-simulador',
+    date: '2026-11-12',
+    title: 'Rastreio de entregas e simulador do financeiro',
+    modules: ['Entregas', 'Finanças', 'Financiamentos', 'Grupos', 'Notificações', 'Conta', 'Privacidade'],
+    details: [
+      'Nova área Entregas: cole o código de rastreio que a loja mandou, dê um nome e uma foto ao item e acompanhe as etapas (postado, em trânsito, saiu para entrega, entregue) com todos os eventos.',
+      'Mostra a previsão de entrega, há quantos dias está a caminho e avisa quando a entrega fica parada.',
+      'Avisos no celular quando sai para entrega, é entregue, chega para retirar, tem problema ou fica aguardando pagamento de imposto ou taxa.',
+      'Endereços de entrega salvos com apelido (Casa, Trabalho...), preenchidos pelo CEP e reaproveitados nas próximas compras; também em Meu perfil.',
+      'Compartilhe uma entrega com um grupo: quem mora junto vê o andamento e recebe os avisos.',
+      'Entregues vão para o histórico uma semana depois; o Início mostra o que chega hoje.',
+      'Novo Simulador no Financeiro: veja o saldo dos próximos meses com seus fixos e a média dos ocasionais, some ganhos e gastos livres e compare com o cenário sem mudanças.',
+      'Simule investimentos no CDI, Tesouro Selic, IPCA+, prefixado ou poupança, com as taxas atuais do Banco Central, aporte mensal e desconto do imposto de renda.',
+      'Veja os valores em reais de hoje (descontada a inflação), salve simulações e compare até três no mesmo gráfico.',
+      'Os índices do Banco Central nos financiamentos voltaram a atualizar.',
+      'A Política de privacidade passou a explicar as entregas (só o código de rastreio vai ao serviço de rastreio).',
+    ],
+  },
   {
     id: 'dev-e-integracoes',
     date: '2026-11-11',

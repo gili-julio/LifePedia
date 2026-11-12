@@ -54,6 +54,7 @@ services:
       INTEGRATIONS_KEY: ${INTEGRATIONS_KEY:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       APP_URL: ${APP_URL:-}
+      TRACK17_API_KEY: ${TRACK17_API_KEY:-}
     ports:
       - "${BIND_ADDRESS:-127.0.0.1}:${API_PORT:-8080}:8080"
     volumes:
