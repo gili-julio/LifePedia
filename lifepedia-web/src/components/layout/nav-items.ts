@@ -5,6 +5,7 @@ import {
   CalendarDaysIcon,
   CalendarRangeIcon,
   CircleCheckIcon,
+  CodeXmlIcon,
   FlameIcon,
   HeartHandshakeIcon,
   HouseIcon,
@@ -13,6 +14,7 @@ import {
   LayoutDashboardIcon,
   LayoutGridIcon,
   NotebookPenIcon,
+  PlugZapIcon,
   ListTodoIcon,
   ReceiptTextIcon,
   WalletCardsIcon,
@@ -129,8 +131,16 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: 'Trabalho',
+    items: [{ to: '/dev', label: 'Dev', icon: CodeXmlIcon, module: 'DEV' }],
+  },
+  {
     title: 'Casa',
     items: [{ to: '/arquitetura', label: 'Arquitetura', icon: Building2Icon, module: 'ARCHITECTURE' }],
+  },
+  {
+    title: 'Conexões',
+    items: [{ to: '/integracoes', label: 'Integrações', icon: PlugZapIcon }],
   },
 ]
 

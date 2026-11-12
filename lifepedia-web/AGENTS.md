@@ -163,6 +163,16 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   protege é a API (403). Chaves `['admin', ...]`, consultas sem `retry`. Mudar permissão, bloquear, encerrar sessões,
   publicar aviso e enviar notificação sempre com `ConfirmAction`. Números e ordem sempre da API. Avisos para todos:
   `features/announcements` (`AnnouncementBanner` no `AppLayout`); fechados ficam no `localStorage` só pelo id.
+- **Integrações** (`features/integrations`): chaves `['integrations', ...]`; mutações invalidam também `['dev']`,
+  `['friends']` (conquistas do Duolingo) e as notificações. Token só vai no corpo do POST/PUT e nunca volta (campo
+  `type="password"`, `autoComplete="off"`). Textos de cada serviço (o que ganha, passo a passo, aviso) só em
+  `providers.ts`. Google: `useGoogleStart` e `window.location.assign(url)`; a página lê `?conectado`/`?erro` (textos em
+  `GOOGLE_ERRORS`) e limpa a URL. Eventos na Agenda pessoal por `useCalendarEvents` + `EventBlock` (slot `event` no
+  `AgendaBoard`, só leitura; dia/minutos em `calendar.ts`, no fuso do navegador).
+- **Dev** (`features/dev`): chaves `['dev', ...]`; mutações invalidam também `['integrations']` e `['tasks']` (issue vira
+  tarefa). Busca de repositório espera 400 ms antes de chamar (`RepoDialog`). Link externo (MR, issue, atalho, chamada)
+  sempre `target="_blank" rel="noopener noreferrer"`. Mapa de calor (`ActivityHeatmap`) num tom só (`--primary` misturado
+  com `--card`), legenda Menos/Mais e números do dia em texto (`aria-live`) ao passar o mouse ou focar.
 - **Arquitetura** (`features/architecture`): chaves `['architecture', ...]`; mutações invalidam o módulo e as
   notificações. Papel sempre da API (`canAct(role, 'EDIT')` só esconde botões). **Conversão no navegador**
   (`convert/convert.ts`, importado com `import()` só ao enviar; constantes e tipos em `convert/options.ts`): arquivos

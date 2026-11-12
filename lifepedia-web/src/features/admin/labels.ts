@@ -13,6 +13,9 @@ export const MODULE_LABEL: Record<ModuleKey, { label: string; items: string }> =
   AI_IMPORT: { label: 'Importação pelo site', items: 'leituras' },
   PUSH: { label: 'Notificações no aparelho', items: 'aparelhos' },
   ARCHITECTURE: { label: 'Arquitetura', items: 'projetos' },
+  DEV: { label: 'Dev', items: 'projetos' },
+  INTEGRATIONS: { label: 'Integrações', items: 'contas ligadas' },
+  AI_DAILY: { label: 'Resumo do daily (IA)', items: 'resumos' },
 }
 
 export const COUNT_LABEL: Record<UserCountKey, string> = {
@@ -27,6 +30,8 @@ export const COUNT_LABEL: Record<UserCountKey, string> = {
   messages: 'Mensagens no chat',
   ai_imports: 'Leituras por IA (30 dias)',
   architecture: 'Projetos de arquitetura',
+  dev: 'Projetos do Dev',
+  integrations: 'Contas ligadas',
 }
 
 /** Resultado de uma leitura (espelha `AiUsage.Outcome`). */

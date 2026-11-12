@@ -13,6 +13,7 @@ export const MODULES: { id: AppModule; label: string; hint: string }[] = [
   { id: 'NOTES', label: 'Notas', hint: 'Notas e pastas' },
   { id: 'GROUPS', label: 'Grupos', hint: 'Grupos e atalhos no menu' },
   { id: 'FRIENDS', label: 'Amigos', hint: 'Amigos e conquistas' },
+  { id: 'DEV', label: 'Dev', hint: 'Projetos de trabalho, MRs e daily' },
   { id: 'ARCHITECTURE', label: 'Arquitetura', hint: 'Maquetes 3D' },
 ]
 

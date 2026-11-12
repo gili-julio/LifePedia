@@ -1,4 +1,4 @@
-import { AlarmClockIcon, ArrowRightIcon, CalendarCheckIcon, ClockIcon, FlameIcon, PinIcon, UsersIcon, WalletIcon } from 'lucide-react'
+import { AlarmClockIcon, AlertTriangleIcon, ArrowRightIcon, CalendarCheckIcon, ClockIcon, FlameIcon, PinIcon, UsersIcon, WalletIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Button } from '@/components/ui/button'
@@ -9,8 +9,10 @@ import { useCommitments } from '@/features/attendance/api'
 import { useAuth } from '@/features/auth/auth-context'
 import { useHiddenModules } from '@/features/auth/preferences'
 import type { AppModule } from '@/features/auth/types'
+import { useDevToday } from '@/features/dev/api'
 import { useSummary } from '@/features/finance/api'
 import { useFinancingOverview } from '@/features/financing/api'
+import { useIntegrationSummary } from '@/features/integrations/api'
 import { useNotes } from '@/features/notes/api'
 import { useAgenda, useHabits } from '@/features/tasks/api'
 import { formatTime } from '@/features/tasks/dates'
@@ -33,9 +35,9 @@ function taskLink(item: TaskItem) {
 }
 
 /** Módulos com cartão no Início. */
-const HOME_MODULES: AppModule[] = ['TASKS', 'ATTENDANCE', 'FINANCE', 'FINANCING', 'NOTES']
+const HOME_MODULES: AppModule[] = ['TASKS', 'ATTENDANCE', 'FINANCE', 'FINANCING', 'NOTES', 'DEV']
 
-/** Início: resumo de tarefas de hoje, hábitos, frequência, o mês no financeiro, financiamentos, notas e as mudanças recentes do sistema. */
+/** Início: tarefas de hoje, hábitos, frequência, o mês no financeiro, financiamentos, notas, o dia no Dev, contas ligadas e as mudanças do sistema. */
 export function HomePage() {
   const { user } = useAuth()
   const today = todayIso()
@@ -58,6 +60,8 @@ export function HomePage() {
           {show('FINANCE') && <FinanceCard />}
           {show('FINANCING') && <FinancingsCard />}
           {show('NOTES') && <NotesCard />}
+          {show('DEV') && <DevCard />}
+          <AccountsCard />
         </div>
       ) : (
         <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
@@ -340,6 +344,71 @@ function NotesCard() {
             ))}
           </ul>
         )}
+    </HomeCard>
+  )
+}
+
+function DevCard() {
+  const { data, isLoading, isError } = useDevToday()
+  if (data && data.projects === 0) return null
+  const rows = data ? [
+    { label: 'Reuniões hoje', value: data.events.length },
+    { label: 'Revisões pedidas', value: data.reviews.length },
+    { label: 'Seus MRs abertos', value: data.myMergeRequests.length },
+    { label: 'Pipelines quebradas', value: data.failing.length, danger: data.failing.length > 0 },
+  ] : []
+  return (
+    <HomeCard title="Dev" to="/dev" description="Hoje no trabalho">
+      {isError ? <p className="text-sm text-destructive">Não foi possível carregar o Dev.</p>
+        : isLoading || !data ? <Skeleton className="h-32 w-full" />
+        : (
+          <div className="space-y-3">
+            <dl className="grid grid-cols-2 gap-2">
+              {rows.map((r) => (
+                <div key={r.label} className="rounded-xl border px-3 py-2">
+                  <dt className="text-xs text-muted-foreground">{r.label}</dt>
+                  <dd className={cn('text-lg font-semibold tabular-nums', r.danger && 'text-destructive')}>{r.value}</dd>
+                </div>
+              ))}
+            </dl>
+            {data.events[0] && (
+              <p className="truncate text-xs text-muted-foreground">
+                Próxima: {data.events.find((e) => !e.allDay)?.title ?? data.events[0].title}
+              </p>
+            )}
+          </div>
+        )}
+    </HomeCard>
+  )
+}
+
+/** Contas ligadas (só aparece com alguma): ofensiva do Duolingo e contas que pararam de sincronizar. */
+function AccountsCard() {
+  const { data } = useIntegrationSummary()
+  if (!data || data.connected === 0) return null
+  return (
+    <HomeCard title="Contas ligadas" to="/integracoes"
+      description={`${data.connected} ${data.connected === 1 ? 'conta ligada' : 'contas ligadas'}`}>
+      <div className="space-y-3 text-sm">
+        {data.duolingo && (
+          <div className="flex items-center gap-3">
+            <FlameIcon className={cn('size-8', data.duolingo.doneToday ? 'text-orange-500' : 'text-muted-foreground')} aria-hidden />
+            <div>
+              <p className="font-semibold">Ofensiva de {data.duolingo.streak} {data.duolingo.streak === 1 ? 'dia' : 'dias'}</p>
+              <p className="text-xs text-muted-foreground">
+                {data.duolingo.doneToday ? 'Lição de hoje feita.' : 'Falta a lição de hoje no Duolingo.'}
+                {' '}{data.duolingo.totalXp.toLocaleString('pt-BR')} XP
+              </p>
+            </div>
+          </div>
+        )}
+        {data.problems > 0 ? (
+          <p className="flex items-center gap-1.5 text-destructive">
+            <AlertTriangleIcon className="size-4" aria-hidden />
+            {data.problems} {data.problems === 1 ? 'conta parou' : 'contas pararam'} de sincronizar.
+          </p>
+        ) : !data.duolingo && <p className="text-muted-foreground">Tudo sincronizando.</p>}
+      </div>
     </HomeCard>
   )
 }

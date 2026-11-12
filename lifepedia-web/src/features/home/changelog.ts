@@ -14,6 +14,8 @@ export type ChangeModule =
   | 'Conta'
   | 'Privacidade'
   | 'Arquitetura'
+  | 'Dev'
+  | 'Integrações'
 
 export type Change = {
   id: string
@@ -28,6 +30,25 @@ export type Change = {
 
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
+  {
+    id: 'dev-e-integracoes',
+    date: '2026-11-11',
+    title: 'Módulo Dev e central de integrações',
+    modules: ['Dev', 'Integrações', 'Agenda', 'Tarefas', 'Amigos', 'Notificações', 'Privacidade'],
+    details: [
+      'Nova central de Integrações: ligue Google Agenda, GitLab, GitHub e Duolingo, veja o que cada um traz, o passo a passo para conectar e se cada conta está sincronizando.',
+      'Dá para ligar várias contas do mesmo serviço (Gmail pessoal e do trabalho, por exemplo), cada uma com apelido e cor.',
+      'Novo módulo Dev: um projeto por trabalho, com atalhos para board, homologação e documentação, e os repositórios de cada um.',
+      'Painel "Hoje no dev" com as reuniões do dia, seus MRs, as revisões pedidas a você, pipelines quebradas e issues.',
+      'Raias automáticas: ao abrir o MR, a issue ganha a etiqueta que você escolheu (ex.: esperando MR); ao aceitar, vai para a próxima (ex.: livre para testes).',
+      'Issues atribuídas a você viram tarefas e concluem sozinhas quando fecham. Se quiser, concluir a tarefa fecha a issue.',
+      'Resumo do daily montado pela IA (ontem, hoje e bloqueios), pronto para copiar.',
+      'Gráfico de atividade com commits, MRs e revisões das últimas semanas, e avisos no celular quando a pipeline falha ou o MR é aprovado, aceito ou comentado.',
+      'Os eventos do Google Agenda aparecem na sua Agenda, com a cor de cada conta e o link da chamada.',
+      'Ofensiva do Duolingo no Início e duas conquistas novas que seus amigos veem.',
+      'A política de privacidade explica as contas ligadas: aceite a versão nova ao entrar.',
+    ],
+  },
   {
     id: 'menu-do-seu-jeito',
     date: '2026-11-10',

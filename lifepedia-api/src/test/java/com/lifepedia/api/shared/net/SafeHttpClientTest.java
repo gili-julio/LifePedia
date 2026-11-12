@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -52,6 +53,15 @@ class SafeHttpClientTest {
     void refusesInternalHosts() {
         for (String url : new String[]{"http://127.0.0.1/", "http://localhost/", "http://[::1]/", "http://169.254.169.254/latest"}) {
             assertThatThrownBy(() -> client.get(URI.create(url), "*/*", 1024, t -> true))
+                    .as(url).isInstanceOf(FetchException.class);
+        }
+    }
+
+    @Test
+    void apiCallsRefuseInternalHostsToo() {
+        for (String url : new String[]{"https://127.0.0.1/api/v4/user", "https://localhost/api/v4/user", "http://10.0.0.5/api/v4/user",
+                "https://gitlab.empresa.com:8443/api/v4/user"}) {
+            assertThatThrownBy(() -> client.exchange("GET", URI.create(url), Map.of("PRIVATE-TOKEN", "x"), null, 1024))
                     .as(url).isInstanceOf(FetchException.class);
         }
     }

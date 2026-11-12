@@ -1,4 +1,4 @@
-import { FlameIcon, HandshakeIcon, HeartHandshakeIcon, ListChecksIcon, type LucideIcon, ReceiptTextIcon, UsersIcon } from 'lucide-react'
+import { FlameIcon, HandshakeIcon, HeartHandshakeIcon, LanguagesIcon, ListChecksIcon, type LucideIcon, ReceiptTextIcon, UsersIcon, ZapIcon } from 'lucide-react'
 import type { AchievementCode } from './types'
 
 type Info = {
@@ -41,5 +41,15 @@ export const ACHIEVEMENTS: Record<AchievementCode, Info> = {
     title: 'Organizado',
     icon: ReceiptTextIcon,
     goal: (n) => plural(n, 'lançamento registrado', 'lançamentos registrados'),
+  },
+  DUOLINGO_STREAK: {
+    title: 'Poliglota',
+    icon: LanguagesIcon,
+    goal: (n) => `${plural(n, 'dia', 'dias')} de ofensiva no Duolingo`,
+  },
+  DUOLINGO_XP: {
+    title: 'Estudioso',
+    icon: ZapIcon,
+    goal: (n) => `${n.toLocaleString('pt-BR')} XP no Duolingo`,
   },
 }

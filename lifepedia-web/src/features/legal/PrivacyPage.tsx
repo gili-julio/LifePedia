@@ -50,6 +50,14 @@ export function PrivacyPage() {
             compartilhou e os links públicos que criou.</li>
           <li>Amigos, pedidos de amizade, conquistas e notificações.</li>
           <li>Preferências do menu: formato no computador e módulos que você escondeu.</li>
+          <li>Contas externas que você liga (Google Agenda, GitLab, GitHub, Duolingo): o apelido e a cor que você deu, o
+            usuário ou e-mail da conta, o endereço do GitLab da empresa, a validade do token e o histórico das
+            sincronizações. Os tokens de acesso ficam <strong>cifrados</strong> e nunca são mostrados de novo.</li>
+          <li>Dev: projetos de trabalho (nome, cor, descrição e atalhos), os repositórios ligados com as regras das raias
+            e, copiados das suas contas, os títulos, números, etiquetas, autores e status dos MRs, issues e pipelines,
+            sua atividade por dia (quantos commits, MRs e revisões) e os eventos do Google Agenda (título, horário, local
+            e link da chamada) de 7 dias atrás a 60 dias à frente.</li>
+          <li>Duolingo: ofensiva, maior ofensiva, XP e o dia da última lição, lidos do seu perfil público.</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
         <List>
@@ -108,6 +116,15 @@ export function PrivacyPage() {
             com tudo o que estiver neles, junto das suas categorias, fixos e nomes de lançamentos, para o Gemini ler e
             devolver os lançamentos. Usamos o plano pago da API, em que o Google não usa esse conteúdo para melhorar seus
             produtos, mas pode registrá-lo por tempo limitado para detectar abusos, conforme os termos dele.</li>
+          <li><strong>Serviços que você liga</strong> (Google Agenda, GitLab, GitHub, Duolingo): o LifePedia acessa a sua
+            conta neles só com a permissão que você deu e lê o que aparece no Dev, na Agenda e no Início. No Google, só a
+            leitura das agendas; no GitLab e no GitHub, se o token permitir, o LifePedia também muda as etiquetas das
+            issues (raias) e fecha issues quando você liga essas regras. No Duolingo lemos só o perfil público. Cada
+            serviço trata os dados conforme a política dele. Desligar a conta apaga o que veio dela e, no Google, desfaz
+            o acesso.</li>
+          <li><strong>Google (Gemini) no resumo do daily</strong>: ao pedir o resumo no Dev, enviamos ao Gemini os títulos
+            dos seus MRs e issues, os nomes dos repositórios, suas contagens de atividade do dia anterior e os títulos e
+            horários das reuniões de hoje, nas mesmas condições da importação. Nada é enviado se você não pedir.</li>
           <li><strong>Serviços de notificação</strong> do seu navegador (Google, Mozilla, Apple ou Microsoft), se você
             ativar o push. O conteúdo vai <strong>criptografado de ponta a ponta</strong>: esses serviços só entregam,
             não conseguem ler.</li>
@@ -137,7 +154,7 @@ export function PrivacyPage() {
 
       <Section title="5. Transferência internacional">
         <p>
-          Google, os serviços de notificação dos navegadores e o provedor de hospedagem podem processar dados fora do
+          Google, GitLab, GitHub, Duolingo, os serviços de notificação dos navegadores e o provedor de hospedagem podem processar dados fora do
           Brasil. Nesses casos a transferência ocorre para prestar o serviço que você pediu (art. 33, V e IX), com
           fornecedores que adotam padrões de proteção compatíveis com a LGPD.
         </p>
@@ -159,6 +176,9 @@ export function PrivacyPage() {
           <li>Seus dados ficam enquanto sua conta existir. Você pode apagar itens a qualquer momento.</li>
           <li><strong>Ao excluir a conta</strong>, apagamos na hora seus dados, fotos, projetos e maquetes, mensagens do chat, sessões e
             inscrições de notificação. Em cada grupo, seus itens saem como se você tivesse saído do grupo.</li>
+          <li>Contas externas ficam até você desligá-las; o que veio delas (eventos, MRs, issues, pipelines, atividade) é
+            refeito a cada sincronização e sai junto quando você desliga a conta. Eventos fora da janela de 7 dias atrás a
+            60 à frente são apagados. Tarefas criadas a partir de issues continuam até você apagar.</li>
           <li>Projetos de arquitetura ficam até você excluí-los (maquetes, anexos e capa saem do servidor junto). Envios de
             maquete que não terminaram são descartados em até 2 horas, e links públicos vencidos são apagados depois de 30
             dias.</li>
@@ -173,6 +193,7 @@ export function PrivacyPage() {
       <Section title="8. Como protegemos">
         <List>
           <li>Conexão criptografada (HTTPS) e senhas com hash BCrypt.</li>
+          <li>Tokens das contas externas cifrados (AES-256-GCM) com uma chave que fica só no servidor, fora do banco.</li>
           <li>Cada dado é ligado ao seu dono e só aparece para ele ou para quem ele compartilhou.</li>
           <li>Limite de tentativas de login, bloqueio temporário após senhas erradas e sessões que podem ser encerradas.</li>
           <li>Proteções contra ataques comuns da web (CSP, CSRF, clickjacking) e servidores sem privilégios de

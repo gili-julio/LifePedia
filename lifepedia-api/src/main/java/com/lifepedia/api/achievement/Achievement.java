@@ -9,7 +9,9 @@ public enum Achievement {
     HABIT_STREAK(false, List.of(3, 7, 14, 30, 100, 365)),
     FRIENDS(false, List.of(1, 3, 10, 25)),
     GROUPS(false, List.of(1, 3, 5)),
-    TRANSACTIONS(true, List.of(1, 50, 200, 500, 1000));
+    TRANSACTIONS(true, List.of(1, 50, 200, 500, 1000)),
+    DUOLINGO_STREAK(false, List.of(7, 30, 100, 365, 1000)),
+    DUOLINGO_XP(false, List.of(1000, 10000, 50000, 100000, 500000));
 
     private final boolean ownerOnly;
     private final List<Integer> levels;

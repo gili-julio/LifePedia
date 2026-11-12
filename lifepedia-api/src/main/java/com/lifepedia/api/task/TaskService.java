@@ -508,6 +508,7 @@ public class TaskService {
         occurrences.save(row);
         if (task.getRepeatUnit() == null) {
             task.setCompletedAt(status == Status.DONE ? row.getCompletedAt() : null);
+            if (status == Status.DONE) events.publishEvent(new TaskDoneEvent(task.getId(), userId));
         } else if (task.isSingleSlot()) {
             advance(task);
         }

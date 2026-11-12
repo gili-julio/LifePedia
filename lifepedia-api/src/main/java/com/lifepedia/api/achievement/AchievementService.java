@@ -5,6 +5,8 @@ import com.lifepedia.api.finance.transaction.TransactionRepository;
 import com.lifepedia.api.friend.Friendship;
 import com.lifepedia.api.friend.FriendshipRepository;
 import com.lifepedia.api.group.GroupMemberRepository;
+import com.lifepedia.api.integration.IntegrationDtos.DuolingoStats;
+import com.lifepedia.api.integration.IntegrationLinks;
 import com.lifepedia.api.task.TaskAgendaService;
 import com.lifepedia.api.task.TaskDtos.HabitSummary;
 import com.lifepedia.api.task.TaskOccurrence.Status;
@@ -38,16 +40,18 @@ public class AchievementService {
     private final FriendshipRepository friendships;
     private final GroupMemberRepository members;
     private final TransactionRepository transactions;
+    private final IntegrationLinks integrations;
 
     public AchievementService(UserAchievementRepository unlocked, TaskOccurrenceRepository occurrences,
                               TaskAgendaService agenda, FriendshipRepository friendships, GroupMemberRepository members,
-                              TransactionRepository transactions) {
+                              TransactionRepository transactions, IntegrationLinks integrations) {
         this.unlocked = unlocked;
         this.occurrences = occurrences;
         this.agenda = agenda;
         this.friendships = friendships;
         this.members = members;
         this.transactions = transactions;
+        this.integrations = integrations;
     }
 
     /** @param owner quem pede é o dono (inclui as conquistas que amigos não veem) */
@@ -98,6 +102,8 @@ public class AchievementService {
             case FRIENDS -> friendships.countInvolving(userId, Friendship.Status.ACCEPTED);
             case GROUPS -> members.countByUserId(userId);
             case TRANSACTIONS -> transactions.countByUserId(userId);
+            case DUOLINGO_STREAK -> integrations.duolingo(userId).map(DuolingoStats::bestStreak).orElse(0);
+            case DUOLINGO_XP -> integrations.duolingo(userId).map(DuolingoStats::totalXp).orElse(0L);
         };
     }
 }

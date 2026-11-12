@@ -10,5 +10,6 @@ public enum AppModule {
     NOTES,
     GROUPS,
     FRIENDS,
-    ARCHITECTURE
+    ARCHITECTURE,
+    DEV
 }

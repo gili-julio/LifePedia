@@ -43,6 +43,9 @@ Imagem Docker: `docker build -t lifepedia-api .` (o `docker-compose.yml` da raiz
 | `ADMIN_EMAIL` | vazio | Conta sempre admin (`AdminBootstrap`: ao subir e no cadastro); não perde o acesso nem é bloqueada |
 | `ARCHITECTURE_QUOTA` | `300MB` | Espaço de cada conta para maquetes e anexos dos projetos dela (inclui versões reservadas) |
 | `ARCHITECTURE_MAX_MODEL` | `100MB` | Tamanho máximo de uma maquete (GLB já comprimido no navegador) |
+| `INTEGRATIONS_KEY` | vazio (só o Duolingo) | Chave AES de 32 bytes em base64 que cifra os tokens das contas ligadas. Trocar ou perder = cada pessoa conecta de novo |
+| `GOOGLE_CLIENT_SECRET` | vazio (Google Agenda desligado) | Segredo do mesmo OAuth Client do `GOOGLE_CLIENT_ID` (código de autorização, só `calendar.readonly`) |
+| `APP_URL` | 1ª origem do `CORS_ORIGINS` | Endereço público do site; a volta do Google é `<APP_URL>/api/integrations/google/callback` |
 | `AI_BASE_URL` | API do Google | Endereço da API; só para apontar a um servidor falso em teste |
 | `STORAGE_DIR` | `data/uploads` (no compose: `/data/uploads`, volume `lifepedia-uploads`) | Pasta dos arquivos (`users/`, `groups/`, `plan-items/`, `notes/` com `<chave>.jpg`; `architecture/` com `<chave>.glb`, `.jpg` e `.pdf`) |
 
@@ -120,7 +123,7 @@ acesso: `users.last_seen_at`, gravado pelo `LastSeenTracker` (interceptor em `/a
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@6` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) e `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), só registro · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@7` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios) e `integrations` (serviço, apelido, login, endereço; nunca token), só registro · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
 | POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@6`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
@@ -162,7 +165,10 @@ e `groupName` (só grupo). Amizade: `FRIEND_REQUEST` (`actorName`, `actorUsernam
 (`actorName`, `actorUsername`). `SYSTEM_MESSAGE` (aviso da administração): `title`, `body`. Arquitetura:
 `ARCHITECTURE_SHARED` (`actorName`, `actorUsername`, `projectId`, `projectName`, `role`, `groupName` quando foi para um
 grupo) e `ARCHITECTURE_COMMENT` (`actorName`, `actorUsername`, `projectId`, `projectName`, `preview`; vai para o dono e
-quem pode editar).
+quem pode editar). Integrações (sem ator): `INTEGRATION_FAILED` (`provider`, `nickname`, `accountId`) e
+`INTEGRATION_EXPIRING` (+ `date`). Dev (sem ator; `projectId`, `projectName`, `repoName`, `title`, `number`):
+`DEV_PIPELINE_FAILED` (MR ou `branch`), `DEV_MR_APPROVED`, `DEV_MR_MERGED` (+ `lane`), `DEV_MR_COMMENTED` (+ `count`) e
+`DEV_REVIEW_REQUESTED` (+ `author`).
 
 **Push**: toda notificação vira também push (texto em `PushTexts`, link para a tela) e cada mensagem nova do chat vai
 para os outros membros (tag por grupo, a última substitui). O envio roda depois do commit, numa thread virtual, e
@@ -431,6 +437,43 @@ excluir o projeto só o dono. A maquete é um **GLB** gerado e comprimido no nav
 
 `ArchitectureCleanupJob` (a cada hora) apaga reservas vencidas e links vencidos há mais de 30 dias.
 
+### Integrações (`/api/integrations`)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/` | `{providers: [{provider, available, unavailable}], accounts}`; conta sem token: apelido, cor, login, `baseUrl`, `status` (`ACTIVE`/`ERROR`), `lastSyncAt`, `lastError`, `tokenExpiresAt`, `canWrite`, `duolingo` e `projects` (projetos do Dev que usam) |
+| GET | `/summary` | `{connected, problems, duolingo}` (Início e perfil) |
+| POST | `/gitlab` · `/github` | `{baseUrl? (só GitLab; vazio = gitlab.com; só https 443), token, nickname?, color?}` → 201; token conferido no serviço (escopo `read_api`/`api`, validade). Mesmo usuário e servidor = troca o token · 15 tentativas/h |
+| POST | `/duolingo` | `{username}` (perfil público) → 201; uma por pessoa (outra → 409) |
+| POST | `/google/start` | `{url}` do consentimento (`state` cifrado, 10 min) |
+| GET | `/google/callback` | Volta do Google (com a sessão): cria/atualiza a conta e redireciona para `/integracoes?conectado=<id>` ou `?erro=...` |
+| PUT | `/{id}` | `{nickname, color}` |
+| PUT | `/{id}/token` | `{token}`; precisa ser a mesma conta no serviço (outra → 400) |
+| POST | `/{id}/sync` | Sincroniza agora (1 por minuto por conta → 429) |
+| GET | `/{id}/syncs` | 20 últimas sincronizações (`outcome`, `manual`, `items`, `message`, `durationMs`) |
+| DELETE | `/{id}` | Desliga: eventos, repositórios, MRs e issues saem em cascata (as tarefas ficam); Google revoga o acesso |
+| GET | `/calendar?from&to` | Eventos do Google Agenda (até 62 dias), com a conta e a cor |
+
+`IntegrationSyncJob`: a cada 5 min roda as contas na vez delas (`IntegrationProvider.interval`; em erro, a cada 6 h) e,
+às 9h, avisa token que vence em 7 dias. Clientes: `code/GitLabClient`, `code/GitHubClient` (`CodeHost`),
+`google/GoogleCalendarClient`, `duolingo/DuolingoClient`, todos via `ApiCalls` → `SafeHttpClient.exchange`.
+
+### Dev (`/api/dev`)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET / POST | `/projects` | Projetos (ordem da pessoa) com `links`, `repos` (com as regras) e `counts`; criar `{name, color, description?, links? (até 12: label, url http(s), kind), calendarAccountId? (conta Google)}` · até 30 |
+| PUT | `/projects/order` | `{ids}` |
+| GET / PUT / DELETE | `/projects/{id}` | Detalhe: `project`, `items` (MRs, issues, pipelines), `events` (7 dias da conta Google do projeto), `activity` (12 semanas) |
+| POST | `/projects/{id}/repos` | `{accountId, externalId}` (id do projeto no GitLab ou `dono/nome` no GitHub) → 201 e sincroniza · até 15 por projeto; repetido → 409 |
+| GET | `/repo-options?accountId&q` | Repositórios da conta no serviço (`linked` = já ligado) · 30/min |
+| PUT | `/repos/{id}` | `{importIssues, closeIssues, labelMrOpened?, labelMrMerged?, labelsClear?}`; etiquetas iguais → 400 |
+| GET | `/repos/{id}/labels` | Etiquetas do repositório no serviço |
+| DELETE | `/repos/{id}` | Desliga o repositório (as tarefas ficam) |
+| GET | `/today` | `events` de hoje, `myMergeRequests`, `reviews`, `failing`, `issues`, `problems` (contas em erro), `aiEnabled`, `projects` |
+| GET | `/activity?weeks=12` | `days` (commits, MRs abertos, aceitos, revisões por dia) e `projects` (somas) · até 26 semanas |
+| POST | `/daily` | Resumo do daily pelo Gemini: `{yesterday, today, blockers, text}` · 10/dia por pessoa; sem IA → 503 |
+
 ### Financeiro
 
 | Método | Rota | Descrição |
@@ -518,6 +561,11 @@ src/main/java/com/lifepedia/api/
 ├── architecture/  projetos com maquete 3D: acesso por papel (ArchitectureAccess), versões e espaço (ArchitectureService),
 │                  arquivos (ArchitectureFiles: GLB conferido, capa, anexos), compartilhamento e link público
 │                  (ArchShareService, PublicModelController), comentários/vistas/anexos (ArchCollabService), variantes/cômodos/luzes (ArchSceneService), limpeza
+├── integration/   contas externas: SecretBox (tokens cifrados), IntegrationService (conectar, Google OAuth, agenda),
+│                  IntegrationSyncService + job (sincronização, histórico, avisos), AccountSyncer (agenda, Duolingo, Dev),
+│                  IntegrationLinks (fachada), clientes code/ (GitLab, GitHub, Pipelines), google/, duolingo/
+├── dev/           projetos de trabalho, repositórios e regras de raia (DevService), retrato e raias (DevSyncService),
+│                  issue e tarefa (DevTaskListener), resumo do daily (DevDailyService + DevDailyPrompt)
 ├── chat/          chat do grupo: mensagens (cursor), leitura/não lidas, stream SSE (ChatStreams, em memória)
 ├── achievement/   conquistas (Achievement: níveis; AchievementService: contagens + níveis gravados; AchievementProgress)
 ├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda (e choque de horário),

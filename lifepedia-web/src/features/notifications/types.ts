@@ -17,6 +17,13 @@ export type NotificationType =
   | 'SYSTEM_MESSAGE'
   | 'ARCHITECTURE_SHARED'
   | 'ARCHITECTURE_COMMENT'
+  | 'INTEGRATION_FAILED'
+  | 'INTEGRATION_EXPIRING'
+  | 'DEV_PIPELINE_FAILED'
+  | 'DEV_MR_APPROVED'
+  | 'DEV_MR_MERGED'
+  | 'DEV_MR_COMMENTED'
+  | 'DEV_REVIEW_REQUESTED'
 
 export type AppNotification = {
   id: string

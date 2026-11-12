@@ -14,6 +14,8 @@ import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.HttpEntity;
 import org.apache.hc.core5.http.HttpException;
 import org.apache.hc.core5.http.HttpHeaders;
+import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
+import org.apache.hc.core5.http.message.BasicClassicHttpRequest;
 import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.stereotype.Component;
@@ -29,7 +31,9 @@ import java.net.URISyntaxException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.time.Duration;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Predicate;
 
 /**
@@ -47,6 +51,18 @@ public class SafeHttpClient implements DisposableBean {
 
     /** @param charset do Content-Type (nulo se não informado) */
     public record Response(URI url, String contentType, Charset charset, byte[] body) {
+    }
+
+    /** Resposta de API: status, cabeçalhos (nome em minúsculas, o primeiro de cada) e corpo. */
+    public record ApiResponse(int status, Map<String, String> headers, byte[] body) {
+
+        public String header(String name) {
+            return headers.get(name.toLowerCase(Locale.ROOT));
+        }
+
+        public boolean ok() {
+            return status >= 200 && status < 300;
+        }
     }
 
     /** Falha ao buscar (bloqueado, fora do ar, grande demais...). A mensagem é técnica, não vai para o usuário. */
@@ -130,12 +146,41 @@ public class SafeHttpClient implements DisposableBean {
         throw new FetchException("Redirecionamentos demais.");
     }
 
+    /**
+     * Chamada a uma API (GitLab, GitHub, Google...) com as mesmas proteções do {@link #get}. Qualquer status volta na
+     * resposta; redirecionamento não é seguido.
+     */
+    public ApiResponse exchange(String method, URI url, Map<String, String> headers, byte[] body, int maxBytes)
+            throws FetchException {
+        checkUri(url);
+        long deadline = System.nanoTime() + DEADLINE.toNanos();
+        BasicClassicHttpRequest request = new BasicClassicHttpRequest(method, url);
+        headers.forEach(request::setHeader);
+        if (body != null) {
+            String type = headers.getOrDefault(HttpHeaders.CONTENT_TYPE, "application/json");
+            request.setEntity(new ByteArrayEntity(body, ContentType.parse(type)));
+        }
+        try (ClassicHttpResponse response = client.executeOpen(RoutingSupport.determineHost(request), request, null)) {
+            Map<String, String> names = new HashMap<>();
+            for (Header header : response.getHeaders()) names.putIfAbsent(header.getName().toLowerCase(Locale.ROOT), header.getValue());
+            HttpEntity entity = response.getEntity();
+            byte[] content = entity == null ? new byte[0] : bytes(entity, maxBytes, deadline);
+            return new ApiResponse(response.getCode(), Map.copyOf(names), content);
+        } catch (IOException | HttpException | IllegalArgumentException e) {
+            throw new FetchException("Falha ao chamar: " + e.getClass().getSimpleName());
+        }
+    }
+
     private static Response read(URI url, HttpEntity entity, int maxBytes, Predicate<String> contentType, long deadline)
             throws FetchException, IOException {
         if (entity == null) throw new FetchException("Resposta vazia.");
         ContentType type = ContentType.parseLenient(entity.getContentType());
         String mime = type == null ? "" : type.getMimeType().toLowerCase(Locale.ROOT);
         if (!contentType.test(mime)) throw new FetchException("Tipo não aceito: " + mime);
+        return new Response(url, mime, type == null ? null : type.getCharset(), bytes(entity, maxBytes, deadline));
+    }
+
+    private static byte[] bytes(HttpEntity entity, int maxBytes, long deadline) throws FetchException, IOException {
         if (entity.getContentLength() > maxBytes) throw new FetchException("Resposta grande demais.");
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (InputStream in = entity.getContent()) {
@@ -147,7 +192,7 @@ public class SafeHttpClient implements DisposableBean {
                 out.write(buffer, 0, read);
             }
         }
-        return new Response(url, mime, type == null ? null : type.getCharset(), out.toByteArray());
+        return out.toByteArray();
     }
 
     private static void checkUri(URI uri) throws FetchException {

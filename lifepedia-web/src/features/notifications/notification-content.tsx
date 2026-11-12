@@ -2,6 +2,10 @@ import {
   AlarmClockIcon,
   BellIcon,
   BellRingIcon,
+  CircleXIcon,
+  GitMergeIcon,
+  GitPullRequestIcon,
+  KeyRoundIcon,
   Building2Icon,
   CircleCheckIcon,
   FileCheckIcon,
@@ -11,6 +15,7 @@ import {
   MegaphoneIcon,
   type LucideIcon,
   MessageCircleIcon,
+  PlugZapIcon,
   RepeatIcon,
   UserMinusIcon,
   UserPlusIcon,
@@ -23,6 +28,18 @@ import type { ReactNode } from 'react'
 import type { AppNotification } from './types'
 
 const IMPORT_LINK = '/financeiro/importar'
+const INTEGRATIONS_LINK = '/integracoes'
+const PROVIDER_LABEL: Record<string, string> = { GOOGLE: 'Google Agenda', GITLAB: 'GitLab', GITHUB: 'GitHub', DUOLINGO: 'Duolingo' }
+
+/** "!31 Tela de login (gertec/app) · Gertec" */
+function devItem(n: AppNotification) {
+  const title = n.data.title ?? n.data.branch ?? ''
+  return <>{n.data.number ? `!${n.data.number} ` : ''}{strong(title)} ({n.data.repoName}) no {n.data.projectName}</>
+}
+
+function devLink(n: AppNotification) {
+  return `/dev/${encodeURIComponent(n.data.projectId ?? '')}`
+}
 
 type Content = {
   text: ReactNode
@@ -170,6 +187,32 @@ export function notificationContent(n: AppNotification): Content {
         link: projectLink(n),
         icon: MessageCircleIcon,
       }
+    case 'INTEGRATION_FAILED':
+      return {
+        text: <>A conta {strong(n.data.nickname)} ({PROVIDER_LABEL[n.data.provider] ?? n.data.provider}) parou de sincronizar. Conecte de novo.</>,
+        link: INTEGRATIONS_LINK,
+        icon: PlugZapIcon,
+      }
+    case 'INTEGRATION_EXPIRING':
+      return {
+        text: <>O token de {strong(n.data.nickname)} ({PROVIDER_LABEL[n.data.provider] ?? n.data.provider}) vence em {formatDate(n.data.date)}</>,
+        link: INTEGRATIONS_LINK,
+        icon: KeyRoundIcon,
+      }
+    case 'DEV_PIPELINE_FAILED':
+      return { text: <>Pipeline falhou: {devItem(n)}</>, link: devLink(n), icon: CircleXIcon }
+    case 'DEV_MR_APPROVED':
+      return { text: <>MR aprovado: {devItem(n)}</>, link: devLink(n), icon: CircleCheckIcon }
+    case 'DEV_MR_MERGED':
+      return {
+        text: <>MR aceito: {devItem(n)}{n.data.lane ? <>. Issue movida para {strong(n.data.lane)}</> : null}</>,
+        link: devLink(n),
+        icon: GitMergeIcon,
+      }
+    case 'DEV_MR_COMMENTED':
+      return { text: <>{n.data.count} comentário(s) novo(s) em {devItem(n)}</>, link: devLink(n), icon: MessageCircleIcon }
+    case 'DEV_REVIEW_REQUESTED':
+      return { text: <>{strong(n.data.author)} pediu sua revisão: {devItem(n)}</>, link: devLink(n), icon: GitPullRequestIcon }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
   }

@@ -69,6 +69,14 @@ lifepedia:
   google:
     # OAuth Client ID (tipo "Aplicativo da Web") do Google Cloud. Vazio = botão do Google escondido.
     client-id: ${GOOGLE_CLIENT_ID:}
+  integrations:
+    # Chave AES de 32 bytes em base64 que cifra os tokens das contas externas (GitLab, GitHub, Google Agenda).
+    # Vazia = só o Duolingo (sem token). Gerar: openssl rand -base64 32. Trocar a chave invalida os tokens salvos.
+    key: ${INTEGRATIONS_KEY:}
+    # Segredo do mesmo OAuth Client do GOOGLE_CLIENT_ID. Vazio = Google Agenda desligado.
+    google-client-secret: ${GOOGLE_CLIENT_SECRET:}
+    # Endereço público do site (volta do Google: <APP_URL>/api/integrations/google/callback). Vazio = 1ª origem do CORS.
+    app-url: ${APP_URL:}
   ai:
     # Chave da API do Gemini, de projeto com cobrança ativa. Vazia = importação pelo site desligada.
     api-key: ${AI_API_KEY:}

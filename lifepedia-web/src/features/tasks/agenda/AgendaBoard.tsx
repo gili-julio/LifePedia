@@ -17,6 +17,10 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { useAttendanceAgenda } from '@/features/attendance/api'
 import { CommitmentBlock } from '@/features/attendance/components/CommitmentBlock'
 import type { AttendanceAgendaItem } from '@/features/attendance/types'
+import { useCalendarEvents } from '@/features/integrations/api'
+import { eventDay, eventMinutes } from '@/features/integrations/calendar'
+import { EventBlock } from '@/features/integrations/components/EventBlock'
+import type { CalendarEvent } from '@/features/integrations/types'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -24,7 +28,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import type { GroupDetail } from '@/features/groups/types'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { api, ApiError } from '@/lib/api'
-import { formatDate, todayIso } from '@/lib/format'
+import { formatDate, formatTime as clockTime, todayIso } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tasksBase, useAgenda, useAgendaSettings, useSaveTask, useUpdateOccurrence } from '../api'
 import { type Board, BoardContext, useBoardValue } from '../board'
@@ -60,8 +64,8 @@ type Props = {
   header?: (newTask: () => void) => ReactNode
 }
 
-/** O que ocupa a grade: ocorrência de tarefa ou dia de compromisso da Frequência (só na agenda pessoal). */
-type Slot = { kind: 'task'; item: TaskItem } | { kind: 'commitment'; item: AttendanceAgendaItem }
+/** O que ocupa a grade: ocorrência de tarefa, dia de compromisso da Frequência ou evento do Google Agenda (os dois só na pessoal). */
+type Slot = { kind: 'task'; item: TaskItem } | { kind: 'commitment'; item: AttendanceAgendaItem } | { kind: 'event'; item: CalendarEvent }
 /** Bloco na grade (minutos desde 0h). */
 type Entry = Span<Slot>
 type Range = { start: number; end: number }
@@ -124,6 +128,7 @@ export function AgendaBoard({ group, header }: Props) {
   const to = view === 'semana' ? addDays(from, 6) : day
   const { data, isLoading, isError } = useAgenda(groupId, from, to, false, { list: null, tag: null, assignee, sort: 'TIME' })
   const attendance = useAttendanceAgenda(from, to, !groupId)
+  const calendar = useCalendarEvents(from, to, !groupId)
   const labels = useLabelLookup(groupId)
   const today = data?.today ?? todayIso()
   const actions = useTaskActions({ today, groupId, onEdit: setChosen })
@@ -171,6 +176,7 @@ export function AgendaBoard({ group, header }: Props) {
   const visible = (item: TaskItem) => source === ALL || (source === PERSONAL ? !item.groupId : item.groupId === source)
   const sources = [...new Set(all.map((i) => i.groupId).filter((g): g is string => !!g))]
   const commitments = !groupId && (source === ALL || source === PERSONAL) ? attendance.data ?? [] : []
+  const events = !groupId && (source === ALL || source === PERSONAL) ? (calendar.data ?? []).filter((e) => !e.allDay) : []
   const days = (data?.days ?? []).map((d) => {
     const items = d.items.filter((i) => occurrenceKey(i) !== pending?.key)
     if (pending && pending.to === d.date) {
@@ -185,11 +191,12 @@ export function AgendaBoard({ group, header }: Props) {
       if (task) linked.set(occurrenceKey(task), c)
       return !task
     })
-    return { date: d.date, items: shown, commitments: own, linked }
+    return { date: d.date, items: shown, commitments: own, linked, events: events.filter((e) => eventDay(e) === d.date) }
   })
   const starts = days.flatMap((d) => [
     ...d.items.map((i) => (i.dueTime ? toMinutes(i.dueTime) : null)),
     ...d.commitments.map((c) => toMinutes(c.time)),
+    ...d.events.map((e) => eventMinutes(e).start),
   ])
   const outside = !range ? 0 : starts.filter((start) => start !== null && (start < range.start * 60 || start >= range.end * 60)).length
 
@@ -361,10 +368,14 @@ export function AgendaBoard({ group, header }: Props) {
                 <TimeAxis start={range.start} end={range.end} />
                 {days.map((d) => (
                   <DayColumn key={d.date} date={d.date} range={range} max={view === 'semana' ? 2 : 6}
-                    items={d.items.filter((i) => !!i.dueTime)} commitments={d.commitments} now={d.date === today ? now : null}
+                    items={d.items.filter((i) => !!i.dueTime)} commitments={d.commitments} events={d.events} now={d.date === today ? now : null}
                     onCreate={(time) => newTask(d.date, time)}>
                     {(entry, cols) => {
                       const slot = entry.value
+                      if (slot.kind === 'event') {
+                        const style = blockStyle(entry, cols, range)
+                        return <EventBlock key={slotKey(slot)} event={slot.item} style={style} short={style.height < 36 || (view === 'semana' && cols > 1)} />
+                      }
                       if (slot.kind === 'commitment') {
                         const style = blockStyle(entry, cols, range)
                         return (
@@ -419,7 +430,8 @@ function showMetrics() {
 }
 
 const slotKey = (slot: Slot) =>
-  slot.kind === 'task' ? occurrenceKey(slot.item) : `commitment:${slot.item.commitmentId}:${slot.item.date}`
+  slot.kind === 'task' ? occurrenceKey(slot.item)
+    : slot.kind === 'event' ? `event:${slot.item.id}` : `commitment:${slot.item.commitmentId}:${slot.item.date}`
 
 /** Posição do bloco na grade: a coluna dentro dos que se cruzam e o intervalo visível. */
 function blockStyle(entry: Entry & { col: number }, cols: number, range: Range) {
@@ -542,12 +554,13 @@ function TimeAxis({ start, end }: { start: number; end: number }) {
   )
 }
 
-function DayColumn({ date, range, max, items, commitments, now, onCreate, children }: {
+function DayColumn({ date, range, max, items, commitments, events, now, onCreate, children }: {
   date: string
   range: Range
   max: number
   items: TaskItem[]
   commitments: AttendanceAgendaItem[]
+  events: CalendarEvent[]
   now: number | null
   onCreate: (time: string) => void
   children: (entry: Entry & { col: number }, cols: number) => ReactNode
@@ -564,6 +577,7 @@ function DayColumn({ date, range, max, items, commitments, now, onCreate, childr
       const start = toMinutes(item.time)
       return { value: { kind: 'commitment', item }, start, end: start + item.durationMinutes }
     }),
+    ...events.map((item): Entry => ({ value: { kind: 'event', item }, ...eventMinutes(item) })),
   ].filter((s) => s.end > startMin && s.start < endMin)
   const { shown, more } = fit(place(spans), max)
 
@@ -602,9 +616,9 @@ function DayColumn({ date, range, max, items, commitments, now, onCreate, childr
               {m.items.map(({ value }) => (
                 <li key={slotKey(value)} className="text-sm">
                   <span className="text-xs text-muted-foreground tabular-nums">
-                    {value.kind === 'task' ? value.item.dueTime : value.item.time}{' '}
+                    {value.kind === 'task' ? value.item.dueTime : value.kind === 'event' ? clockTime(value.item.start) : value.item.time}{' '}
                   </span>
-                  {value.kind === 'task' ? value.item.title : value.item.name}
+                  {value.kind === 'task' ? value.item.title : value.kind === 'event' ? value.item.title : value.item.name}
                 </li>
               ))}
             </ul>

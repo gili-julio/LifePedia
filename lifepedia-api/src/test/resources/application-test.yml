@@ -16,3 +16,7 @@ lifepedia:
   architecture:
     quota: 1MB
     max-model: 600KB
+  # Chave só de teste (32 bytes). Os clientes dos serviços externos são mocks nos testes.
+  integrations:
+    key: dGVzdC1vbmx5LWtleS0wMTIzNDU2Nzg5YWJjZGVmMDE=
+    app-url: http://localhost:5173

@@ -25,6 +25,8 @@ compartilham usuário, autenticação, design e padrões.
 | **Notas** | ✅ v1.0 | Anotações em **markdown** com editor visual (barra, menu "/", checklist, tabela, código com cores, fotos), modo **markdown** e **lado a lado**, salvar automático, **pastas**, **etiquetas**, cor/ícone, **fixar**, **arquivar**, **lixeira** (30 dias), **modelos**, links `[[Nome]]` entre notas, ligação com **tarefa** ou **compromisso**, **notas do grupo** com atividade, baixar `.md` e card no **Início** |
 | **Frequência** | ✅ v1.0 | Compromissos fixos (ex.: matérias) com dias da semana, horário, período e **limite de faltas**; marcar presença, falta ou sem aula em cada dia; **tarefa ligada** concluída conta presença; aparece na **agenda** e no **Início**; **importar do SIGAA** (UFRN) colando a página de frequência |
 | **Arquitetura** | ✅ v1.0 | **Maquete 3D** da casa exportada do SketchUp (.dae, .glb, .fbx ou .obj, ou um .zip com as texturas; o .skp não abre fora do SketchUp), **comprimida no navegador** antes de subir; visualizador com girar/zoom, **caminhar** por dentro (colisão com paredes, degraus, joystick no celular, **modo fantasma** que atravessa paredes e voa, **minimapa** da planta), **corte**, **planta** de cima e **andares**, **partes por tipo** (paredes, portas, janelas, móveis, louças...), **ficha da peça** (nome, medidas, material e link), **provador de acabamentos** (cor ou textura por material, **biblioteca de texturas**, **variantes** salvas), **visual** realista, maquete branca ou raio-x, **comparar lado a lado** (variantes e versões), **cômodos** com área, **noite com luzes**, **medir** em metros, **sol e sombra** por mês e hora, **vistas salvas** com **tour**, **foto em alta** e **tela cheia**; **versões** (trocar e comparar), **comentários presos na maquete** (resolver/reabrir), **anexos** (renders, fotos, plantas em PDF), **espaço por conta** e **compartilhar** com amigos, grupos (só ver, comentar ou editar) ou **link público** com validade |
+| **Dev** | ✅ v1.0 | **Projetos de trabalho** (ex.: Sebito, Gertec, Nut) com **atalhos** (board, homologação, produção, documentação) e os **repositórios** do GitLab/GitHub de cada um; painel **Hoje no dev** (reuniões do Google Agenda, seus MRs, revisões pedidas, pipelines quebradas e issues); **issues viram tarefas** (concluem sozinhas ao fechar; opcional: concluir fecha a issue); **raias automáticas** por etiqueta (MR aberto → "esperando MR", aceito → "livre para testes"); **resumo do daily** com IA; **atividade** (commits, MRs e revisões por dia); avisos de pipeline falhou, MR aprovado, aceito, comentado e revisão pedida |
+| **Integrações** | ✅ v1.0 | Central para ligar **Google Agenda** (OAuth só leitura, várias contas), **GitLab** (gitlab.com ou da empresa, token pessoal), **GitHub** (token) e **Duolingo** (perfil público): o que cada um traz, **passo a passo**, várias contas com apelido e cor, situação de cada conta, **sincronizar agora**, histórico, aviso de token vencendo ou recusado e desligar (apaga o que veio dela); eventos na **Agenda**; ofensiva do Duolingo no Início e nas **conquistas** |
 | Metas | 💡 ideia | Objetivos pessoais e financeiros com acompanhamento |
 | Saúde | 💡 ideia | Consultas, exames, medicamentos, hábitos |
 | Documentos | 💡 ideia | Documentos importantes, vencimentos, lembretes |
@@ -452,6 +454,8 @@ VPS de 4 GB com o Coolify) e `COOKIE_SECURE` sempre ligado.
    | `AI_MODEL` / `AI_TIMEOUT` / `AI_DAILY_LIMIT` | opcionais: modelo (`gemini-3.5-flash-lite`), tempo máximo da leitura (`180s`) e leituras por dia somando todas as contas (`100`) |
    | `ADMIN_EMAIL` | opcional: e-mail da conta que é sempre admin (painel `/admin`); vazio = nenhuma fixa |
    | `ARCHITECTURE_QUOTA` / `ARCHITECTURE_MAX_MODEL` | opcionais: espaço de cada conta para maquetes e anexos (`300MB`) e tamanho máximo de uma maquete comprimida (`100MB`); os arquivos ficam no volume de uploads |
+   | `INTEGRATIONS_KEY` | opcional: chave AES (32 bytes em base64, `openssl rand -base64 32`) que cifra os tokens das contas ligadas (GitLab, GitHub, Google Agenda); vazia = só o Duolingo. **Não perca nem troque**: os tokens salvos deixam de abrir |
+   | `GOOGLE_CLIENT_SECRET` / `APP_URL` | opcionais: Google Agenda nas integrações (ver abaixo) e o endereço público do site para a volta do Google (vazio = 1ª origem do `CORS_ORIGINS`) |
    | `DB_USER` | opcional, padrão `lifepedia` |
 
 4. Deploy. O primeiro build demora (Maven e npm baixam tudo).
@@ -470,6 +474,21 @@ projeto e abra *Google Auth Platform* (antes *APIs e serviços → Tela de permi
 
 Não há secret: a API só confere a assinatura do token do Google com o ID. O mesmo botão serve para entrar, cadastrar
 e vincular a conta em *Meu perfil*.
+
+**Google Agenda nas integrações** (opcional, usa o mesmo cliente do login): defina `INTEGRATIONS_KEY` e, no Console:
+
+1. *Acesso a dados* → *Adicionar ou remover escopos*: `https://www.googleapis.com/auth/calendar.readonly` → *Salvar*.
+   É escopo sensível: sem a verificação do Google, com o app publicado, a tela de permissão mostra "O Google não
+   verificou este app" (*Avançado* → *Acessar*) e vale para até 100 pessoas; em modo *Teste* só entram os testadores e
+   a conexão vence a cada 7 dias.
+2. *Clientes* → o mesmo cliente do login → *URIs de redirecionamento autorizados*:
+   `https://app.seudominio.com.br/api/integrations/google/callback` (e
+   `http://localhost:3080/api/integrations/google/callback` para testar local) → *Salvar*.
+3. No mesmo cliente, *Chaves secretas do cliente* → *Adicionar chave secreta*; copie na hora (o Google só mostra uma vez)
+   para `GOOGLE_CLIENT_SECRET`. `APP_URL` = o endereço público, igual ao da URI acima sem o caminho.
+
+**GitLab e GitHub** não precisam de nada no servidor além do `INTEGRATIONS_KEY`: cada pessoa cola o próprio token na
+página *Integrações*. GitLab da empresa precisa abrir na internet (https, porta 443): o servidor não acessa rede interna nem VPN.
 
 **Importação pelo site** (opcional): crie a chave no [Google AI Studio](https://aistudio.google.com/apikey), num projeto
 com **cobrança ativa**, e coloque em `AI_API_KEY` (Coolify e, se quiser local, `.env`). A assinatura Google AI (Pro ou de
@@ -525,6 +544,7 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Amigos | Perfil e conquistas de alguém só para quem é amigo (senão **404**); conquistas financeiras nunca aparecem para amigos (só contagem, nunca valores). Pedidos: 30/h por usuário, até 50 sem resposta; aceitar só quem recebeu |
 | Administração | Rotas `/api/admin/**` barradas na cadeia do Spring Security (`AdminAccess`, confere no banco a cada requisição: tirar o admin vale na hora) e de novo no controller; sem login **401**, sem admin **403**. O front só esconde o menu e a rota (`RequireAdmin`, que reconfere a conta). Primeiro admin só pelo `ADMIN_EMAIL` (fixo: não perde o acesso nem é bloqueado); os outros só por outro admin, nunca o próprio. Bloquear apaga as sessões (token vale nada na hora, stream do chat fecha) e impede login; o detalhe da conta mostra só cadastro e contagens. Toda ação fica em `admin_audit_log` |
 | Arquitetura | Projeto só para o dono e para quem ele compartilhou (amigo aceito ou membro de um grupo do dono); sem acesso → **404**, papel menor → **403** (só ver < comentar < editar; compartilhar e excluir só o dono). Maquete enviada como GLB cru, conferida pela API (cabeçalho, tamanho declarado, bloco JSON) e gravada com nome aleatório; espaço por conta reservado antes do envio. Anexos: imagens regravadas em JPEG; PDF servido com `Content-Security-Policy: sandbox` e `nosniff`. **Link público** (`/maquete/<token>`): única rota de dados sem login (`GET /api/public/architecture/**`), token aleatório de 256 bits, com validade (1 a 365 dias), apagável, limite por IP; mostra só a versão atual e as vistas (nada de comentários, anexos ou e-mail) |
+| Integrações e Dev | Tokens das contas externas **cifrados** (AES-256-GCM, chave `INTEGRATIONS_KEY` só no ambiente), nunca devolvidos nem logados; contas, eventos, repositórios, MRs e issues só do dono (**404** para os outros). Chamadas ao GitLab/GitHub/Google/Duolingo só pelo `SafeHttpClient` (GitLab da empresa: só https, porta 443, IP público). Google: OAuth com `state` cifrado ligado à pessoa (10 min), só `calendar.readonly`; desligar revoga. Limites por pessoa para conectar, sincronizar e buscar repositórios. Resumo do daily: só quando a pessoa pede, com o prompt montado na API |
 | Rede | Portas só em `127.0.0.1`; banco com senha aleatória; API e nginx rodam **sem root**; `no-new-privileges` |
 | Navegador | CSP restritiva (única origem externa: `accounts.google.com/gsi`, para o botão do Google; `wasm-unsafe-eval` só para o WebAssembly que comprime e abre as maquetes, sem `eval` de JS), `Cross-Origin-Opener-Policy: same-origin-allow-popups` (popup do Google), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, sem versão do servidor |
 | Notificações push | Web Push com chaves VAPID (a privada só no ambiente). O conteúdo vai **cifrado de ponta a ponta** até o aparelho (RFC 8291): o serviço de push do navegador (Google, Mozilla, Apple, Microsoft) não lê o texto. A API só envia para esses serviços (lista fixa, `https` na porta 443, sem redirecionamento). Cada aparelho fica ligado à **sessão de login**: sair, sessão vencida ou excluir a conta param o envio; outra pessoa no mesmo navegador não herda o push. Com o app em foco nada aparece. O texto da notificação aparece na tela de bloqueio, conforme o aparelho |

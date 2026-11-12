@@ -66,6 +66,20 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   cookie, limite por IP). Cena por versão (`ArchSceneService`: variantes com os ajustes em JSON validado por `MaterialOverride`, cômodos com o
   contorno em JSON, luzes; FK em cascata com a versão) entra no link público (`sceneOf`) e no arquivo da conta (só os
   nomes). Teste em `ArchitectureIntegrationTest` (perfil de teste: espaço de 1 MB e maquete de 600 KB).
+- **Integrações** (`integration/`): token só pelo `SecretBox` (`seal`/`open`; sem `INTEGRATIONS_KEY` só o Duolingo
+  funciona). Chamada ao serviço só por `ApiCalls` (`SafeHttpClient.exchange`: sem redirect, IP público, 443) e fora de
+  transação; o que grava vai num `TransactionTemplate` depois. Serviço novo = cliente + `AccountSyncer` (`supports`,
+  `sync(Connection)`, `usage`) + valor em `IntegrationProvider` + textos no front. `IntegrationSyncService.sync` evita duas
+  ao mesmo tempo na mesma conta; `AUTH` = conta em `ERROR` + aviso uma vez, o resto só no histórico (20 por conta).
+  Outros módulos usam só `IntegrationLinks` (conta da pessoa, `Connection`, `codeHost`, agenda, Duolingo). Testes em
+  `IntegrationIntegrationTest` e `DevIntegrationTest` com `@MockitoBean` dos clientes (`provider()` precisa de stub: a
+  lista de `CodeHost` filtra por ele), `SecretBoxTest`, `PipelinesTest` e o caso de `exchange` no `SafeHttpClientTest`.
+- **Dev** (`dev/`): dono por `findByIdAndUserId`; conta e agenda validadas por `IntegrationLinks`. `DevSyncService` (um
+  `AccountSyncer`) busca o retrato, move as raias (`dev_automations`: uma vez por MR e evento, só MR criado/aceito depois
+  de `rules_since`) e checa issues sumidas fora de transação; grava tudo numa transação só. Tarefa da issue só por
+  `TaskLinks.createPersonal`/`completePersonal`; concluir publica `task/TaskDoneEvent` e `DevTaskListener` fecha a issue
+  depois do commit (thread virtual). Aviso só se o repositório já sincronizou antes (`synced_at`). Prompt do daily só em
+  `DevDailyPrompt`; uso por `AiUsageLog.DEV_DAILY`.
 - **Banco** (`finance/bank`): `BankRef` é `@Embedded` em ocasionais, fixos e itens de grupo; valide com `BankRef.clean`
   antes de gravar e passe nos `sync` do `GroupFinanceSync`. Soma por banco só em `BankReport`, nunca em SQL solto.
   Banco novo no catálogo = valor em `Bank` + entrada e logo no web (`src/lib/banks.ts`).
@@ -170,7 +184,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@6`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@6`; frequência, notas, financiamentos e arquitetura só como registro); mudou o arquivo ⇒ `@7` e importação dos
+  (`lifepedia/account@7`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@7`; frequência, notas, financiamentos, arquitetura, Dev e integrações só como registro); mudou o arquivo ⇒ `@8` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para

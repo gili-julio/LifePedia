@@ -13,6 +13,7 @@ import { AccountSections } from '@/features/account/components/AccountSections'
 import { LegalLinks } from '@/features/legal/LegalLinks'
 import { PushCard } from '@/features/notifications/PushCard'
 import { api, ApiError } from '@/lib/api'
+import { IntegrationsProfileCard } from '@/features/integrations/components/IntegrationsProfileCard'
 import { useAuth } from './auth-context'
 import { GoogleAccount } from './GoogleAccount'
 import { MenuPreferences } from './MenuPreferences'
@@ -110,6 +111,7 @@ export function ProfilePage() {
 
       <GoogleAccount />
       {!incomplete && <MenuPreferences />}
+      {!incomplete && <IntegrationsProfileCard />}
       {!incomplete && <PushCard />}
       {!incomplete && <AccountSections />}
       <LegalLinks />

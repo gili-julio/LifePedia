@@ -15,6 +15,7 @@ public final class PushTexts {
 
     private static final String APP = "LifePedia";
     private static final String IMPORT_LINK = "/financeiro/importar";
+    private static final String INTEGRATIONS_LINK = "/integracoes";
 
     private PushTexts() {
     }
@@ -57,6 +58,21 @@ public final class PushTexts {
                     + (group == null ? " com você" : " com o grupo"), projectLink(data), projectTag(type, data), false);
             case ARCHITECTURE_COMMENT -> new PushMessage(APP, actor + " comentou em " + project(data) + ": “"
                     + data.getOrDefault("preview", "") + "”", projectLink(data), projectTag(type, data), false);
+            case INTEGRATION_FAILED -> new PushMessage(APP, "A conta " + data.getOrDefault("nickname", "") + " ("
+                    + provider(data) + ") parou de sincronizar. Conecte de novo.", INTEGRATIONS_LINK, accountTag(type, data), false);
+            case INTEGRATION_EXPIRING -> new PushMessage(APP, "O token de " + data.getOrDefault("nickname", "") + " ("
+                    + provider(data) + ") vence" + onDay(data), INTEGRATIONS_LINK, accountTag(type, data), false);
+            case DEV_PIPELINE_FAILED -> new PushMessage(devTitle(data), "Pipeline falhou: " + devItem(data), devLink(data),
+                    devTag(type, data), false);
+            case DEV_MR_APPROVED -> new PushMessage(devTitle(data), "MR aprovado: " + devItem(data), devLink(data),
+                    devTag(type, data), false);
+            case DEV_MR_MERGED -> new PushMessage(devTitle(data), "MR aceito: " + devItem(data)
+                    + (data.containsKey("lane") ? ". Issue movida para " + data.get("lane") : ""), devLink(data),
+                    devTag(type, data), false);
+            case DEV_MR_COMMENTED -> new PushMessage(devTitle(data), data.getOrDefault("count", "") + " comentário(s) novo(s) em "
+                    + devItem(data), devLink(data), devTag(type, data), false);
+            case DEV_REVIEW_REQUESTED -> new PushMessage(devTitle(data), data.getOrDefault("author", "") + " pediu sua revisão: "
+                    + devItem(data), devLink(data), devTag(type, data), false);
         };
     }
 
@@ -64,6 +80,38 @@ public final class PushTexts {
     public static PushMessage chat(UUID groupId, String groupName, String author, String body) {
         String text = body.length() > 140 ? body.substring(0, 139) + "…" : body;
         return new PushMessage(groupName, author + ": " + text, "/grupos/" + groupId + "?aba=chat", "chat:" + groupId, true);
+    }
+
+    private static String provider(Map<String, String> data) {
+        return switch (data.getOrDefault("provider", "")) {
+            case "GOOGLE" -> "Google Agenda";
+            case "GITLAB" -> "GitLab";
+            case "GITHUB" -> "GitHub";
+            case "DUOLINGO" -> "Duolingo";
+            default -> "";
+        };
+    }
+
+    private static String accountTag(NotificationType type, Map<String, String> data) {
+        return type.name() + ":" + data.getOrDefault("accountId", "");
+    }
+
+    private static String devTitle(Map<String, String> data) {
+        return data.getOrDefault("projectName", APP);
+    }
+
+    private static String devItem(Map<String, String> data) {
+        String number = data.get("number");
+        String title = data.getOrDefault("title", data.getOrDefault("branch", ""));
+        return (number == null ? "" : "!" + number + " ") + title + " (" + data.getOrDefault("repoName", "") + ")";
+    }
+
+    private static String devLink(Map<String, String> data) {
+        return "/dev/" + URLEncoder.encode(data.getOrDefault("projectId", ""), StandardCharsets.UTF_8);
+    }
+
+    private static String devTag(NotificationType type, Map<String, String> data) {
+        return type.name() + ":" + data.getOrDefault("repoName", "") + ":" + data.getOrDefault("number", data.getOrDefault("branch", ""));
     }
 
     private static String project(Map<String, String> data) {

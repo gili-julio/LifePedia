@@ -11,6 +11,7 @@ export type FriendCandidate = UserSummary & { status: 'FRIEND' | 'SENT' | 'RECEI
 
 /** Espelha `achievement.Achievement` da API; código novo = texto novo em `achievements.ts`. */
 export type AchievementCode = 'TASKS_DONE' | 'GROUP_TASKS_DONE' | 'HABIT_STREAK' | 'FRIENDS' | 'GROUPS' | 'TRANSACTIONS'
+  | 'DUOLINGO_STREAK' | 'DUOLINGO_XP'
 
 export type Achievement = {
   code: AchievementCode

@@ -81,6 +81,11 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   exceção: o script/iframe do botão do Google (`accounts.google.com/gsi`, liberado no `nginx.conf` e carregado só por
   `features/auth/GoogleButton.tsx`). `'wasm-unsafe-eval'` (WebAssembly, não `eval`) e `connect-src blob:` existem só
   para comprimir/abrir maquetes 3D (`features/architecture`).
+- **Contas externas** (`integration/`): token só cifrado (`SecretBox`, AES-256-GCM, `INTEGRATIONS_KEY` no ambiente); nunca
+  volta na resposta, nem em log, nem no arquivo da conta. Toda chamada a GitLab/GitHub/Google/Duolingo pelo
+  `SafeHttpClient.exchange` (o GitLab da empresa é URL do usuário: só https na 443 e IP público). OAuth do Google com
+  `state` cifrado ligado ao usuário (10 min) e só `calendar.readonly`. Escrever no serviço (etiqueta, fechar issue) só
+  pelas regras que a pessoa ligou no repositório.
 - **Rotas públicas** de dados: só `GET /api/public/architecture/**` (link da maquete: token aleatório de 256 bits,
   validade, limite por IP; nunca devolve e-mail, comentários nem anexos; leva vistas, variantes, cômodos e luzes).
 - **Push** (`notification/push`): só para hosts de `lifepedia.push.allowed-hosts` (`https`, 443, sem redirect);
@@ -134,6 +139,10 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Arquitetura: `ArchRole` (`VIEW`/`COMMENT`/`EDIT`/`OWNER`), `ArchAttachment.Kind` (`IMAGE`/`PDF`) e DTOs de
     `ArchitectureDtos` ↔ `features/architecture/types.ts` (+ textos em `labels.ts`)
   - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
+  - Integrações: `IntegrationProvider`, `IntegrationAccount.Status`, `IntegrationSync.Outcome` e DTOs de `IntegrationDtos` ↔
+    `features/integrations/types.ts` (+ textos em `providers.ts`)
+  - Dev: `DevDtos.LinkKind`, `DevItem.Kind`, status de `integration/code/Pipelines` e DTOs de `DevDtos` ↔ `features/dev/types.ts`
+    (+ textos em `labels.ts`)
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
   `InvestmentCategories`). `Totals.expense` e `MonthPoint.*Expense` vêm **sem** investimento; `invested` à parte;
@@ -205,12 +214,14 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@6`, anexo; importa `@1` a `@6`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@7`, anexo; importa `@1` a `@7`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
   `profile`, `groups`, `commitments` (frequência, desde o `@3`), `notes` (desde o `@4`), `financings` e `financingSimulations` (desde o `@5`) e `architecture` (projetos com versões,
-  vistas, nomes dos anexos, das variantes e dos cômodos, mais os comentários da pessoa; sem os arquivos 3D, desde o `@6`) são só registro. Mudou o formato? Crie `@7` e mantenha a importação dos anteriores (usuários guardam
+  vistas, nomes dos anexos, das variantes e dos cômodos, mais os comentários da pessoa; sem os arquivos 3D, desde o `@6`),
+  `devProjects` (nome, descrição, atalhos e repositórios) e `integrations` (serviço, apelido, login, endereço; nunca token),
+  desde o `@7`, são só registro. Mudou o formato? Crie `@8` e mantenha a importação dos anteriores (usuários guardam
   arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -321,6 +332,32 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   `texture` = id da biblioteca do front, `viewer/textures.ts`), cômodos (ponto, teto, área e contorno achados no navegador)
   e luzes; `POST/PUT/DELETE /variants`, `/rooms`, `/lights` só com `EDIT`. O índice do material é estável por versão (o
   GLB não muda depois de enviado).
+
+- **Integrações** (`/api/integrations`): `GET` (`providers` com `available`/`unavailable` e `accounts` sem token, com
+  `projects` = projetos do Dev que usam a conta), `GET /summary` (`connected`, `problems`, `duolingo`), `POST /gitlab`
+  e `/github` (`{baseUrl?, token, nickname?, color?}`: a API confere o token no serviço; mesmo usuário no mesmo servidor só
+  troca o token), `POST /duolingo {username}` (uma por pessoa), `POST /google/start` → `{url}` e `GET /google/callback`
+  (volta do Google, redireciona para `/integracoes?conectado=<id>` ou `?erro=google|google-cancelado|google-permissao|
+  google-limite`), `PUT /{id} {nickname, color}`, `PUT /{id}/token {token}` (mesma conta lá), `POST /{id}/sync` (1/min),
+  `GET /{id}/syncs` (20 últimas), `DELETE /{id}` (o banco apaga eventos, repositórios, MRs e issues; Google revoga),
+  `GET /calendar?from&to` (até 62 dias). Até 20 contas por pessoa. `IntegrationSyncJob` a cada 5 min (Google 15 min,
+  GitLab/GitHub 10 min, Duolingo 1 h; conta em erro a cada 6 h) e às 9h avisa token pessoal vencendo em 7 dias
+  (`INTEGRATION_EXPIRING`, uma vez por token). Token recusado → conta `ERROR` + `INTEGRATION_FAILED` (uma vez); falha
+  passageira só vai para o histórico. Duolingo guarda a maior ofensiva vista (conquistas `DUOLINGO_STREAK`/`DUOLINGO_XP`).
+- **Dev** (`/api/dev`): `GET/POST /projects`, `PUT /projects/order {ids}`, `GET/PUT/DELETE /projects/{id}` (detalhe com
+  `items`, `events` dos próximos 7 dias da `calendarAccountId` e `activity` de 12 semanas), `POST /projects/{id}/repos
+  {accountId, externalId}` (confere no serviço e sincroniza), `GET /repo-options?accountId&q`, `PUT /repos/{id}`
+  (`{importIssues, closeIssues, labelMrOpened, labelMrMerged, labelsClear}`; mudar etiqueta = `rules_since` agora, nada do
+  passado muda), `GET /repos/{id}/labels`, `DELETE /repos/{id}`, `GET /today`, `GET /activity?weeks` (até 26), `POST
+  /daily` (Gemini; 10 por pessoa por dia). Sincronização (`DevSyncService`, um `AccountSyncer`) guarda o retrato em
+  `dev_items` (MRs da pessoa abertos e aceitos nos últimos 3 dias, MRs com revisão pedida, issues atribuídas, última
+  pipeline do branch principal). **Raia**: MR da pessoa (fora de rascunho, criado/aceito depois de `rules_since`) põe a
+  etiqueta nas issues que ele fecha ("Closes #12" ou branch "12-...") e tira `labelsClear` + a da outra raia; cada MR e
+  evento uma vez só (`dev_automations`); só com token que escreve. Issue nova vira tarefa pessoal (fachada
+  `TaskLinks.createPersonal`, etiqueta = nome do projeto; apagada não volta); issue que fechou lá conclui a tarefa;
+  concluir a tarefa (`TaskDoneEvent`) fecha a issue se `closeIssues`. Avisos (nunca na 1ª sincronização do
+  repositório): `DEV_PIPELINE_FAILED`, `DEV_MR_APPROVED`, `DEV_MR_MERGED` (com a raia), `DEV_MR_COMMENTED`,
+  `DEV_REVIEW_REQUESTED`.
 
 ## Checklist: novo módulo
 

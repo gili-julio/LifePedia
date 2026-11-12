@@ -132,6 +132,18 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/architecture/pages/ProjectPage')).ProjectPage }),
           },
           {
+            path: '/dev',
+            lazy: async () => ({ Component: (await import('@/features/dev/pages/DevPage')).DevPage }),
+          },
+          {
+            path: '/dev/:projectId',
+            lazy: async () => ({ Component: (await import('@/features/dev/pages/DevProjectPage')).DevProjectPage }),
+          },
+          {
+            path: '/integracoes',
+            lazy: async () => ({ Component: (await import('@/features/integrations/pages/IntegrationsPage')).IntegrationsPage }),
+          },
+          {
             path: '/perfil',
             lazy: async () => ({ Component: (await import('@/features/auth/ProfilePage')).ProfilePage }),
           },

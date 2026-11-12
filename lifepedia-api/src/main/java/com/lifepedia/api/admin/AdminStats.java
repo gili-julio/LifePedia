@@ -48,6 +48,9 @@ class AdminStats {
             union all select 'AI_IMPORT', count(distinct user_id), count(*) from ai_usage where feature = :feature
             union all select 'PUSH', count(distinct user_id), count(*) from push_subscriptions where session_id is not null
             union all select 'ARCHITECTURE', count(distinct user_id), count(*) from arch_projects
+            union all select 'DEV', count(distinct user_id), count(*) from dev_projects
+            union all select 'INTEGRATIONS', count(distinct user_id), count(*) from integration_accounts
+            union all select 'AI_DAILY', count(distinct user_id), count(*) from ai_usage where feature = :daily
             ) m order by users desc, k
             """;
 
@@ -63,7 +66,9 @@ class AdminStats {
                       and (requester_id = :id or addressee_id = :id)) as friends,
                    (select count(*) from group_messages where user_id = :id) as messages,
                    (select count(*) from ai_usage where user_id = :id and created_at >= :since) as ai_imports,
-                   (select count(*) from arch_projects where user_id = :id) as architecture
+                   (select count(*) from arch_projects where user_id = :id) as architecture,
+                   (select count(*) from dev_projects where user_id = :id) as dev,
+                   (select count(*) from integration_accounts where user_id = :id) as integrations
             """;
 
     private final JdbcClient jdbc;
@@ -107,7 +112,7 @@ class AdminStats {
     }
 
     List<ModuleUsage> modules() {
-        return jdbc.sql(MODULES).param("feature", AiUsageLog.IMPORT)
+        return jdbc.sql(MODULES).param("feature", AiUsageLog.IMPORT).param("daily", AiUsageLog.DEV_DAILY)
                 .query((rs, n) -> new ModuleUsage(rs.getString(1), rs.getLong(2), rs.getLong(3))).list();
     }
 

@@ -22,7 +22,7 @@ export type User = {
 
 /** Espelha `AppModule` da API. */
 export type AppModule = 'FINANCE' | 'FINANCING' | 'TASKS' | 'AGENDA' | 'ATTENDANCE' | 'NOTES' | 'GROUPS' | 'FRIENDS'
-  | 'ARCHITECTURE'
+  | 'ARCHITECTURE' | 'DEV'
 
 /** O token fica no cookie, não no corpo. */
 export type AuthResponse = {

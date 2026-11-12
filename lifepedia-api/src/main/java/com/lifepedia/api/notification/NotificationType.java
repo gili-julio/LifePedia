@@ -35,5 +35,19 @@ public enum NotificationType {
     /** Projeto de arquitetura compartilhado. data: actorName, actorUsername, projectId, projectName, role, groupName (grupo) */
     ARCHITECTURE_SHARED,
     /** Comentário na maquete. data: actorName, actorUsername, projectId, projectName, preview */
-    ARCHITECTURE_COMMENT
+    ARCHITECTURE_COMMENT,
+    /** O serviço recusou o token da conta externa. data: provider, nickname, accountId */
+    INTEGRATION_FAILED,
+    /** Token pessoal perto de vencer. data: provider, nickname, accountId, date */
+    INTEGRATION_EXPIRING,
+    /** Pipeline falhou (MR da pessoa ou branch principal). data: projectId, projectName, repoName, title, number (MR), branch */
+    DEV_PIPELINE_FAILED,
+    /** MR da pessoa aprovado. data: projectId, projectName, repoName, title, number */
+    DEV_MR_APPROVED,
+    /** MR da pessoa aceito. data: projectId, projectName, repoName, title, number, lane (etiqueta aplicada, se houver) */
+    DEV_MR_MERGED,
+    /** Comentários novos no MR da pessoa. data: projectId, projectName, repoName, title, number, count */
+    DEV_MR_COMMENTED,
+    /** Pediram a revisão da pessoa. data: projectId, projectName, repoName, title, number, author */
+    DEV_REVIEW_REQUESTED
 }
