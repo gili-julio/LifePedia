@@ -25,6 +25,8 @@ import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.shared.RateLimiter;
 import com.lifepedia.api.shared.net.SafeHttpClient;
+import com.lifepedia.api.user.User;
+import com.lifepedia.api.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -63,6 +65,7 @@ public class IntegrationService {
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final IntegrationAccountRepository accounts;
+    private final UserRepository users;
     private final IntegrationSyncRepository syncs;
     private final CalendarEventRepository events;
     private final List<CodeHost> codeHosts;
@@ -77,12 +80,13 @@ public class IntegrationService {
     private final Clock clock;
     private final TransactionTemplate transaction;
 
-    public IntegrationService(IntegrationAccountRepository accounts, IntegrationSyncRepository syncs, CalendarEventRepository events,
-                              List<CodeHost> codeHosts, List<AccountSyncer> syncers, GoogleCalendarClient google,
+    public IntegrationService(IntegrationAccountRepository accounts, UserRepository users, IntegrationSyncRepository syncs,
+                              CalendarEventRepository events, List<CodeHost> codeHosts, List<AccountSyncer> syncers, GoogleCalendarClient google,
                               DuolingoClient duolingo, SecretBox secrets, IntegrationSyncService sync,
                               IntegrationProperties properties, CorsProperties cors, RateLimiter rateLimiter, Clock clock,
                               PlatformTransactionManager transactions) {
         this.accounts = accounts;
+        this.users = users;
         this.syncs = syncs;
         this.events = events;
         this.codeHosts = codeHosts;
@@ -179,11 +183,14 @@ public class IntegrationService {
         return new GoogleStart(google.authorizeUrl(state, redirectUri()).toString());
     }
 
-    /** Volta do Google; devolve o caminho do site para onde levar a pessoa (com o resultado na query). */
-    public String googleCallback(UUID userId, String code, String state, String error) {
-        if (error != null || code == null || state == null || !validState(userId, state)) {
-            return "/integracoes?erro=" + (error != null ? "google-cancelado" : "google");
-        }
+    /**
+     * Volta do Google; devolve o caminho do site para onde levar a pessoa (com o resultado na query). Vem de outro site, então o
+     * cookie de sessão (SameSite=Strict) não chega: a pessoa sai do {@code state} cifrado, que vale uma vez só.
+     */
+    public String googleCallback(String code, String state, String error) {
+        if (error != null) return "/integracoes?erro=google-cancelado";
+        UUID userId = code == null || state == null ? null : stateOwner(state);
+        if (userId == null) return "/integracoes?erro=google";
         Tokens tokens;
         try {
             tokens = google.exchange(code, redirectUri());
@@ -346,17 +353,21 @@ public class IntegrationService {
         return all;
     }
 
-    private boolean validState(UUID userId, String state) {
+    private UUID stateOwner(String state) {
         String plain = secrets.open(state);
-        if (plain == null) return false;
+        if (plain == null) return null;
         String[] parts = plain.split("\\|");
-        if (parts.length != 3 || !parts[0].equals(userId.toString())) return false;
+        if (parts.length != 3) return null;
+        UUID userId;
         try {
-            long at = Long.parseLong(parts[1]);
-            return clock.instant().getEpochSecond() - at <= STATE_TTL.toSeconds();
-        } catch (NumberFormatException e) {
-            return false;
+            userId = UUID.fromString(parts[0]);
+            if (clock.instant().getEpochSecond() - Long.parseLong(parts[1]) > STATE_TTL.toSeconds()) return null;
+        } catch (IllegalArgumentException e) {
+            return null;
         }
+        if (!rateLimiter.tryAcquire("google-state:" + parts[2], 1, STATE_TTL)) return null;
+        User user = users.findById(userId).orElse(null);
+        return user == null || user.isBlocked() ? null : userId;
     }
 
     private String redirectUri() {

@@ -452,7 +452,7 @@ excluir o projeto só o dono. A maquete é um **GLB** gerado e comprimido no nav
 | POST | `/gitlab` · `/github` | `{baseUrl? (só GitLab; vazio = gitlab.com; só https 443), token, nickname?, color?}` → 201; token conferido no serviço (escopo `read_api`/`api`, validade). Mesmo usuário e servidor = troca o token · 15 tentativas/h |
 | POST | `/duolingo` | `{username}` (perfil público) → 201; uma por pessoa (outra → 409) |
 | POST | `/google/start` | `{url}` do consentimento (`state` cifrado, 10 min) |
-| GET | `/google/callback` | Volta do Google (com a sessão): cria/atualiza a conta e redireciona para `/integracoes?conectado=<id>` ou `?erro=...` |
+| GET | `/google/callback` | Volta do Google (pública: o cookie `SameSite=Strict` não vem de outro site; a pessoa sai do `state`, uso único): cria/atualiza a conta e redireciona para `/integracoes?conectado=<id>` ou `?erro=...` |
 | PUT | `/{id}` | `{nickname, color}` |
 | PUT | `/{id}/token` | `{token}`; precisa ser a mesma conta no serviço (outra → 400) |
 | POST | `/{id}/sync` | Sincroniza agora (1 por minuto por conta → 429) |

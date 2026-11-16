@@ -87,7 +87,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 - **Contas externas** (`integration/`): token só cifrado (`SecretBox`, AES-256-GCM, `INTEGRATIONS_KEY` no ambiente); nunca
   volta na resposta, nem em log, nem no arquivo da conta. Toda chamada a GitLab/GitHub/Google/Duolingo pelo
   `SafeHttpClient.exchange` (o GitLab da empresa é URL do usuário: só https na 443 e IP público). OAuth do Google com
-  `state` cifrado ligado ao usuário (10 min) e só `calendar.readonly`. Escrever no serviço (etiqueta, fechar issue) só
+  `state` cifrado ligado ao usuário (10 min, uso único) e só `calendar.readonly`; o `GET /google/callback` é público
+  (volta de outro site não traz o cookie `SameSite=Strict`), a pessoa sai do `state`. Escrever no serviço (etiqueta, fechar issue) só
   pelas regras que a pessoa ligou no repositório.
 - **Rotas públicas** de dados: só `GET /api/public/architecture/**` (link da maquete: token aleatório de 256 bits,
   validade, limite por IP; nunca devolve e-mail, comentários nem anexos; leva vistas, variantes, cômodos e luzes).

@@ -202,13 +202,15 @@ class IntegrationIntegrationTest extends ApiTestSupport {
         when(google.events(eq("access"), any(), any(), any())).thenReturn(List.of(
                 new RemoteEvent("primary:1", "Daily", start, start.plusMinutes(15), false, null, "https://meet.google.com/abc", null)));
 
-        // Outra pessoa não usa o state de alguém.
         String other = registerAndGetBearer();
-        assertThat(callback(other, "codigo", state).getResponse().getHeader(HttpHeaders.LOCATION)).isEqualTo("/integracoes?erro=google");
+        String tampered = state.substring(0, 10) + (state.charAt(10) == 'A' ? 'B' : 'A') + state.substring(11);
+        assertThat(callback("codigo", tampered).getResponse().getHeader(HttpHeaders.LOCATION)).isEqualTo("/integracoes?erro=google");
 
-        MvcTestResult back = callback(me, "codigo", state);
+        // Volta do Google sem cookie nem bearer (SameSite=Strict): a pessoa vem do state.
+        MvcTestResult back = callback("codigo", state);
         assertThat(back).hasStatus(302);
         assertThat(back.getResponse().getHeader(HttpHeaders.LOCATION)).startsWith("/integracoes?conectado=");
+        assertThat(callback("codigo", state).getResponse().getHeader(HttpHeaders.LOCATION)).isEqualTo("/integracoes?erro=google");
         String overview = body(send("GET", me, "/api/integrations", null));
         assertThat(JsonPath.<String>read(overview, "$.accounts[0].login")).isEqualTo("maria@gmail.com");
 
@@ -220,7 +222,7 @@ class IntegrationIntegrationTest extends ApiTestSupport {
         assertThat(JsonPath.<List<Object>>read(body(send("GET", other, "/api/integrations/calendar?from=" + today + "&to=" + today, null)),
                 "$[*]")).isEmpty();
 
-        assertThat(callback(me, null, null).getResponse().getHeader(HttpHeaders.LOCATION)).isEqualTo("/integracoes?erro=google");
+        assertThat(callback(null, null).getResponse().getHeader(HttpHeaders.LOCATION)).isEqualTo("/integracoes?erro=google");
     }
 
     @Test
@@ -243,8 +245,8 @@ class IntegrationIntegrationTest extends ApiTestSupport {
         assertThat(JsonPath.<List<Object>>read(body(send("GET", alice, "/api/integrations", null)), "$.accounts")).isEmpty();
     }
 
-    private MvcTestResult callback(String bearer, String code, String state) {
-        var request = mvc.get().uri("/api/integrations/google/callback").header(HttpHeaders.AUTHORIZATION, bearer);
+    private MvcTestResult callback(String code, String state) {
+        var request = mvc.get().uri("/api/integrations/google/callback");
         if (code != null) request.param("code", code);
         if (state != null) request.param("state", state);
         return request.exchange();

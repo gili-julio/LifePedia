@@ -76,12 +76,12 @@ public class IntegrationController {
         return service.googleStart(CurrentUser.id(jwt));
     }
 
-    /** Volta do consentimento do Google (navegação do próprio navegador, com o cookie de sessão). */
+    /** Volta do consentimento do Google (rota pública: a pessoa vem do {@code state} cifrado). */
     @GetMapping("/google/callback")
-    public ResponseEntity<Void> googleCallback(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String code,
+    public ResponseEntity<Void> googleCallback(@RequestParam(required = false) String code,
                                                @RequestParam(required = false) String state,
                                                @RequestParam(required = false) String error) {
-        String target = service.googleCallback(CurrentUser.id(jwt), code, state, error);
+        String target = service.googleCallback(code, state, error);
         return ResponseEntity.status(HttpStatus.FOUND).header(HttpHeaders.LOCATION, target).build();
     }
 
