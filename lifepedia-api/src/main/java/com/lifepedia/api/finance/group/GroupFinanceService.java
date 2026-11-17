@@ -25,6 +25,7 @@ import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import com.lifepedia.api.finance.transaction.TransactionRepository;
 import com.lifepedia.api.group.GroupAccess;
 import com.lifepedia.api.group.GroupMember;
+import com.lifepedia.api.search.SearchText;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.shared.PageResponse;
@@ -165,10 +166,11 @@ public class GroupFinanceService {
 
     @Transactional(readOnly = true)
     public PageResponse<GroupTransactionResponse> transactions(UUID userId, UUID groupId, YearMonth month, EntryType type,
-                                                               BankFilter bank, int page, int size, String sort) {
+                                                               BankFilter bank, String q, int page, int size, String sort) {
         access.requireMember(groupId, userId);
         var pageable = Paging.pageable(page, size, sort, TRANSACTION_SORT, "date,desc", "g.createdAt", "g.id");
-        var found = groupTransactions.page(groupId, month, type, bank.code(), bank.name(), bank.kind(), bank.none(), pageable);
+        var found = groupTransactions.page(groupId, month, type, bank.code(), bank.name(), bank.kind(), bank.none(),
+                SearchText.listPattern(q), pageable);
         return PageResponse.of(found, items -> {
             Refs refs = refs(items.stream().map(GroupTransaction::getCategoryId).toList(),
                     items.stream().map(GroupTransaction::getUserId).toList());
@@ -180,10 +182,12 @@ public class GroupFinanceService {
 
     @Transactional(readOnly = true)
     public PageResponse<GroupRecurringResponse> recurring(UUID userId, UUID groupId, EntryType type, BankFilter bank,
-                                                          int page, int size, String sort) {
+                                                          String q, int page, int size, String sort) {
         access.requireMember(groupId, userId);
         var pageable = Paging.pageable(page, size, sort, RECURRING_SORT, "amount,desc", "r.id");
-        return PageResponse.of(groupRecurring.page(groupId, type, bank.code(), bank.name(), bank.kind(), bank.none(), pageable), items -> {
+        var found = groupRecurring.page(groupId, type, bank.code(), bank.name(), bank.kind(), bank.none(),
+                SearchText.listPattern(q), pageable);
+        return PageResponse.of(found, items -> {
             Refs refs = refs(items.stream().map(GroupRecurringEntry::getCategoryId).toList(),
                     items.stream().map(GroupRecurringEntry::getUserId).toList());
             return items.stream().map(r -> new GroupRecurringResponse(r.getId(), r.getDescription(), r.getType(),

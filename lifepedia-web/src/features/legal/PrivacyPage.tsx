@@ -197,6 +197,8 @@ export function PrivacyPage() {
           <li><strong>Preferências de tela</strong> (tema, menu recolhido, dias recolhidos na semana, cores da agenda, ocultar valores,
             avisos do sistema que você fechou),
             guardadas só no seu navegador.</li>
+          <li><strong>Buscas recentes</strong>: o que você buscou e os itens que abriu pela busca ficam só no seu navegador,
+            para facilitar a próxima busca, e são apagados quando você sai da conta.</li>
         </List>
         <p>Não usamos cookies de publicidade, de análise ou de terceiros, por isso não pedimos consentimento para eles.</p>
       </Section>
@@ -234,7 +236,7 @@ export function PrivacyPage() {
           <li>Limite de tentativas de login, bloqueio temporário após senhas erradas e sessões que podem ser encerradas.</li>
           <li>Proteções contra ataques comuns da web (CSP, CSRF, clickjacking) e servidores sem privilégios de
             administrador.</li>
-          <li>O app instalado não guarda seus dados no aparelho; tudo vem do servidor a cada acesso.</li>
+          <li>O app instalado não guarda seus dados no aparelho; tudo vem do servidor a cada acesso (só as buscas recentes ficam no navegador até você sair).</li>
         </List>
         <p>
           Nenhum sistema é totalmente imune. Se houver um incidente de segurança que possa causar risco ou dano

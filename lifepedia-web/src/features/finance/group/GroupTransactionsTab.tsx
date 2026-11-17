@@ -7,6 +7,8 @@ import { DataTablePagination } from '@/components/data-table/DataTablePagination
 import { useClampPage, useListState } from '@/components/data-table/list-state'
 import { SortableHead } from '@/components/data-table/SortableHead'
 import { SortSelect } from '@/components/data-table/SortSelect'
+import { ListSearch } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -60,7 +62,9 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
   const [filter, setFilter] = useState<Filter>('ALL')
   const list = useListState({ field: 'date', direction: 'desc' })
   const [bank, setBank] = useState('')
-  const { data, isLoading } = useGroupTransactionsPage(groupId, month, filter === 'ALL' ? undefined : filter, list.params, toBankFilter(bank))
+  const [search, setSearch] = useListSearch()
+  const { data, isLoading } = useGroupTransactionsPage(groupId, month, filter === 'ALL' ? undefined : filter, list.params,
+    toBankFilter(bank), search)
   const banks = useGroupBankOverview(groupId, month).data?.banks
   useClampPage(data, list.setPage)
   const create = useCreateGroupTransaction()
@@ -103,13 +107,21 @@ export function GroupTransactionsTab({ groupId, month, isAdmin, onBring }: Props
           <PlusIcon /> <span className="max-sm:sr-only">Novo lançamento</span>
         </Button>
       </div>
-      <BankFilterSelect lines={banks} value={bank} onChange={(value) => {
-        setBank(value)
-        list.resetPage()
-      }} />
+      <div className="flex flex-wrap items-center gap-2">
+        <ListSearch value={search} onChange={(value) => {
+          setSearch(value)
+          list.resetPage()
+        }} placeholder="Buscar no mês" />
+        <BankFilterSelect lines={banks} value={bank} onChange={(value) => {
+          setBank(value)
+          list.resetPage()
+        }} />
+      </div>
 
       {isLoading ? (
         <Skeleton className="h-48" />
+      ) : !items.length && search ? (
+        <p className="py-12 text-center text-sm text-muted-foreground">Nada encontrado com essa busca em {formatMonth(month).toLowerCase()}.</p>
       ) : !items.length ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-sm text-muted-foreground">Nenhum lançamento no grupo em {formatMonth(month).toLowerCase()}.</p>

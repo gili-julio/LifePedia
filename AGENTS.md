@@ -84,6 +84,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 - **Veículos** (`vehicle/`): acesso só por `VehicleAccess.require(veículo, pessoa, papel mínimo)` (sem acesso 404, papel
   menor 403). À FIPE vão só códigos validados (`FipeClient`, `SafeHttpClient`, fora de transação); token opcional
   `FIPE_TOKEN` só no ambiente (cabeçalho). Gasto de outra pessoa nunca mexe no financeiro dela.
+- **Busca** (`search/` + um `SearchProvider` por módulo): cada fonte filtra por quem vê (dono, grupos em que é membro,
+  compartilhados) e pula módulos escondidos; busca num grupo exige membro (404). Texto sempre como parâmetro (`SearchSql`),
+  `LIKE` escapado (`SearchText.like`). Amigos só por nome e @username. Recentes só no aparelho, apagados ao sair.
 - **Carteira** (`finance/wallet`): cartão, conta e fatura só do dono (404); só os 4 últimos números do cartão. O aviso de
   compra colado é lido só no navegador. No grupo, só os cartões que o dono marcou e só para membros (404).
 - **Entregas** (`delivery/`): ao 17TRACK vai só o código de rastreio e ao ViaCEP só o CEP, sempre pelo
@@ -163,6 +166,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Carteira: `finance/wallet/CardCycle` (fechamento, vencimento e fatura de uma data) ↔ `features/finance/wallet/cycle.ts`;
     `InvoiceStatus` e DTOs de `WalletDtos` ↔ `features/finance/wallet/types.ts` (+ textos em `labels.ts`); `kind` da
     notificação `CARD_REMINDER` ↔ `cardText` em `notification-content.tsx`
+  - Busca: `SearchKind` (e o módulo de cada um) e DTOs de `SearchDtos`/`SearchHit` ↔ `features/search/types.ts` (+ textos e
+    ícones em `kinds.ts`); `search_norm` (V41) ↔ `SearchText.normalize` ↔ `lib/search-text.ts` (`normalizeText`)
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
   `InvestmentCategories`). `Totals.expense` e `MonthPoint.*Expense` vêm **sem** investimento; `invested` à parte;
@@ -332,6 +337,17 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   **Conferido** (`transactions.checked`): veio de documento (lote com `originalDescription`) ou foi casado na importação
   (`POST /api/finance/import` com `checks: [{transactionId, amount?, month?}]`). Aviso `CARD_REMINDER` às 9h
   (`WalletReminderJob`, uma vez por fatura: `CLOSING`, `DUE`, `BUDGET` em 80 e 100).
+- **Busca** (`/api/search?q=&modules=&kinds=&groupId=&from=&to=&min=&max=&type=&categoryId=&limit=`): junta o que cada
+  `SearchProvider` acha (um por módulo, no pacote do módulo) em `groups` (tipo, módulo, até `limit` itens, `more`), do tipo mais
+  relevante ao menos, e `totals` (contagem e soma de entradas e saídas dos lançamentos achados). Cada item traz `link` (rota da
+  web), `subtitle`, `snippet` (trecho do texto longo), `amount`/`entryType`, `groupName` e `fields` (prévia). Sem 2 letras nem
+  filtro: vazio. Filtros de período/valor/tipo só nos tipos que têm aquilo (`SearchKind`); `groupId` só os tipos de grupo.
+  Texto: `search_norm` (V41: `unaccent` + `lower`, IMMUTABLE), palavra contida ou `strict_word_similarity >= 0.3` nas de 5+
+  letras (`SearchSql`). Listas: `GET /api/finance/transactions/search?q=&from=&to=&min=&max=&type=&categoryId=&bank=&bankKind=
+  &page=&size=&sort=` (todos os meses, `income`/`expense` somam tudo o que achou), `PUT /api/finance/transactions/batch
+  {ids, categoryId?, month?}` → `{count}` e `POST /api/finance/transactions/batch/delete {ids}` (até 500, tudo ou nada;
+  grupos sincronizados acompanham), `q` em `GET /api/finance/recurring` e nas páginas de lançamentos e fixos do grupo
+  (texto inteiro sem acento, `SearchText.listPattern`).
 - **Importação pelo site** (`AI_API_KEY`): `GET /api/finance/import/assistant` (`enabled`, limites de arquivo e `quota`),
   `POST /analyze` (multipart `files`, **202**: valida, grava `import_drafts` em `RUNNING` e a API chama o Gemini em segundo
   plano; o front nunca manda prompt), `GET /prompt` (o mesmo prompt, para o agente da pessoa). Limites por conta em

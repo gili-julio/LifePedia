@@ -59,6 +59,27 @@ public final class TransactionDtos {
             List<@Valid @NotNull TransactionRequest> items) {
     }
 
+    /** Muda a categoria e/ou o mês de vários lançamentos, tudo ou nada. */
+    public record BatchUpdateRequest(
+            @NotEmpty(message = "Escolha os lançamentos.")
+            @Size(max = 500, message = "Escolha no máximo 500 lançamentos.") List<@NotNull UUID> ids,
+            UUID categoryId,
+            YearMonth month) {
+    }
+
+    public record BatchDeleteRequest(
+            @NotEmpty(message = "Escolha os lançamentos.")
+            @Size(max = 500, message = "Escolha no máximo 500 lançamentos.") List<@NotNull UUID> ids) {
+    }
+
+    public record BatchResult(int count) {
+    }
+
+    /** Página da busca na tela de lançamentos, com a soma de tudo o que achou (não só da página). */
+    public record SearchPage(List<TransactionResponse> items, int page, int size, long totalItems, int totalPages,
+                             BigDecimal income, BigDecimal expense) {
+    }
+
     public record TransactionResponse(
             UUID id,
             String description,

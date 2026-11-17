@@ -236,6 +236,11 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Ações do cabeçalho**: muitas ações? Marque as menos usadas como `secondary` (vão para o ⋮ no desktop). Excluir
   leva `destructive` (vermelho no menu).
 - **Fixos**: vigência e valor do mês sempre por `features/finance/fixed.ts` (`isActiveIn`, `valueIn`).
+- **Busca**: a geral é a paleta (`features/search`, aberta por `useSearch().openSearch()`, Ctrl K ou "/"); resultados,
+  relevância e soma vêm da API, o front só monta seções, teclado e prévia. Lista nova com busca: `ListSearch` +
+  `useListSearch()` (guarda em `?busca=`, para a paleta abrir a lista filtrada) e, se a lista vem toda, `matchesSearch` de
+  `lib/search-text.ts`; paginada na API, mande `q`. Destaque com `Highlight`; sem resultado, `NoMatches`. Recentes só em
+  `recent.ts` (apagados em `clearSession`). Novo `SearchKind` na API = entrada em `kinds.ts`.
 - **Carteira** (`features/finance/wallet`): chaves `['finance', 'wallet', ...]` e `['finance', 'groups', groupId, 'cards']`
   (qualquer mutação do financeiro recarrega: lançamento muda a fatura). Totais, situação, previsão, média, meta, limite e
   saldos **sempre da API**; o front só formata (`invoiceHint`, `STATUS` com ícone e texto). `cycle.ts` (espelho de

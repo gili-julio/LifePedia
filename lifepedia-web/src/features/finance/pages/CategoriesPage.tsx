@@ -2,6 +2,9 @@ import { EllipsisVerticalIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-r
 import { useState } from 'react'
 import { ActionSheet } from '@/components/ActionSheet'
 import { PageHeader } from '@/components/PageHeader'
+import { ListSearch } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
+import { matchesSearch } from '@/lib/search-text'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,14 +14,16 @@ import { DeleteCategoryDialog } from '../components/DeleteCategoryDialog'
 import type { Category, EntryType } from '../types'
 import { useCategoryLookup } from '../use-category-lookup'
 
-function CategoryList({ items, onEdit, onDelete, onMore }: {
+function CategoryList({ items, filtered, onEdit, onDelete, onMore }: {
   items: Category[]
+  /** Lista filtrada pela busca. */
+  filtered?: boolean
   onEdit: (c: Category) => void
   onDelete: (c: Category) => void
   onMore: (c: Category) => void
 }) {
   if (!items.length) {
-    return <p className="py-10 text-center text-sm text-muted-foreground">Nenhuma categoria ainda.</p>
+    return <p className="py-10 text-center text-sm text-muted-foreground">{filtered ? 'Nenhuma categoria com esse nome.' : 'Nenhuma categoria ainda.'}</p>
   }
   return (
     <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -53,16 +58,18 @@ export function CategoriesPage() {
   const [deleting, setDeleting] = useState<Category | null>(null)
   const [menu, setMenu] = useState<{ open: boolean; item?: Category }>({ open: false })
 
-  const expenses = ofType('EXPENSE')
-  const incomes = ofType('INCOME')
+  const [search, setSearch] = useListSearch()
+  const expenses = ofType('EXPENSE').filter((c) => matchesSearch(search, c.name))
+  const incomes = ofType('INCOME').filter((c) => matchesSearch(search, c.name))
   const openEdit = (category: Category) => setDialog({ open: true, category })
-  const listProps = { onEdit: openEdit, onDelete: setDeleting, onMore: (item: Category) => setMenu({ open: true, item }) }
+  const listProps = { filtered: !!search, onEdit: openEdit, onDelete: setDeleting, onMore: (item: Category) => setMenu({ open: true, item }) }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Categorias"
         description="Organize seus lançamentos do seu jeito. As cores aparecem nos gráficos do comparativo."
+        toolbar={<ListSearch value={search} onChange={setSearch} placeholder="Buscar categoria" />}
         actions={[{ label: 'Nova categoria', icon: PlusIcon, primary: true, onSelect: () => setDialog({ open: true }) }]}
       />
 

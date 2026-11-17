@@ -2,6 +2,9 @@ import { Building2Icon, PlusIcon, UsersIcon } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { ListSearch, NoMatches } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
+import { matchesSearch } from '@/lib/search-text'
 import { UserAvatar } from '@/components/UserAvatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -19,12 +22,18 @@ export function ArchitecturePage() {
   const navigate = useNavigate()
   const { data } = useProjects()
   const [creating, setCreating] = useState(false)
+  const [search, setSearch] = useListSearch()
+  const match = (p: ProjectSummary) => matchesSearch(search, p.name, p.description, p.owner.name)
+  const owned = data?.owned.filter(match) ?? []
+  const shared = data?.shared.filter(match) ?? []
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Arquitetura"
         description="Maquetes 3D da casa: ande por dentro, meça, comente e compartilhe."
+        toolbar={data && data.owned.length + data.shared.length > 0
+          ? <ListSearch value={search} onChange={setSearch} placeholder="Buscar projeto" /> : undefined}
         actions={[{ label: 'Novo projeto', icon: PlusIcon, primary: true, onSelect: () => setCreating(true) }]}
       />
 
@@ -35,7 +44,7 @@ export function ArchitecturePage() {
               <h2 id="arch-mine" className="text-lg font-semibold tracking-tight">Meus projetos</h2>
               <div className="w-full sm:w-72"><UsageBar usage={data.usage} /></div>
             </div>
-            {data.owned.length === 0 ? (
+            {search && !owned.length ? <NoMatches onClear={() => setSearch('')} /> : data.owned.length === 0 ? (
               <Card>
                 <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
                   <Building2Icon className="size-8 text-muted-foreground" aria-hidden />
@@ -45,13 +54,13 @@ export function ArchitecturePage() {
                   <Button onClick={() => setCreating(true)}><PlusIcon /> Novo projeto</Button>
                 </CardContent>
               </Card>
-            ) : <ProjectGrid items={data.owned} />}
+            ) : <ProjectGrid items={owned} />}
           </section>
 
-          {data.shared.length > 0 && (
+          {shared.length > 0 && (
             <section aria-labelledby="arch-shared" className="space-y-3">
               <h2 id="arch-shared" className="text-lg font-semibold tracking-tight">Compartilhados comigo</h2>
-              <ProjectGrid items={data.shared} />
+              <ProjectGrid items={shared} />
             </section>
           )}
         </>

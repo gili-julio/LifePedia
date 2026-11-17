@@ -3,6 +3,9 @@ import { type ReactNode, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
+import { ListSearch, NoMatches } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
+import { matchesSearch } from '@/lib/search-text'
 import { ScrollTabsList } from '@/components/ScrollTabsList'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -25,6 +28,8 @@ function errorMessage(error: unknown, fallback: string) {
 
 function FriendList({ onAdd }: { onAdd: () => void }) {
   const { data, isLoading } = useFriends()
+  const [search, setSearch] = useListSearch()
+  const shown = data?.filter((f) => matchesSearch(search, f.user.name, f.user.username)) ?? []
   if (isLoading) {
     return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-16" />)}</div>
   }
@@ -38,9 +43,10 @@ function FriendList({ onAdd }: { onAdd: () => void }) {
       </div>
     )
   }
+  if (!shown.length) return <NoMatches onClear={() => setSearch('')} />
   return (
     <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {data.map((f) => (
+      {shown.map((f) => (
         <li key={f.user.id}>
           <Link to={`/amigos/${f.user.id}`}
             className="flex items-center gap-3 rounded-lg border bg-card p-3 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none motion-reduce:transition-none">
@@ -149,12 +155,14 @@ export function FriendsPage() {
   const [adding, setAdding] = useState(false)
   const { data: requests } = useFriendRequests()
   const received = requests?.received.length ?? 0
+  const [search, setSearch] = useListSearch()
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Amigos"
         description="Acompanhe as conquistas dos seus amigos e motivem-se juntos."
+        toolbar={tab === 'amigos' ? <ListSearch value={search} onChange={setSearch} placeholder="Buscar amigo" /> : undefined}
         actions={[{ label: 'Adicionar amigo', icon: UserPlusIcon, primary: true, onSelect: () => setAdding(true) }]}
       />
       <Card>

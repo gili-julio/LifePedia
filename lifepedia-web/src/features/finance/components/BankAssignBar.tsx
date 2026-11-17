@@ -1,5 +1,5 @@
 import { Loader2Icon, WalletCardsIcon, XIcon } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { BankField } from '@/components/bank/BankSelect'
 import { DialogBody, DialogScrollContent } from '@/components/DialogLayout'
@@ -56,15 +56,16 @@ function AssignForm({ ids, target, onClear, onClose }: Props & { onClose: () => 
   )
 }
 
-/** Faixa que aparece com itens selecionados: define o banco de todos de uma vez. */
-export function BankAssignBar({ ids, target, onClear }: Props) {
+/** Faixa que aparece com itens selecionados: define o banco de todos de uma vez (e outras ações, em `children`). */
+export function BankAssignBar({ ids, target, onClear, children }: Props & { children?: ReactNode }) {
   const [open, setOpen] = useState(false)
   if (!ids.length) return null
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-muted px-3 py-2 text-sm">
       <span className="font-medium">{ids.length} selecionado(s)</span>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button size="sm" variant="ghost" onClick={onClear}><XIcon /> Limpar</Button>
+        {children}
         <Button size="sm" onClick={() => setOpen(true)}><WalletCardsIcon /> Definir banco</Button>
       </div>
       <Dialog open={open} onOpenChange={setOpen}>

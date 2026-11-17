@@ -2,6 +2,9 @@ import { CalculatorIcon, FilePlus2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { ListSearch, NoMatches } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
+import { matchesSearch } from '@/lib/search-text'
 import { financingUrl, simulatorUrl, useFinancingOverview } from '../api'
 import { FinancingDialog } from '../components/FinancingDialog'
 import { FinancingGrid, SavedSimulations } from '../components/FinancingLists'
@@ -11,12 +14,15 @@ export function FinancingsPage() {
   const navigate = useNavigate()
   const { data, isLoading } = useFinancingOverview()
   const [creating, setCreating] = useState(false)
+  const [search, setSearch] = useListSearch()
+  const items = data?.filter((f) => matchesSearch(search, f.name, f.bank, f.groupName))
   return (
     <div className="space-y-6">
       <PageHeader
         title="Financiamentos"
         description="Simule antes de comprar e acompanhe os que estão em andamento."
         hideValues
+        toolbar={data?.length ? <ListSearch value={search} onChange={setSearch} placeholder="Buscar financiamento" /> : undefined}
         actions={[
           { label: 'Simular', icon: CalculatorIcon, primary: true, to: simulatorUrl(null) },
           { label: 'Cadastrar financiamento', icon: FilePlus2Icon, onSelect: () => setCreating(true) },
@@ -24,7 +30,8 @@ export function FinancingsPage() {
       />
       <section aria-labelledby="financings-active" className="space-y-3">
         <h2 id="financings-active" className="text-lg font-semibold tracking-tight">Em andamento</h2>
-        <FinancingGrid items={data} isLoading={isLoading} groupId={null} onCreate={() => setCreating(true)} />
+        {search && items && !items.length ? <NoMatches onClear={() => setSearch('')} />
+          : <FinancingGrid items={items} isLoading={isLoading} groupId={null} onCreate={() => setCreating(true)} />}
       </section>
       <SavedSimulations groupId={null} />
       <FinancingDialog open={creating} onOpenChange={setCreating} groupId={null}

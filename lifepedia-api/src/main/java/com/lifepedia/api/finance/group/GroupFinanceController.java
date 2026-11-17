@@ -73,9 +73,10 @@ public class GroupFinanceController {
                                                                @RequestParam(required = false) BankKind bankKind,
                                                                @RequestParam(defaultValue = "0") int page,
                                                                @RequestParam(defaultValue = "10") int size,
-                                                               @RequestParam(required = false) String sort) {
+                                                               @RequestParam(required = false) String sort,
+                                                               @RequestParam(required = false) String q) {
         return service.transactions(CurrentUser.id(jwt), groupId, month != null ? month : YearMonth.now(), type,
-                BankFilter.of(bank, bankKind), page, size, sort);
+                BankFilter.of(bank, bankKind), q, page, size, sort);
     }
 
     /** Lançamento só do grupo (sem item pessoal), com a categoria de quem cadastra. */
@@ -113,8 +114,9 @@ public class GroupFinanceController {
                                                           @RequestParam(required = false) BankKind bankKind,
                                                           @RequestParam(defaultValue = "0") int page,
                                                           @RequestParam(defaultValue = "10") int size,
-                                                          @RequestParam(required = false) String sort) {
-        return service.recurring(CurrentUser.id(jwt), groupId, type, BankFilter.of(bank, bankKind), page, size, sort);
+                                                          @RequestParam(required = false) String sort,
+                                                          @RequestParam(required = false) String q) {
+        return service.recurring(CurrentUser.id(jwt), groupId, type, BankFilter.of(bank, bankKind), q, page, size, sort);
     }
 
     /** Fixo só do grupo (sem item pessoal). */

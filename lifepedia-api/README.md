@@ -579,6 +579,10 @@ a FIPE dos veículos lidos há mais de 20 dias (até 200 por vez).
 | POST / PUT / DELETE | `/api/finance/transactions[/{id}]` | CRUD de ocasionais |
 | PUT | `/api/finance/transactions/{id}/month` | `{month, following?}` adianta/adia a parcela ("Loja (3/10)"); `following` move as seguintes da mesma compra com o mesmo deslocamento (sincronizadas nos grupos também) → `{moved}` · `400` antes do mês da compra ou `following` sem parcela no nome |
 | POST | `/api/finance/transactions/batch` | `{items: [...]}` (1 a 500) — lote de ocasionais, tudo ou nada; erro indica a linha |
+| GET | `/api/finance/transactions/search?q=&from=&to=&min=&max=&type=&categoryId=&bank=&bankKind=&page=&size=20&sort=` | Busca em todos os meses (texto sem acento e com erro de digitação; `from`/`to` pela data) → página + `income`/`expense` de tudo o que achou |
+| PUT | `/api/finance/transactions/batch` | `{ids, categoryId?, month?}` (até 500) muda categoria e/ou mês, tudo ou nada → `{count}` · `400` categoria de outro tipo ou mês antes da data · `404` item de outra pessoa |
+| POST | `/api/finance/transactions/batch/delete` | `{ids}` (até 500) exclui, tudo ou nada → `204` |
+| GET | `/api/search?q=&modules=&kinds=&groupId=&from=&to=&min=&max=&type=&categoryId=&limit=5` | Busca geral: `groups` por tipo (`kind`, `module`, `items`, `more`) e `totals` dos lançamentos · precisa de 2 letras ou um filtro · `groupId` só para membros (`404`) |
 | POST | `/api/finance/import` | `{transactions: [...], fixedAdjustments: [{recurringEntryId, month, amount}], fixedBanks: [{recurringEntryId, bank}], draftId?}` — importação de extrato/fatura, tudo ou nada; `fixedBanks` só preenche fixo sem banco; `draftId` fecha a revisão junto (`409` se já fechada) |
 | GET | `/api/finance/import/assistant` | `{enabled, maxFiles, maxTotalBytes, maxPages, quota: {intervalHours, weekLimit, monthLimit, usedWeek, usedMonth, nextAt}}` |
 | GET | `/api/finance/import/prompt` | `{prompt}` com as categorias, os fixos e os nomes da pessoa |
@@ -652,6 +656,8 @@ src/main/java/com/lifepedia/api/
 ├── group/         grupos, membros, convites, link de convite, imagens (GroupImageStore), GroupAccess,
 │                  GroupMemberRemovedEvent, GroupDeletedEvent, atividade (GroupActivityInterceptor), atalhos/fixar
 ├── friend/        pedidos de amizade, amigos, perfil do amigo
+├── search/        busca geral: SearchService/Controller, SearchKind, SearchSql (consulta, filtros, relevância), SearchText
+│                  (sem acento, trecho); cada módulo tem o seu SearchProvider (TransactionSearch, NoteSearch...)
 ├── architecture/  projetos com maquete 3D: acesso por papel (ArchitectureAccess), versões e espaço (ArchitectureService),
 │                  arquivos (ArchitectureFiles: GLB conferido, capa, anexos), compartilhamento e link público
 │                  (ArchShareService, PublicModelController), comentários/vistas/anexos (ArchCollabService), variantes/cômodos/luzes (ArchSceneService), limpeza

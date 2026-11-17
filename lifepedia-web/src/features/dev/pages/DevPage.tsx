@@ -1,7 +1,10 @@
 import { AlertTriangleIcon, CodeXmlIcon, PlugZapIcon, PlusIcon, SparklesIcon } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { ListSearch, NoMatches } from '@/components/ListSearch'
 import { PageHeader } from '@/components/PageHeader'
+import { useListSearch } from '@/components/use-list-search'
+import { matchesSearch } from '@/lib/search-text'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,11 +27,14 @@ export function DevPage() {
   const activity = useDevActivity(12)
   const [creating, setCreating] = useState(false)
   const [daily, setDaily] = useState(false)
+  const [search, setSearch] = useListSearch()
+  const shown = projects.data?.filter((p) => matchesSearch(search, p.name, p.description)) ?? []
   const empty = projects.data?.length === 0
 
   return (
     <div className="space-y-6">
       <PageHeader title="Dev" description="Seus projetos de trabalho: reuniões, MRs, revisões, pipelines e issues num lugar só."
+        toolbar={projects.data?.length ? <ListSearch value={search} onChange={setSearch} placeholder="Buscar projeto" /> : undefined}
         actions={[
           { label: 'Novo projeto', icon: PlusIcon, primary: true, onSelect: () => setCreating(true) },
           ...(today.data?.aiEnabled && !empty ? [{ label: 'Resumo do daily', icon: SparklesIcon, onSelect: () => setDaily(true) }] : []),
@@ -82,9 +88,11 @@ export function DevPage() {
 
           <section aria-labelledby="dev-projects" className="space-y-3">
             <h2 id="dev-projects" className="text-lg font-semibold tracking-tight">Projetos</h2>
-            <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {projects.data.map((p) => <li key={p.id}><ProjectCard project={p} /></li>)}
-            </ul>
+            {shown.length ? (
+              <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {shown.map((p) => <li key={p.id}><ProjectCard project={p} /></li>)}
+              </ul>
+            ) : <NoMatches onClear={() => setSearch('')} />}
           </section>
 
           <section aria-labelledby="dev-activity" className="space-y-3">

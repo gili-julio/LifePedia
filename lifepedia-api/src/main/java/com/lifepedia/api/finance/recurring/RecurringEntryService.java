@@ -9,11 +9,13 @@ import com.lifepedia.api.finance.group.GroupFinanceSync;
 import com.lifepedia.api.finance.recurring.RecurringEntryDtos.AdjustmentResponse;
 import com.lifepedia.api.finance.recurring.RecurringEntryDtos.RecurringEntryRequest;
 import com.lifepedia.api.finance.recurring.RecurringEntryDtos.RecurringEntryResponse;
+import com.lifepedia.api.search.SearchText;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.finance.transaction.TransactionService;
 import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.shared.PageResponse;
 import com.lifepedia.api.shared.Paging;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -56,10 +58,12 @@ public class RecurringEntryService {
             "amount", "r.amount");
 
     @Transactional(readOnly = true)
-    public PageResponse<RecurringEntryResponse> page(UUID userId, EntryType type, BankFilter bank,
+    public PageResponse<RecurringEntryResponse> page(UUID userId, EntryType type, BankFilter bank, String q,
                                                      int page, int size, String sort) {
         Pageable pageable = Paging.pageable(page, size, sort, SORT_FIELDS, "amount,desc", "r.id");
-        return PageResponse.of(repository.page(userId, type, bank.code(), bank.name(), bank.kind(), bank.none(), pageable), entries -> {
+        Page<RecurringEntry> found = repository.page(userId, type, bank.code(), bank.name(), bank.kind(), bank.none(),
+                SearchText.listPattern(q), pageable);
+        return PageResponse.of(found, entries -> {
             Map<UUID, List<RecurringAdjustment>> adjustments = adjustmentRepository
                     .findByRecurringEntryIdIn(entries.stream().map(RecurringEntry::getId).toList()).stream()
                     .collect(Collectors.groupingBy(RecurringAdjustment::getRecurringEntryId));

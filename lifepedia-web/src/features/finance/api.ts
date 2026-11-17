@@ -46,13 +46,29 @@ const keys = {
   categoryItems: (month: YearMonth, categoryId: string) => ['finance', 'summary', month, 'category', categoryId] as const,
   categories: ['finance', 'categories'] as const,
   recurring: ['finance', 'recurring'] as const,
-  recurringPage: (type: EntryType, params: PageParams, filter: BankFilter) => ['finance', 'recurring', 'page', type, params, filter] as const,
+  recurringPage: (type: EntryType, params: PageParams, filter: BankFilter, q: string) =>
+    ['finance', 'recurring', 'page', type, params, filter, q] as const,
   transactions: (month: YearMonth) => ['finance', 'transactions', month] as const,
   transactionsPage: (month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter) =>
     ['finance', 'transactions', 'page', month, type, params, filter] as const,
   transactionsSearch: (filter: TransactionSearch) => ['finance', 'transactions', 'search', filter] as const,
   descriptions: ['finance', 'transactions', 'descriptions'] as const,
+  transactionsFind: (query: TransactionQuery, params: PageParams) => ['finance', 'transactions', 'find', query, params] as const,
 }
+
+/** Busca da tela de lançamentos (todos os meses): texto, período pela data, valor, tipo e banco. */
+export type TransactionQuery = BankFilter & {
+  q?: string
+  from?: string
+  to?: string
+  min?: number
+  max?: number
+  type?: EntryType
+  categoryId?: string
+}
+
+/** Página da busca com a soma de tudo o que achou. */
+export type TransactionSearchPage = Page<Transaction> & { income: number; expense: number }
 
 /** Filtro de `/transactions/all` (descrição sem diferenciar maiúsculas). */
 export type TransactionSearch = { from: YearMonth; to?: YearMonth; type?: EntryType; description?: string }
@@ -116,10 +132,11 @@ export function useRecurringEntries() {
   })
 }
 
-export function useRecurringPage(type: EntryType, params: PageParams, filter: BankFilter = {}) {
+/** @param q busca na descrição, categoria e observação (sem acento) */
+export function useRecurringPage(type: EntryType, params: PageParams, filter: BankFilter = {}, q = '') {
   return useQuery({
-    queryKey: keys.recurringPage(type, params, filter),
-    queryFn: () => api<Page<RecurringEntry>>('/api/finance/recurring', { query: { type, ...params, ...filter } }),
+    queryKey: keys.recurringPage(type, params, filter, q),
+    queryFn: () => api<Page<RecurringEntry>>('/api/finance/recurring', { query: { type, ...params, ...filter, q } }),
     placeholderData: keepPreviousData,
   })
 }
@@ -132,10 +149,21 @@ export function fetchTransactions(queryClient: QueryClient, month: YearMonth) {
   })
 }
 
-export function useTransactionsPage(month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter = {}) {
+export function useTransactionsPage(month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter = {},
+                                    enabled = true) {
   return useQuery({
     queryKey: keys.transactionsPage(month, type, params, filter),
     queryFn: () => api<Page<Transaction>>('/api/finance/transactions', { query: { month, type, ...params, ...filter } }),
+    enabled,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useTransactionFind(query: TransactionQuery, params: PageParams, enabled: boolean) {
+  return useQuery({
+    queryKey: keys.transactionsFind(query, params),
+    queryFn: () => api<TransactionSearchPage>('/api/finance/transactions/search', { query: { ...query, ...params } }),
+    enabled,
     placeholderData: keepPreviousData,
   })
 }
@@ -188,6 +216,19 @@ export function useSaveTransaction() {
 export function useMoveTransactionMonth() {
   return useFinanceMutation(({ id, month, following }: { id: string; month: YearMonth; following: boolean }) =>
     api<{ moved: number }>(`/api/finance/transactions/${id}/month`, { method: 'PUT', body: { month, following } }),
+  )
+}
+
+/** Muda categoria e/ou mês de vários lançamentos (tudo ou nada). */
+export function useBatchUpdateTransactions() {
+  return useFinanceMutation((data: { ids: string[]; categoryId?: string; month?: YearMonth }) =>
+    api<{ count: number }>('/api/finance/transactions/batch', { method: 'PUT', body: data }),
+  )
+}
+
+export function useBatchDeleteTransactions() {
+  return useFinanceMutation((ids: string[]) =>
+    api<void>('/api/finance/transactions/batch/delete', { method: 'POST', body: { ids } }),
   )
 }
 

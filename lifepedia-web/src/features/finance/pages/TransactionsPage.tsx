@@ -1,4 +1,4 @@
-import { CalendarClockIcon, CheckCircle2Icon, PencilIcon, PlusIcon, RepeatIcon, SparklesIcon, Trash2Icon } from 'lucide-react'
+import { CalendarClockIcon, CheckCircle2Icon, PencilIcon, PlusIcon, RepeatIcon, SparklesIcon, Trash2Icon, XIcon } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -6,6 +6,9 @@ import { ActionSheet } from '@/components/ActionSheet'
 import { BankBadge, BankMark } from '@/components/bank/BankLogo'
 import { DataTablePagination } from '@/components/data-table/DataTablePagination'
 import { useClampPage, useListState } from '@/components/data-table/list-state'
+import { Highlight } from '@/components/Highlight'
+import { ListSearch } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
 import { SortableHead } from '@/components/data-table/SortableHead'
 import { SortSelect } from '@/components/data-table/SortSelect'
 import { PageHeader } from '@/components/PageHeader'
@@ -17,7 +20,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/lib/api'
 import { defaultDateInMonth, formatDate, formatMonth, type YearMonth } from '@/lib/format'
-import { useBankOverview, useDeleteTransaction, useMoveTransactionMonth, useSummary, useTransactionsPage } from '../api'
+import { useMoney } from '@/lib/hide-values'
+import {
+  useBankOverview,
+  useDeleteTransaction,
+  useMoveTransactionMonth,
+  useSummary,
+  useTransactionFind,
+  useTransactionsPage,
+  useTransactionsSearch,
+  type TransactionQuery,
+} from '../api'
 import { BankAssignBar } from '../components/BankAssignBar'
 import { BankFilterSelect } from '../components/BankFilterSelect'
 import { CategoryBadge } from '../components/CategoryBadge'
@@ -28,6 +41,7 @@ import { MoveInstallmentDialog } from '../components/MoveInstallmentDialog'
 import { MonthPicker } from '../components/MonthPicker'
 import { RecurringEntryDialog } from '../components/RecurringEntryDialog'
 import { TotalCard } from '../components/TotalCard'
+import { TransactionBatchActions } from '../components/TransactionBatchActions'
 import { TransactionDialog } from '../components/TransactionDialog'
 import { TypeIcon } from '../components/TypeIcon'
 import type { EntryType, Transaction } from '../types'
@@ -47,14 +61,31 @@ const SORT_OPTIONS = [
 
 export function TransactionsPage() {
   const [month, setMonthParam] = useMonthParam()
-  const [filter, setFilter] = useState<Filter>('ALL')
   const [params, setParams] = useSearchParams()
+  const [filter, setFilter] = useState<Filter>(() => typeParam(params.get('tipo')))
   const bankValue = params.get('banco') ?? ''
   const bankFilter = toBankFilter(bankValue)
   const list = useListState({ field: 'date', direction: 'desc' })
-  const { data, isLoading } = useTransactionsPage(month, filter === 'ALL' ? undefined : filter, list.params, bankFilter)
+  const [text, setText] = useListSearch()
+  const query: TransactionQuery = {
+    ...bankFilter,
+    q: text || undefined,
+    from: params.get('de') ?? undefined,
+    to: params.get('ate') ?? undefined,
+    min: numberParam(params.get('min')),
+    max: numberParam(params.get('max')),
+    type: filter === 'ALL' ? undefined : filter,
+  }
+  const extra = [query.from, query.to, query.min, query.max].some((v) => v !== undefined)
+  const searching = !!text || extra
+  const monthPage = useTransactionsPage(month, filter === 'ALL' ? undefined : filter, list.params, bankFilter, !searching)
+  const found = useTransactionFind(query, list.params, searching)
+  const { data, isLoading } = searching ? found : monthPage
   useClampPage(data, list.setPage)
-  const totals = useSummary(month, bankFilter).data?.occasional
+  const monthTotals = useSummary(month, bankFilter).data?.occasional
+  const totals = searching
+    ? found.data && { income: found.data.income, expense: found.data.expense, balance: found.data.income - found.data.expense }
+    : monthTotals
   const banks = useBankOverview(month).data?.banks
   const selection = useSelection()
   const remove = useDeleteTransaction()
@@ -65,11 +96,27 @@ export function TransactionsPage() {
   const [moving, setMoving] = useState<{ open: boolean; item?: Transaction }>({ open: false })
   const move = useMoveTransactionMonth()
 
+  const targetId = params.get('lancamento')
+  const target = useTransactionsSearch({ from: month, to: month }, !!targetId).data?.find((t) => t.id === targetId)
+  const creating = params.get('novo') === '1'
+
   const items = data?.items ?? []
+  const selectedTypes = new Set(items.filter((t) => selection.selected.has(t.id)).map((t) => t.type))
   const pageIds = items.map((t) => t.id)
   const allSelected = pageIds.length > 0 && pageIds.every((id) => selection.selected.has(id))
   const setMonth = (next: YearMonth) => {
     setMonthParam(next)
+    list.resetPage()
+    selection.clear()
+  }
+  const dropParams = (...names: string[]) =>
+    setParams((prev) => {
+      const next = new URLSearchParams(prev)
+      names.forEach((name) => next.delete(name))
+      return next
+    }, { replace: true })
+  const search = (value: string) => {
+    setText(value)
     list.resetPage()
     selection.clear()
   }
@@ -102,7 +149,8 @@ export function TransactionsPage() {
         hideValues
         title="Lançamentos ocasionais"
         description="Ganhos e gastos que não se repetem todo mês."
-        toolbar={<MonthPicker value={month} onChange={setMonth} />}
+        toolbar={searching ? <p className="text-sm text-muted-foreground">Buscando em todos os meses</p>
+          : <MonthPicker value={month} onChange={setMonth} />}
         actions={[
           { label: 'Importar com IA', icon: SparklesIcon, to: '/financeiro/importar' },
           { label: 'Novo lançamento', icon: PlusIcon, primary: true, onSelect: openNew },
@@ -110,9 +158,9 @@ export function TransactionsPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <TotalCard label="Ganhos ocasionais" value={totals?.income} kind="INCOME" />
-        <TotalCard label="Gastos ocasionais" value={totals?.expense} kind="EXPENSE" />
-        <TotalCard label="Saldo ocasional" value={totals?.balance} kind="BALANCE" />
+        <TotalCard label={searching ? 'Ganhos encontrados' : 'Ganhos ocasionais'} value={totals?.income} kind="INCOME" />
+        <TotalCard label={searching ? 'Gastos encontrados' : 'Gastos ocasionais'} value={totals?.expense} kind="EXPENSE" />
+        <TotalCard label={searching ? 'Saldo encontrado' : 'Saldo ocasional'} value={totals?.balance} kind="BALANCE" />
       </div>
 
       <Card>
@@ -128,20 +176,40 @@ export function TransactionsPage() {
                 <TabsTrigger value="INCOME">Ganhos</TabsTrigger>
               </TabsList>
             </Tabs>
-            <BankFilterSelect lines={banks} value={bankValue} onChange={setBank} />
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              <ListSearch value={text} onChange={search} placeholder="Buscar em todos os meses" />
+              <BankFilterSelect lines={banks} value={bankValue} onChange={setBank} />
+            </div>
           </div>
-          <BankAssignBar ids={selection.ids} target="transactions" onClear={selection.clear} />
+          {extra && <ExtraFilters query={query} onClear={() => { dropParams('de', 'ate', 'min', 'max'); list.resetPage() }} />}
+          {searching && data && (
+            <p className="text-sm text-muted-foreground">
+              {data.totalItems === 1 ? '1 lançamento encontrado' : `${data.totalItems} lançamentos encontrados`}.
+              Marque para mudar categoria, mês ou banco de uma vez.
+            </p>
+          )}
+          <BankAssignBar ids={selection.ids} target="transactions" onClear={selection.clear}>
+            <TransactionBatchActions ids={selection.ids} type={selectedTypes.size === 1 ? [...selectedTypes][0] : undefined}
+              onDone={selection.clear} />
+          </BankAssignBar>
 
           {isLoading ? (
             <Skeleton className="h-48" />
           ) : !items.length ? (
             <div className="flex flex-col items-center gap-3 py-12 text-center">
               <p className="text-sm text-muted-foreground">
-                Nenhum lançamento{bankValue ? ' neste banco' : ''} em {formatMonth(month).toLowerCase()}.
+                {searching ? 'Nada encontrado. Tente outra palavra ou tire um filtro.'
+                  : `Nenhum lançamento${bankValue ? ' neste banco' : ''} em ${formatMonth(month).toLowerCase()}.`}
               </p>
-              <Button variant="outline" onClick={openNew}>
-                <PlusIcon /> Registrar lançamento
-              </Button>
+              {searching ? (
+                <Button variant="outline" onClick={() => { search(''); dropParams('busca', 'de', 'ate', 'min', 'max') }}>
+                  <XIcon /> Limpar busca
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={openNew}>
+                  <PlusIcon /> Registrar lançamento
+                </Button>
+              )}
             </div>
           ) : (
             <>
@@ -153,7 +221,8 @@ export function TransactionsPage() {
                       key={t.id}
                       type={t.type}
                       title={t.description}
-                      details={<>{t.bank && <BankMark bank={t.bank} />}<CategoryBadge categoryId={t.categoryId} /> · {formatDate(t.date).slice(0, 5)}
+                      highlight={searching ? text : undefined}
+                      details={<>{t.bank && <BankMark bank={t.bank} />}<CategoryBadge categoryId={t.categoryId} /> · {searching ? formatDate(t.date) : formatDate(t.date).slice(0, 5)}
                         {t.checked && <CheckCircle2Icon className="size-3 shrink-0 text-income" aria-label="Conferido" />}</>}
                       amount={<Money value={t.amount} type={t.type} />}
                       onMore={() => setMenu({ open: true, item: t })}
@@ -193,10 +262,10 @@ export function TransactionsPage() {
                           {t.bank && <BankMark bank={t.bank} className="xl:hidden" />}
                           <div className="min-w-0">
                             <p className="flex items-center gap-1.5">
-                              <span className="truncate font-medium">{t.description}</span>
+                              <span className="truncate font-medium">{searching ? <Highlight text={t.description} query={text} /> : t.description}</span>
                               {t.checked && <CheckCircle2Icon className="size-3.5 shrink-0 text-income" aria-label="Conferido com a fatura ou o extrato" />}
                             </p>
-                            {t.notes && <p className="truncate text-xs text-muted-foreground">{t.notes}</p>}
+                            {t.notes && <p className="truncate text-xs text-muted-foreground">{searching ? <Highlight text={t.notes} query={text} /> : t.notes}</p>}
                           </div>
                         </div>
                       </TableCell>
@@ -256,9 +325,12 @@ export function TransactionsPage() {
         onConfirm={() => deleting && handleDelete(deleting)}
       />
       <TransactionDialog
-        open={dialog.open}
-        onOpenChange={(open) => setDialog((d) => ({ ...d, open }))}
-        transaction={dialog.transaction}
+        open={dialog.open || creating || !!target}
+        onOpenChange={(open) => {
+          setDialog((d) => ({ ...d, open }))
+          if (!open && (creating || targetId)) dropParams('novo', 'lancamento')
+        }}
+        transaction={dialog.open ? dialog.transaction : target}
         defaultDate={defaultDateInMonth(month)}
       />
       <MoveInstallmentDialog
@@ -274,4 +346,29 @@ export function TransactionsPage() {
       />
     </div>
   )
+}
+
+/** Período e valor vindos da busca geral, com botão para tirar. */
+function ExtraFilters({ query, onClear }: { query: TransactionQuery; onClear: () => void }) {
+  const { formatCurrency } = useMoney()
+  const value = query.min !== undefined && query.min === query.max ? `valor ${formatCurrency(query.min)}`
+    : [query.min !== undefined && `a partir de ${formatCurrency(query.min)}`, query.max !== undefined && `até ${formatCurrency(query.max)}`]
+      .filter(Boolean).join(' e ')
+  const parts = [query.from && `desde ${formatDate(query.from)}`, query.to && `até ${formatDate(query.to)}`, value].filter(Boolean)
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="rounded-full bg-muted px-3 py-1">{parts.join(', ')}</span>
+      <Button size="sm" variant="ghost" onClick={onClear}><XIcon /> Tirar filtros</Button>
+    </div>
+  )
+}
+
+function typeParam(value: string | null): Filter {
+  return value === 'INCOME' || value === 'EXPENSE' ? value : 'ALL'
+}
+
+function numberParam(value: string | null) {
+  if (value === null || value === '') return undefined
+  const number = Number(value)
+  return Number.isFinite(number) ? number : undefined
 }

@@ -8,7 +8,10 @@ import { DataTablePagination } from '@/components/data-table/DataTablePagination
 import { useClampPage, useListState, type ListState, type Page } from '@/components/data-table/list-state'
 import { SortableHead } from '@/components/data-table/SortableHead'
 import { SortSelect } from '@/components/data-table/SortSelect'
+import { Highlight } from '@/components/Highlight'
+import { ListSearch } from '@/components/ListSearch'
 import { PageHeader } from '@/components/PageHeader'
+import { useListSearch } from '@/components/use-list-search'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -75,9 +78,10 @@ type EntryListProps = {
   selection: ReturnType<typeof useSelection>
   /** Lista filtrada por banco */
   filtered: boolean
+  search: string
 }
 
-function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore, selection, filtered }: EntryListProps) {
+function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore, selection, filtered, search }: EntryListProps) {
   const { formatCurrency } = useMoney()
   const entries = data?.items ?? []
   const noun = type === 'INCOME' ? 'ganho fixo' : 'despesa fixa'
@@ -86,6 +90,9 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
   const allSelected = pageIds.length > 0 && pageIds.every((id) => selection.selected.has(id))
 
   if (!data) return <Skeleton className="h-48" />
+  if (!data.totalItems && search) {
+    return <p className="py-12 text-center text-sm text-muted-foreground">Nada encontrado com essa busca.</p>
+  }
   if (!data.totalItems) {
     return (
       <div className="flex flex-col items-center gap-3 py-12 text-center">
@@ -109,6 +116,7 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
               key={entry.id}
               type={entry.type}
               title={entry.description}
+              highlight={search || undefined}
               muted={!isCurrent(entry)}
               details={
                 <>
@@ -160,7 +168,7 @@ function EntryList({ data, list, type, total, onCreate, onEdit, onDelete, onMore
                 <div className="flex items-center gap-2">
                   <TypeIcon type={entry.type} />
                   {entry.bank && <BankMark bank={entry.bank} className="xl:hidden" />}
-                  <span className="font-medium">{entry.description}</span>
+                  <span className="font-medium"><Highlight text={entry.description} query={search} /></span>
                 </div>
               </TableCell>
               <TableCell><CategoryBadge categoryId={entry.categoryId} /></TableCell>
@@ -207,7 +215,8 @@ export function RecurringEntriesPage() {
   const [params, setParams] = useSearchParams()
   const bankValue = params.get('banco') ?? ''
   const bankFilter = toBankFilter(bankValue)
-  const { data } = useRecurringPage(tab, list.params, bankFilter)
+  const [search, setSearch] = useListSearch()
+  const { data } = useRecurringPage(tab, list.params, bankFilter, search)
   useClampPage(data, list.setPage)
   const banks = useBankOverview(currentYearMonth()).data?.banks
   const selection = useSelection()
@@ -274,7 +283,14 @@ export function RecurringEntriesPage() {
                 <TabsTrigger value="INCOME">Ganhos</TabsTrigger>
               </TabsList>
             </Tabs>
-            <BankFilterSelect lines={banks} value={bankValue} onChange={setBank} />
+            <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+              <ListSearch value={search} onChange={(value) => {
+                setSearch(value)
+                list.resetPage()
+                selection.clear()
+              }} placeholder="Buscar fixo" />
+              <BankFilterSelect lines={banks} value={bankValue} onChange={setBank} />
+            </div>
           </div>
           <BankAssignBar ids={selection.ids} target="recurring" onClear={selection.clear} />
           <EntryList
@@ -288,6 +304,7 @@ export function RecurringEntriesPage() {
             onMore={openMenu}
             selection={selection}
             filtered={!!bankValue}
+            search={search}
           />
         </CardContent>
       </Card>

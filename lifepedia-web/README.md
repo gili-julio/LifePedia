@@ -191,6 +191,8 @@ src/
 │   ├── MonthField.tsx        campo de mês do sistema (grade de meses, opcionalmente limpável)
 │   ├── ColorPicker.tsx       paleta (lib/colors) + cor livre
 │   ├── ConfirmDelete.tsx     confirmação de exclusão (com botão próprio ou controlada)
+│   ├── ListSearch.tsx        campo de busca das listas (pausa na digitação, Esc limpa) + NoMatches; use-list-search (`?busca=`)
+│   ├── Highlight.tsx         destaca as palavras da busca (sem acento)
 │   ├── SortableItems.tsx     lista reordenável (dnd-kit: alça, teclado, anúncios pt-BR)
 │   ├── data-table/           listagens: useListState, SortableHead, SortSelect (mobile), DataTablePagination
 │   └── Logo.tsx
@@ -229,6 +231,9 @@ src/
 │   │                         painéis, popovers e barras da maquete; ModelStage, ModelTab com comentários e cena,
 │   │                         NewVersionDialog, ShareDialog, VersionsTab,
 │   │                         AttachmentsTab, ProjectFormDialog, UsageBar, WalkJoystick); páginas (lista, projeto, link público)
+│   ├── search/               busca geral: SearchProvider (Ctrl K, "/", grupo da página), SearchPalette (resultados,
+│   │                         teclado, prévia), SearchFiltersBar, SearchPreview, api, query.ts (valor no texto, período),
+│   │                         kinds.ts (textos e ícones), actions.ts (telas e ações), recent.ts (recentes até sair)
 │   ├── announcements/        AnnouncementBanner (faixa dos avisos no topo do AppLayout) + api
 │   ├── legal/                Termos e Política (LegalLayout, PrivacyPage, TermsPage), legal.ts (versão, controlador e
 │   │                         contato), LegalLinks (rodapés), LegalGate (aceite obrigatório, no AppLayout)
@@ -297,6 +302,6 @@ src/
 │       ├── group/                    financeiro dentro dos grupos: visão geral, abas de itens, BringItemsDialog, GroupShareSection
 │       └── pages/                    Dashboard, Fixos, Lançamentos, Importar, Categorias
 ├── hooks/use-mobile.ts       gerado pelo shadcn (sidebar); celular = abaixo de 1024px
-├── lib/                      pwa (service worker, instalar, cor da barra), api (fetch com cookie + X-Requested-With), format (moeda/mês/data, formatInstantDate no fuso local), hide-values (ocultar valores: `useMoney`, preferência no aparelho), colors (paleta), utils (cn), skipAutoFocusOnTouch
+├── lib/                      pwa (service worker, instalar, cor da barra), api (fetch com cookie + X-Requested-With), format (moeda/mês/data, formatInstantDate no fuso local), hide-values (ocultar valores: `useMoney`, preferência no aparelho), search-text (sem acento, erro de digitação, trechos), colors (paleta), utils (cn), skipAutoFocusOnTouch
 └── index.css                 tema shadcn (maia) + Manrope + cores de significado (--income/--expense/--data)
 ```

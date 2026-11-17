@@ -14,9 +14,14 @@ import com.lifepedia.api.finance.Installments.MoveRequest;
 import com.lifepedia.api.finance.Installments.MoveResult;
 import com.lifepedia.api.finance.group.GroupFinanceSync;
 import com.lifepedia.api.finance.wallet.CardMonths;
+import com.lifepedia.api.finance.transaction.TransactionDtos.BatchResult;
+import com.lifepedia.api.finance.transaction.TransactionDtos.BatchUpdateRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.CheckRequest;
+import com.lifepedia.api.finance.transaction.TransactionDtos.SearchPage;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionResponse;
+import com.lifepedia.api.search.SearchQuery;
+import com.lifepedia.api.search.SearchTotals;
 import com.lifepedia.api.shared.BusinessException;
 import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.shared.PageResponse;
@@ -39,6 +44,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -50,17 +56,26 @@ public class TransactionService {
     private final GroupFinanceSync groupSync;
     private final ApplicationEventPublisher events;
     private final CardMonths cardMonths;
+    private final TransactionSearch finder;
 
     public TransactionService(TransactionRepository repository, CategoryService categoryService,
                               GroupFinanceService groupFinance, GroupFinanceSync groupSync,
-                              ApplicationEventPublisher events, CardMonths cardMonths) {
+                              ApplicationEventPublisher events, CardMonths cardMonths, TransactionSearch finder) {
         this.repository = repository;
         this.categoryService = categoryService;
         this.groupFinance = groupFinance;
         this.groupSync = groupSync;
         this.events = events;
         this.cardMonths = cardMonths;
+        this.finder = finder;
     }
+
+    private static final int MAX_PAGE = 100;
+    private static final Map<String, String> SEARCH_SORT = Map.of(
+            "date", "t.date",
+            "description", "lower(t.description)",
+            "category", "lower(c.name)",
+            "amount", "t.amount");
 
     private static final Map<String, String> SORT_FIELDS = Map.of(
             "date", "t.date",
@@ -86,6 +101,20 @@ public class TransactionService {
         return repository.search(userId, from, to, type, normalized).stream().map(TransactionResponse::from).toList();
     }
 
+    /** Busca da tela de lançamentos: em todos os meses (ou no período), com a soma de tudo o que achou. */
+    @Transactional(readOnly = true)
+    public SearchPage searchPage(UUID userId, SearchQuery query, BankFilter bank, String sort, int page, int size) {
+        if (page < 0 || size < 1 || size > MAX_PAGE) throw new BusinessException(HttpStatus.BAD_REQUEST, "Página inválida.");
+        SearchTotals totals = finder.totals(query, bank);
+        List<UUID> ids = finder.ids(query, bank, searchOrder(sort), page, size);
+        Map<UUID, Transaction> byId = new HashMap<>();
+        repository.findByUserIdAndIdIn(userId, ids).forEach(t -> byId.put(t.getId(), t));
+        List<TransactionResponse> items = ids.stream().map(byId::get).filter(Objects::nonNull)
+                .map(TransactionResponse::from).toList();
+        return new SearchPage(items, page, size, totals.count(), (int) ((totals.count() + size - 1) / size),
+                totals.income(), totals.expense());
+    }
+
     /** Nomes que o usuário já usa (últimos 12 meses), para padronizar a importação. */
     @Transactional(readOnly = true)
     public List<String> descriptions(UUID userId) {
@@ -95,12 +124,35 @@ public class TransactionService {
     /** Exclui ocasionais do usuário; todos precisam existir. */
     @Transactional
     public void deleteAll(UUID userId, Collection<UUID> ids) {
-        Set<UUID> unique = new HashSet<>(ids);
-        List<Transaction> found = repository.findByUserIdAndIdIn(userId, unique);
-        if (found.size() != unique.size()) {
-            throw new NotFoundException("Lançamento a remover não encontrado.");
+        repository.deleteAll(requireAll(userId, ids));
+    }
+
+    /** Muda categoria e/ou mês de vários lançamentos (tudo ou nada); devolve quantos. */
+    @Transactional
+    public BatchResult updateAll(UUID userId, BatchUpdateRequest request) {
+        if (request.categoryId() == null && request.month() == null) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Escolha a categoria ou o mês.");
         }
-        repository.deleteAll(found);
+        List<Transaction> found = requireAll(userId, request.ids());
+        Category category = null;
+        if (request.categoryId() != null) {
+            category = categoryService.mapByIdFor(userId).get(request.categoryId());
+            if (category == null) throw new BusinessException(HttpStatus.BAD_REQUEST, "Categoria inválida.");
+        }
+        for (Transaction t : found) {
+            if (category != null) CategoryService.requireMatchingType(category, t.getType());
+            if (request.month() != null && request.month().isBefore(YearMonth.from(t.getDate()))) {
+                throw new BusinessException(HttpStatus.BAD_REQUEST,
+                        "O mês não pode ser anterior à data de \"" + t.getDescription() + "\".");
+            }
+        }
+        for (Transaction t : found) {
+            if (category != null) t.setCategoryId(category.getId());
+            if (request.month() != null) t.setMonth(request.month());
+        }
+        // A sincronização limpa o contexto do JPA: tudo muda antes dela.
+        found.forEach(groupSync::transactionChanged);
+        return new BatchResult(found.size());
     }
 
     public static String normalize(String description) {
@@ -194,6 +246,21 @@ public class TransactionService {
     @Transactional
     public void delete(UUID userId, UUID id) {
         repository.delete(find(userId, id));
+    }
+
+    /** {@code campo,asc|desc} dos mesmos campos da página do mês; padrão: data, mais novo primeiro. */
+    private static String searchOrder(String sort) {
+        String[] parts = sort == null || sort.isBlank() ? new String[] {"date", "desc"} : sort.split(",");
+        String column = SEARCH_SORT.get(parts[0]);
+        if (column == null) throw new BusinessException(HttpStatus.BAD_REQUEST, "Ordenação inválida.");
+        return column + (parts.length > 1 && "asc".equalsIgnoreCase(parts[1]) ? " asc" : " desc");
+    }
+
+    private List<Transaction> requireAll(UUID userId, Collection<UUID> ids) {
+        Set<UUID> unique = new HashSet<>(ids);
+        List<Transaction> found = repository.findByUserIdAndIdIn(userId, unique);
+        if (found.size() != unique.size()) throw new NotFoundException("Lançamento não encontrado.");
+        return found;
     }
 
     private Transaction find(UUID userId, UUID id) {

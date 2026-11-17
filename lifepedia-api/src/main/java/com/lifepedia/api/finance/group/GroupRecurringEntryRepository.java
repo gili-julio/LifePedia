@@ -17,16 +17,21 @@ import java.util.UUID;
 
 public interface GroupRecurringEntryRepository extends JpaRepository<GroupRecurringEntry, UUID> {
 
+    /** {@code text}: padrão de LIKE já sem acento ({@code SearchText.listPattern}), na descrição, categoria, observação e quem levou. */
+    String TEXT = "and (:text is null or cast(function('search_norm', "
+            + "concat(r.description, ' ', c.name, ' ', u.name, ' ', coalesce(r.notes, ''))) as String) like :text escape '\\')";
+
     /** Ordenação por expressões com {@code r} (item), {@code c} (categoria) e {@code u} (quem levou). */
     @Query(value = "select r from GroupRecurringEntry r join Category c on c.id = r.categoryId join User u on u.id = r.userId "
             + "where r.groupId = :groupId and (:type is null or r.type = :type) "
             + "and (:bankCode is null or r.bank.code = :bankCode) and (:bankName is null or lower(r.bank.name) = :bankName) "
-            + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null)",
-            countQuery = "select count(r) from GroupRecurringEntry r where r.groupId = :groupId and (:type is null or r.type = :type) "
+            + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null) " + TEXT,
+            countQuery = "select count(r) from GroupRecurringEntry r join Category c on c.id = r.categoryId join User u on u.id = r.userId "
+                    + "where r.groupId = :groupId and (:type is null or r.type = :type) "
                     + "and (:bankCode is null or r.bank.code = :bankCode) and (:bankName is null or lower(r.bank.name) = :bankName) "
-                    + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null)")
+                    + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null) " + TEXT)
     Page<GroupRecurringEntry> page(UUID groupId, EntryType type, String bankCode, String bankName, BankKind bankKind,
-                                   boolean noBank, Pageable pageable);
+                                   boolean noBank, String text, Pageable pageable);
 
     Optional<GroupRecurringEntry> findByIdAndGroupId(UUID id, UUID groupId);
 

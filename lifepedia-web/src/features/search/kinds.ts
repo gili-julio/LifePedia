@@ -1,0 +1,76 @@
+import {
+  Building2Icon,
+  CalendarCheck2Icon,
+  CalendarRangeIcon,
+  CarIcon,
+  CodeXmlIcon,
+  CreditCardIcon,
+  FuelIcon,
+  GitPullRequestIcon,
+  HeartHandshakeIcon,
+  LandmarkIcon,
+  ListTodoIcon,
+  MessageCircleIcon,
+  NotebookPenIcon,
+  PackageIcon,
+  ReceiptTextIcon,
+  RepeatIcon,
+  ShoppingBagIcon,
+  TagsIcon,
+  UsersIcon,
+  WalletCardsIcon,
+  WrenchIcon,
+  type LucideIcon,
+} from 'lucide-react'
+import type { AppModule } from '@/features/auth/types'
+import type { SearchKind } from './types'
+
+export const KINDS: Record<SearchKind, { label: string; icon: LucideIcon }> = {
+  TRANSACTION: { label: 'Lançamentos', icon: ReceiptTextIcon },
+  RECURRING: { label: 'Fixos', icon: RepeatIcon },
+  CATEGORY: { label: 'Categorias', icon: TagsIcon },
+  CARD: { label: 'Cartões', icon: CreditCardIcon },
+  ACCOUNT: { label: 'Contas', icon: WalletCardsIcon },
+  GROUP_TRANSACTION: { label: 'Lançamentos dos grupos', icon: ReceiptTextIcon },
+  GROUP_RECURRING: { label: 'Fixos dos grupos', icon: RepeatIcon },
+  FINANCING: { label: 'Financiamentos', icon: LandmarkIcon },
+  TASK: { label: 'Tarefas', icon: ListTodoIcon },
+  EVENT: { label: 'Agenda', icon: CalendarRangeIcon },
+  COMMITMENT: { label: 'Frequência', icon: CalendarCheck2Icon },
+  NOTE: { label: 'Notas', icon: NotebookPenIcon },
+  DELIVERY: { label: 'Entregas', icon: PackageIcon },
+  VEHICLE: { label: 'Veículos', icon: CarIcon },
+  VEHICLE_EXPENSE: { label: 'Gastos dos veículos', icon: FuelIcon },
+  VEHICLE_SERVICE: { label: 'Manutenções', icon: WrenchIcon },
+  GROUP: { label: 'Grupos', icon: UsersIcon },
+  PLAN_ITEM: { label: 'Planejamento dos grupos', icon: ShoppingBagIcon },
+  MESSAGE: { label: 'Mensagens', icon: MessageCircleIcon },
+  FRIEND: { label: 'Amigos', icon: HeartHandshakeIcon },
+  DEV_PROJECT: { label: 'Projetos Dev', icon: CodeXmlIcon },
+  DEV_ITEM: { label: 'Issues e MRs', icon: GitPullRequestIcon },
+  ARCH_PROJECT: { label: 'Arquitetura', icon: Building2Icon },
+}
+
+/** Módulos do filtro, na ordem do menu. */
+export const MODULES: { id: AppModule; label: string }[] = [
+  { id: 'FINANCE', label: 'Financeiro' },
+  { id: 'FINANCING', label: 'Financiamentos' },
+  { id: 'TASKS', label: 'Tarefas' },
+  { id: 'AGENDA', label: 'Agenda' },
+  { id: 'ATTENDANCE', label: 'Frequência' },
+  { id: 'NOTES', label: 'Notas' },
+  { id: 'DELIVERIES', label: 'Entregas' },
+  { id: 'VEHICLES', label: 'Veículos' },
+  { id: 'GROUPS', label: 'Grupos' },
+  { id: 'FRIENDS', label: 'Amigos' },
+  { id: 'DEV', label: 'Dev' },
+  { id: 'ARCHITECTURE', label: 'Arquitetura' },
+]
+
+export const PERIODS = [
+  { id: 'all', label: 'Qualquer data' },
+  { id: 'month', label: 'Este mês' },
+  { id: '30d', label: 'Últimos 30 dias' },
+  { id: '3m', label: 'Últimos 3 meses' },
+  { id: 'year', label: 'Este ano' },
+] as const

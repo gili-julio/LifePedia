@@ -15,10 +15,10 @@ const keys = {
   categoryItems: (groupId: string, month: YearMonth, category: string) =>
     ['finance', 'groups', groupId, 'summary', month, 'category', category] as const,
   banks: (groupId: string, month: YearMonth, months: number) => ['finance', 'groups', groupId, 'banks', month, months] as const,
-  transactions: (groupId: string, month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter) =>
-    ['finance', 'groups', groupId, 'transactions', month, type, params, filter] as const,
-  recurring: (groupId: string, type: EntryType, params: PageParams, filter: BankFilter) =>
-    ['finance', 'groups', groupId, 'recurring', type, params, filter] as const,
+  transactions: (groupId: string, month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter, q: string) =>
+    ['finance', 'groups', groupId, 'transactions', month, type, params, filter, q] as const,
+  recurring: (groupId: string, type: EntryType, params: PageParams, filter: BankFilter, q: string) =>
+    ['finance', 'groups', groupId, 'recurring', type, params, filter, q] as const,
   origins: (groupId: string) => ['finance', 'groups', groupId, 'origins'] as const,
 }
 
@@ -55,18 +55,20 @@ export function useGroupCategoryItems(groupId: string, month: YearMonth, categor
   })
 }
 
-export function useGroupTransactionsPage(groupId: string, month: YearMonth, type: EntryType | undefined, params: PageParams, filter: BankFilter = {}) {
+/** @param q busca na descrição, categoria, observação e quem levou (sem acento) */
+export function useGroupTransactionsPage(groupId: string, month: YearMonth, type: EntryType | undefined, params: PageParams,
+                                         filter: BankFilter = {}, q = '') {
   return useQuery({
-    queryKey: keys.transactions(groupId, month, type, params, filter),
-    queryFn: () => api<Page<GroupTransaction>>(`${base(groupId)}/transactions`, { query: { month, type, ...params, ...filter } }),
+    queryKey: keys.transactions(groupId, month, type, params, filter, q),
+    queryFn: () => api<Page<GroupTransaction>>(`${base(groupId)}/transactions`, { query: { month, type, ...params, ...filter, q } }),
     placeholderData: keepPreviousData,
   })
 }
 
-export function useGroupRecurringPage(groupId: string, type: EntryType, params: PageParams, filter: BankFilter = {}) {
+export function useGroupRecurringPage(groupId: string, type: EntryType, params: PageParams, filter: BankFilter = {}, q = '') {
   return useQuery({
-    queryKey: keys.recurring(groupId, type, params, filter),
-    queryFn: () => api<Page<GroupRecurringEntry>>(`${base(groupId)}/recurring`, { query: { type, ...params, ...filter } }),
+    queryKey: keys.recurring(groupId, type, params, filter, q),
+    queryFn: () => api<Page<GroupRecurringEntry>>(`${base(groupId)}/recurring`, { query: { type, ...params, ...filter, q } }),
     placeholderData: keepPreviousData,
   })
 }

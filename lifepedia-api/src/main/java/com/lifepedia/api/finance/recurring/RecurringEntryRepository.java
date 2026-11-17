@@ -24,16 +24,21 @@ public interface RecurringEntryRepository extends JpaRepository<RecurringEntry, 
 
     Optional<RecurringEntry> findByIdAndUserId(UUID id, UUID userId);
 
+    /** {@code text}: padrão de LIKE já sem acento ({@code SearchText.like}), na descrição, categoria e observação. */
+    String TEXT = "and (:text is null or cast(function('search_norm', "
+            + "concat(r.description, ' ', c.name, ' ', coalesce(r.notes, ''))) as String) like :text escape '\\')";
+
     /** Ordenação por expressões com {@code r} (fixo) e {@code c} (categoria). */
     @Query(value = "select r from RecurringEntry r join Category c on c.id = r.categoryId "
             + "where r.userId = :userId and (:type is null or r.type = :type) "
             + "and (:bankCode is null or r.bank.code = :bankCode) and (:bankName is null or lower(r.bank.name) = :bankName) "
-            + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null)",
-            countQuery = "select count(r) from RecurringEntry r where r.userId = :userId and (:type is null or r.type = :type) "
+            + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null) " + TEXT,
+            countQuery = "select count(r) from RecurringEntry r join Category c on c.id = r.categoryId "
+                    + "where r.userId = :userId and (:type is null or r.type = :type) "
                     + "and (:bankCode is null or r.bank.code = :bankCode) and (:bankName is null or lower(r.bank.name) = :bankName) "
-                    + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null)")
+                    + "and (:bankKind is null or r.bank.kind = :bankKind) and (:noBank = false or r.bank.code is null) " + TEXT)
     Page<RecurringEntry> page(UUID userId, EntryType type, String bankCode, String bankName, BankKind bankKind,
-                              boolean noBank, Pageable pageable);
+                              boolean noBank, String text, Pageable pageable);
 
     /** Itens com banco, do mais novo ao mais antigo. */
     @Query("select r from RecurringEntry r where r.userId = :userId and r.bank.code is not null order by r.createdAt desc")

@@ -2,6 +2,9 @@ import { PackagePlusIcon } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
+import { ListSearch, NoMatches } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
+import { matchesSearch } from '@/lib/search-text'
 import { ScrollTabsList } from '@/components/ScrollTabsList'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -11,6 +14,7 @@ import { useDeliveries } from '../api'
 import { AddressList } from '../components/AddressList'
 import { DeliveryCard } from '../components/DeliveryCard'
 import { DeliveryDialog } from '../components/DeliveryDialog'
+import type { Delivery } from '../types'
 
 const TABS = ['andamento', 'entregues', 'enderecos'] as const
 type Tab = (typeof TABS)[number]
@@ -22,10 +26,13 @@ export function DeliveriesPage() {
   const [creating, setCreating] = useState(params.get('nova') === '1')
   const active = useDeliveries(false)
   const archived = useDeliveries(true)
+  const [search, setSearch] = useListSearch()
+  const match = (d: Delivery) => matchesSearch(search, d.name, d.trackingCode, d.carrier?.name, d.group?.name)
 
   return (
     <div className="space-y-6">
       <PageHeader title="Entregas" description="Cole o código de rastreio das suas compras e acompanhe o caminho até você."
+        toolbar={tab !== 'enderecos' ? <ListSearch value={search} onChange={setSearch} placeholder="Buscar entrega ou código" /> : undefined}
         actions={[{ label: 'Nova entrega', icon: PackagePlusIcon, primary: true, onSelect: () => setCreating(true) }]} />
 
       <Tabs value={tab} onValueChange={(v) => setParams((p) => { p.set('aba', v); return p }, { replace: true })}>
@@ -47,14 +54,14 @@ export function DeliveriesPage() {
                   <Button onClick={() => setCreating(true)}><PackagePlusIcon /> Nova entrega</Button>
                 </CardContent>
               </Card>
-            ) : <Grid>{active.data.map((d) => <DeliveryCard key={d.id} delivery={d} />)}</Grid>}
+            ) : <Matches items={active.data.filter(match)} onClear={() => setSearch('')} />}
         </TabsContent>
 
         <TabsContent value="entregues" className="space-y-3 pt-2">
           <p className="text-sm text-muted-foreground">Entregues saem de "Em andamento" uma semana depois. Você também pode arquivar à mão.</p>
           {!archived.data ? <Skeleton className="h-40" />
             : !archived.data.length ? <p className="text-sm text-muted-foreground">Nada no histórico ainda.</p>
-            : <Grid>{archived.data.map((d) => <DeliveryCard key={d.id} delivery={d} />)}</Grid>}
+            : <Matches items={archived.data.filter(match)} onClear={() => setSearch('')} />}
         </TabsContent>
 
         <TabsContent value="enderecos" className="pt-2">
@@ -78,4 +85,9 @@ export function DeliveriesPage() {
 
 function Grid({ children }: { children: ReactNode }) {
   return <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">{children}</div>
+}
+
+function Matches({ items, onClear }: { items: Delivery[]; onClear: () => void }) {
+  if (!items.length) return <NoMatches onClear={onClear} />
+  return <Grid>{items.map((d) => <DeliveryCard key={d.id} delivery={d} />)}</Grid>
 }

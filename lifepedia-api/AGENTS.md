@@ -114,6 +114,12 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 - **Banco** (`finance/bank`): `BankRef` é `@Embedded` em ocasionais, fixos e itens de grupo; valide com `BankRef.clean`
   antes de gravar e passe nos `sync` do `GroupFinanceSync`. Soma por banco só em `BankReport`, nunca em SQL solto.
   Banco novo no catálogo = valor em `Bank` + entrada e logo no web (`src/lib/banks.ts`).
+- **Busca** (`search/`): fonte nova = um `@Component` que implementa `SearchProvider` **no pacote do módulo** (ex.:
+  `note/NoteSearch`), com `SearchKind` novo (módulo e se aceita período, valor, entrada/saída e grupo). Consulta só por
+  `SearchSql` (texto como parâmetro, `owned`/`inGroups` para o escopo, `dates`/`amounts`/`finance` para os filtros) e
+  `JdbcClient`; visibilidade igual à do módulo (dono, grupos em que é membro, compartilhados). Link da web em `SearchHit`
+  (`SearchHit.encode` no `?busca=`). Listas paginadas filtram com `SearchText.listPattern` + `cast(function('search_norm',
+  ...) as String) like :text escape '\\'` no JPQL. Testes: `SearchIntegrationTest`, `SearchTextTest`.
 - **Carteira** (`finance/wallet`): ciclo só em `CardCycle` (puro) e faturas, situação, previsão, limite e o que a conta
   paga só em `CardBook` (puro, tudo carregado antes; `CardBookTest`). Cartão e conta casam com os lançamentos pela chave do
   banco + `kind` (`Card.matches`, `BankAccount.matches`); um de cada por banco. `TransactionService` só pergunta a fatura

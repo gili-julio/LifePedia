@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
+import { ListSearch } from '@/components/ListSearch'
 import { ScrollTabsList } from '@/components/ScrollTabsList'
+import { useListSearch } from '@/components/use-list-search'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsTrigger } from '@/components/ui/tabs'
 import type { GroupDetail } from '@/features/groups/types'
@@ -11,6 +13,7 @@ import type { TaskFilters, TaskSort } from '../types'
 import { LabelsDialog } from './LabelsDialog'
 import { useTaskActions } from './task-actions'
 import { TaskDialog, type TaskTarget } from './TaskDialog'
+import { TaskSearchResults } from './TaskSearchResults'
 import { HabitsView } from './HabitsView'
 import { DoneView, TodayView, UndatedView, UpcomingView } from './TaskViews'
 import { WeekView } from './WeekView'
@@ -52,6 +55,7 @@ export function TasksBoard({ group, param, header }: Props) {
   const [filters, setFilters] = useState<TaskFilters>({ list: null, tag: null, assignee: null, sort: 'MANUAL' })
   const [chosen, setChosen] = useState<TaskTarget | null>(null)
   const [labelsOpen, setLabelsOpen] = useState(false)
+  const [search, setSearch] = useListSearch()
   const today = todayIso()
   const labels = useLabelLookup(board.groupId)
   const linked = params.get('tarefa')
@@ -88,22 +92,28 @@ export function TasksBoard({ group, param, header }: Props) {
           openLabels: () => setLabelsOpen(true),
         })}
 
-        <Tabs value={tab} onValueChange={(value) => update({ [param]: value === 'hoje' ? null : value })}>
-          <ScrollTabsList value={tab}>
-            <TabsTrigger value="hoje">Hoje</TabsTrigger>
-            <TabsTrigger value="semana">Semana</TabsTrigger>
-            <TabsTrigger value="proximos">Próximos</TabsTrigger>
-            <TabsTrigger value="sem-data">Sem data</TabsTrigger>
-            <TabsTrigger value="habitos">Hábitos</TabsTrigger>
-            <TabsTrigger value="concluidas">Concluídas</TabsTrigger>
-          </ScrollTabsList>
-          <TabsContent value="hoje" className="pt-4"><TodayView {...view} /></TabsContent>
-          <TabsContent value="semana" className="pt-4"><WeekView {...view} /></TabsContent>
-          <TabsContent value="proximos" className="pt-4"><UpcomingView {...view} /></TabsContent>
-          <TabsContent value="sem-data" className="pt-4"><UndatedView {...view} /></TabsContent>
-          <TabsContent value="habitos" className="pt-4"><HabitsView today={today} labels={labels} onEdit={setChosen} /></TabsContent>
-          <TabsContent value="concluidas" className="pt-4"><DoneView labels={labels} /></TabsContent>
-        </Tabs>
+        <ListSearch value={search} onChange={setSearch} placeholder="Buscar tarefa em todas as datas" className="sm:w-80" />
+        {search ? (
+          <TaskSearchResults query={search} groupId={board.groupId} onClear={() => setSearch('')}
+            onOpen={(taskId) => setChosen({ mode: 'edit', groupId: board.groupId, taskId, occurrence: null })} />
+        ) : (
+          <Tabs value={tab} onValueChange={(value) => update({ [param]: value === 'hoje' ? null : value })}>
+            <ScrollTabsList value={tab}>
+              <TabsTrigger value="hoje">Hoje</TabsTrigger>
+              <TabsTrigger value="semana">Semana</TabsTrigger>
+              <TabsTrigger value="proximos">Próximos</TabsTrigger>
+              <TabsTrigger value="sem-data">Sem data</TabsTrigger>
+              <TabsTrigger value="habitos">Hábitos</TabsTrigger>
+              <TabsTrigger value="concluidas">Concluídas</TabsTrigger>
+            </ScrollTabsList>
+            <TabsContent value="hoje" className="pt-4"><TodayView {...view} /></TabsContent>
+            <TabsContent value="semana" className="pt-4"><WeekView {...view} /></TabsContent>
+            <TabsContent value="proximos" className="pt-4"><UpcomingView {...view} /></TabsContent>
+            <TabsContent value="sem-data" className="pt-4"><UndatedView {...view} /></TabsContent>
+            <TabsContent value="habitos" className="pt-4"><HabitsView today={today} labels={labels} onEdit={setChosen} /></TabsContent>
+            <TabsContent value="concluidas" className="pt-4"><DoneView labels={labels} /></TabsContent>
+          </Tabs>
+        )}
 
         {actions.dialogs}
         <TaskDialog target={target} onOpenChange={(open) => !open && closeDialog()} />

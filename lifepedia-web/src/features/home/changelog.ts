@@ -33,6 +33,22 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'busca',
+    date: '2026-11-17',
+    title: 'Busca: encontre lançamentos, tarefas, notas e tudo o mais de qualquer tela',
+    modules: ['Geral', 'Finanças', 'Tarefas', 'Notas', 'Grupos', 'Privacidade'],
+    details: [
+      'Nova busca no topo de todas as telas (ou Ctrl K e "/"): procura em lançamentos, fixos, cartões, tarefas, agenda, notas, entregas, veículos, grupos, amigos, Dev e Arquitetura de uma vez.',
+      'Não precisa acertar acento nem maiúscula, e um erro de digitação ainda encontra ("padaira" acha "Padaria").',
+      'Cada resultado mostra uma prévia com os detalhes, as palavras ficam destacadas e, nas notas, aparece o trecho onde achou.',
+      'Filtre por módulo, período, entrada ou saída e valor, ou digite o valor na busca: "> 100", "até 50", "100-200" ou "50,90".',
+      'Também leva às telas e a ações rápidas, como novo lançamento, compra rápida no cartão e importar fatura, e lembra as buscas e itens recentes neste aparelho até você sair.',
+      'Dentro de um grupo, a busca começa só no que é do grupo.',
+      'Lançamentos: busque em todos os meses, veja quanto somou tudo o que achou e marque vários para mudar categoria, mês ou banco, ou excluir de uma vez.',
+      'Campo de busca também em Fixos, Tarefas, Categorias, Entregas, Veículos, Financiamentos, Grupos, Amigos, Dev, Arquitetura e nas abas de lançamentos e fixos do grupo.',
+    ],
+  },
+  {
     id: 'carteira',
     date: '2026-11-17',
     title: 'Carteira: acompanhe a fatura do cartão enquanto ela está aberta',

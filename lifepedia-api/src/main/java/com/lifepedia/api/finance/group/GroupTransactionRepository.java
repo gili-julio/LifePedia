@@ -18,17 +18,21 @@ import java.util.UUID;
 
 public interface GroupTransactionRepository extends JpaRepository<GroupTransaction, UUID> {
 
+    /** {@code text}: padrão de LIKE já sem acento ({@code SearchText.listPattern}), na descrição, categoria, observação e quem levou. */
+    String TEXT = "and (:text is null or cast(function('search_norm', "
+            + "concat(g.description, ' ', c.name, ' ', u.name, ' ', coalesce(g.notes, ''))) as String) like :text escape '\\')";
+
     /** Ordenação por expressões com {@code g} (item), {@code c} (categoria) e {@code u} (quem levou). */
     @Query(value = "select g from GroupTransaction g join Category c on c.id = g.categoryId join User u on u.id = g.userId "
             + "where g.groupId = :groupId and g.month = :month and (:type is null or g.type = :type) "
             + "and (:bankCode is null or g.bank.code = :bankCode) and (:bankName is null or lower(g.bank.name) = :bankName) "
-            + "and (:bankKind is null or g.bank.kind = :bankKind) and (:noBank = false or g.bank.code is null)",
-            countQuery = "select count(g) from GroupTransaction g "
+            + "and (:bankKind is null or g.bank.kind = :bankKind) and (:noBank = false or g.bank.code is null) " + TEXT,
+            countQuery = "select count(g) from GroupTransaction g join Category c on c.id = g.categoryId join User u on u.id = g.userId "
                     + "where g.groupId = :groupId and g.month = :month and (:type is null or g.type = :type) "
                     + "and (:bankCode is null or g.bank.code = :bankCode) and (:bankName is null or lower(g.bank.name) = :bankName) "
-                    + "and (:bankKind is null or g.bank.kind = :bankKind) and (:noBank = false or g.bank.code is null)")
+                    + "and (:bankKind is null or g.bank.kind = :bankKind) and (:noBank = false or g.bank.code is null) " + TEXT)
     Page<GroupTransaction> page(UUID groupId, YearMonth month, EntryType type, String bankCode, String bankName,
-                                BankKind bankKind, boolean noBank, Pageable pageable);
+                                BankKind bankKind, boolean noBank, String text, Pageable pageable);
 
     Optional<GroupTransaction> findByIdAndGroupId(UUID id, UUID groupId);
 

@@ -1,4 +1,4 @@
-import { ChevronRightIcon, MenuIcon, PanelLeftIcon } from 'lucide-react'
+import { ChevronRightIcon, MenuIcon, PanelLeftIcon, SearchIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import { HideValuesButton } from '@/components/HideValuesButton'
@@ -15,6 +15,8 @@ import { useUnreadNotifications } from '@/features/notifications/api'
 import { NotificationsSheet } from '@/features/notifications/NotificationsSheet'
 import { useDevicePush } from '@/features/notifications/push'
 import { useReminderToasts } from '@/features/notifications/use-reminder-toasts'
+import { useSearch } from '@/features/search/search-context'
+import { SearchProvider } from '@/features/search/SearchProvider'
 import { useInstallApp } from '@/lib/pwa'
 import { AppSidebar } from './AppSidebar'
 import { IosInstallDialog } from './IosInstallDialog'
@@ -38,28 +40,31 @@ export function AppLayout() {
   return (
     // Formato do menu vem da conta (perfil); Ctrl+B e a borda trocam só até recarregar.
     <SidebarProvider defaultOpen={!user?.preferences.sidebarIcons}>
-      <AppSidebar unread={unread} onOpenNotifications={() => setNotificationsOpen(true)} onInstall={onInstall} />
-      <SidebarInset className="min-w-0">
-        <TopBar unread={unread} />
-        <AnnouncementBanner />
-        <div className="mx-auto w-full max-w-6xl px-4 py-8">
-          <Outlet />
-        </div>
-      </SidebarInset>
-      <CloseOnNavigate />
-      <NotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
-      <IosInstallDialog open={iosStepsOpen} onOpenChange={setIosStepsOpen} />
-      <LegalGate />
-      <ProfileGate />
+      <SearchProvider>
+        <AppSidebar unread={unread} onOpenNotifications={() => setNotificationsOpen(true)} onInstall={onInstall} />
+        <SidebarInset className="min-w-0">
+          <TopBar unread={unread} />
+          <AnnouncementBanner />
+          <div className="mx-auto w-full max-w-6xl px-4 py-8">
+            <Outlet />
+          </div>
+        </SidebarInset>
+        <CloseOnNavigate />
+        <NotificationsSheet open={notificationsOpen} onOpenChange={setNotificationsOpen} />
+        <IosInstallDialog open={iosStepsOpen} onOpenChange={setIosStepsOpen} />
+        <LegalGate />
+        <ProfileGate />
+      </SearchProvider>
     </SidebarProvider>
   )
 }
 
-/** Topo fino: botão do menu; no celular a logo, no desktop o caminho da página; à direita o olhinho dos valores. */
+/** Topo fino: botão do menu; no celular a logo, no desktop o caminho da página; à direita a busca e o olhinho dos valores. */
 function TopBar({ unread }: { unread: number }) {
   const { pathname, search } = useLocation()
   const active = findActiveNav(pathname, search, useDynamicLinks())
   const { isMobile, toggleSidebar } = useSidebar()
+  const { openSearch } = useSearch()
   const label = unread ? `Abrir ou fechar o menu (${unread} notificações não lidas)` : 'Abrir ou fechar o menu'
 
   return (
@@ -82,7 +87,18 @@ function TopBar({ unread }: { unread: number }) {
           )}
         </p>
       )}
-      <span className="-mr-1 ml-auto"><HideValuesButton /></span>
+      <span className="-mr-1 ml-auto flex items-center gap-1">
+        <Button variant="ghost" size="icon-sm" className="sm:hidden" aria-label="Buscar" onClick={() => openSearch()}>
+          <SearchIcon />
+        </Button>
+        <button type="button" onClick={() => openSearch()} aria-label="Buscar (Ctrl+K)"
+          className="hidden h-8 w-56 items-center gap-2 rounded-full border bg-muted/40 px-3 text-sm text-muted-foreground transition-colors hover:bg-muted sm:flex">
+          <SearchIcon className="size-4" aria-hidden />
+          <span className="flex-1 text-left">Buscar</span>
+          <kbd className="rounded border bg-background px-1.5 text-[10px] font-sans">Ctrl K</kbd>
+        </button>
+        <HideValuesButton />
+      </span>
     </header>
   )
 }

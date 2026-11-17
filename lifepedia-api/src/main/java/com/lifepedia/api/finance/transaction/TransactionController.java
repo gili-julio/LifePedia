@@ -2,12 +2,17 @@ package com.lifepedia.api.finance.transaction;
 
 import com.lifepedia.api.finance.Installments.MoveRequest;
 import com.lifepedia.api.finance.Installments.MoveResult;
+import com.lifepedia.api.finance.transaction.TransactionDtos.BatchDeleteRequest;
+import com.lifepedia.api.finance.transaction.TransactionDtos.BatchResult;
+import com.lifepedia.api.finance.transaction.TransactionDtos.BatchUpdateRequest;
+import com.lifepedia.api.finance.transaction.TransactionDtos.SearchPage;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionBatchRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionResponse;
 import com.lifepedia.api.finance.EntryType;
 import com.lifepedia.api.finance.bank.BankFilter;
 import com.lifepedia.api.finance.bank.BankKind;
+import com.lifepedia.api.search.SearchQuery;
 import com.lifepedia.api.shared.CurrentUser;
 import com.lifepedia.api.shared.PageResponse;
 import jakarta.validation.Valid;
@@ -25,6 +30,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
@@ -71,6 +78,30 @@ public class TransactionController {
         return service.search(CurrentUser.id(jwt), start, end, type, description);
     }
 
+    /**
+     * Busca da tela de lançamentos, em todos os meses: texto sem acento e com erro de digitação, período ({@code from}
+     * e {@code to} pela data), valor ({@code min}, {@code max}), tipo, categoria e banco. Soma tudo o que achou.
+     * {@code sort} como na página do mês.
+     */
+    @GetMapping("/search")
+    public SearchPage search(@AuthenticationPrincipal Jwt jwt,
+                             @RequestParam(required = false) String q,
+                             @RequestParam(required = false) LocalDate from,
+                             @RequestParam(required = false) LocalDate to,
+                             @RequestParam(required = false) BigDecimal min,
+                             @RequestParam(required = false) BigDecimal max,
+                             @RequestParam(required = false) EntryType type,
+                             @RequestParam(required = false) UUID categoryId,
+                             @RequestParam(required = false) String bank,
+                             @RequestParam(required = false) BankKind bankKind,
+                             @RequestParam(defaultValue = "0") int page,
+                             @RequestParam(defaultValue = "20") int size,
+                             @RequestParam(required = false) String sort) {
+        UUID userId = CurrentUser.id(jwt);
+        SearchQuery query = SearchQuery.of(userId, q, null, List.of(), from, to, min, max, type, categoryId, size);
+        return service.searchPage(userId, query, BankFilter.of(bank, bankKind), sort, page, size);
+    }
+
     /** Descrições mais usadas nos últimos 12 meses (até 200), para o prompt de importação. */
     @GetMapping("/descriptions")
     public List<String> descriptions(@AuthenticationPrincipal Jwt jwt) {
@@ -101,6 +132,18 @@ public class TransactionController {
     @PutMapping("/{id}/month")
     public MoveResult moveMonth(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody MoveRequest request) {
         return service.moveMonth(CurrentUser.id(jwt), id, request);
+    }
+
+    /** Muda categoria e/ou mês de vários lançamentos (tudo ou nada). */
+    @PutMapping("/batch")
+    public BatchResult updateAll(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BatchUpdateRequest request) {
+        return service.updateAll(CurrentUser.id(jwt), request);
+    }
+
+    @PostMapping("/batch/delete")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAll(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody BatchDeleteRequest request) {
+        service.deleteAll(CurrentUser.id(jwt), request.ids());
     }
 
     @DeleteMapping("/{id}")

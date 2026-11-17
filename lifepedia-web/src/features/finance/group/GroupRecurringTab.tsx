@@ -8,6 +8,8 @@ import { useClampPage, useListState } from '@/components/data-table/list-state'
 import { SortableHead } from '@/components/data-table/SortableHead'
 import { SortSelect } from '@/components/data-table/SortSelect'
 import { Badge } from '@/components/ui/badge'
+import { ListSearch } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -58,7 +60,8 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
   const [type, setType] = useState<EntryType>('EXPENSE')
   const list = useListState({ field: 'amount', direction: 'desc' })
   const [bank, setBank] = useState('')
-  const { data, isLoading } = useGroupRecurringPage(groupId, type, list.params, toBankFilter(bank))
+  const [search, setSearch] = useListSearch()
+  const { data, isLoading } = useGroupRecurringPage(groupId, type, list.params, toBankFilter(bank), search)
   const banks = useGroupBankOverview(groupId, currentYearMonth()).data?.banks
   useClampPage(data, list.setPage)
   const create = useCreateGroupRecurring()
@@ -97,16 +100,22 @@ export function GroupRecurringTab({ groupId, isAdmin, onBring }: Props) {
           <PlusIcon /> <span className="max-sm:sr-only">Novo fixo</span>
         </Button>
       </div>
-      <BankFilterSelect lines={banks} value={bank} onChange={(value) => {
-        setBank(value)
-        list.resetPage()
-      }} />
+      <div className="flex flex-wrap items-center gap-2">
+        <ListSearch value={search} onChange={(value) => {
+          setSearch(value)
+          list.resetPage()
+        }} placeholder="Buscar fixo" />
+        <BankFilterSelect lines={banks} value={bank} onChange={(value) => {
+          setBank(value)
+          list.resetPage()
+        }} />
+      </div>
 
       {isLoading ? (
         <Skeleton className="h-48" />
       ) : !items.length ? (
         <div className="flex flex-col items-center gap-3 py-12 text-center">
-          <p className="text-sm text-muted-foreground">Nenhum fixo deste tipo no grupo.</p>
+          <p className="text-sm text-muted-foreground">{search ? 'Nada encontrado com essa busca.' : 'Nenhum fixo deste tipo no grupo.'}</p>
           <div className="flex flex-wrap justify-center gap-2">
             <Button variant="outline" onClick={() => setEditing({ open: true })}><PlusIcon /> Novo fixo</Button>
             <Button variant="outline" onClick={onBring}><PackagePlusIcon /> Levar meus itens</Button>

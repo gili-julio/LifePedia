@@ -3,6 +3,9 @@ import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/PageHeader'
+import { ListSearch, NoMatches } from '@/components/ListSearch'
+import { useListSearch } from '@/components/use-list-search'
+import { matchesSearch } from '@/lib/search-text'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,6 +26,8 @@ function participants(count: number) {
 function MyGroups({ onCreate }: { onCreate: () => void }) {
   const { data, isLoading } = useGroups()
   const pin = usePinGroup()
+  const [search, setSearch] = useListSearch()
+  const shown = data?.filter((g) => matchesSearch(search, g.name)) ?? []
 
   async function togglePin(id: string, pinned: boolean) {
     try {
@@ -44,9 +49,10 @@ function MyGroups({ onCreate }: { onCreate: () => void }) {
       </div>
     )
   }
+  if (!shown.length) return <NoMatches onClear={() => setSearch('')} />
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {data.map((g) => (
+      {shown.map((g) => (
         <li key={g.id} className="relative">
           <Link to={`/grupos/${g.id}`}
             className="flex items-center gap-3 rounded-lg border bg-card p-3 pr-12 transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
@@ -130,12 +136,14 @@ export function GroupsPage() {
   const navigate = useNavigate()
   const { data: invites } = useReceivedInvites()
   const pending = invites?.length ?? 0
+  const [search, setSearch] = useListSearch()
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Grupos"
         description="Divida despesas e ganhos com outras pessoas e acompanhe as métricas do grupo."
+        toolbar={tab === 'groups' ? <ListSearch value={search} onChange={setSearch} placeholder="Buscar grupo" /> : undefined}
         actions={[{ label: 'Novo grupo', icon: PlusIcon, primary: true, onSelect: () => setCreating(true) }]}
       />
       <Card>

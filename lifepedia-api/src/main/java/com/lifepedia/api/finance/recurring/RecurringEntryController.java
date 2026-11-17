@@ -46,8 +46,9 @@ public class RecurringEntryController {
                                                      @RequestParam(required = false) BankKind bankKind,
                                                      @RequestParam(defaultValue = "0") int page,
                                                      @RequestParam(defaultValue = "10") int size,
-                                                     @RequestParam(required = false) String sort) {
-        return service.page(CurrentUser.id(jwt), type, BankFilter.of(bank, bankKind), page, size, sort);
+                                                     @RequestParam(required = false) String sort,
+                                                     @RequestParam(required = false) String q) {
+        return service.page(CurrentUser.id(jwt), type, BankFilter.of(bank, bankKind), q, page, size, sort);
     }
 
     /** Todos, sem paginação (seleção e importação). */
