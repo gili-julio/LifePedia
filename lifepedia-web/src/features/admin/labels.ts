@@ -18,6 +18,7 @@ export const MODULE_LABEL: Record<ModuleKey, { label: string; items: string }> =
   AI_DAILY: { label: 'Resumo do daily (IA)', items: 'resumos' },
   DELIVERIES: { label: 'Entregas', items: 'entregas' },
   SIMULATOR: { label: 'Simulador do financeiro', items: 'simulações salvas' },
+  VEHICLES: { label: 'Veículos', items: 'veículos' },
 }
 
 export const COUNT_LABEL: Record<UserCountKey, string> = {
@@ -36,6 +37,7 @@ export const COUNT_LABEL: Record<UserCountKey, string> = {
   integrations: 'Contas ligadas',
   deliveries: 'Entregas',
   simulations: 'Simulações salvas',
+  vehicles: 'Veículos',
 }
 
 /** Resultado de uma leitura (espelha `AiUsage.Outcome`). */
@@ -72,6 +74,7 @@ export const LIMIT_LABEL: Record<LimitKey, { label: string; unit: string; off: s
   GEMINI_IMPORT: { label: 'Gemini: importação (24 h)', unit: 'leituras', off: 'Sem AI_API_KEY' },
   GEMINI_DAILY: { label: 'Gemini: resumo do daily (24 h)', unit: 'resumos', off: 'Sem AI_API_KEY' },
   GOOGLE_CALENDAR: { label: 'Google Agenda sem verificação', unit: 'pessoas', off: 'Sem GOOGLE_CLIENT_SECRET' },
+  FIPE: { label: 'Tabela FIPE (hoje)', unit: 'consultas', off: '' },
 }
 
 export const JOB_LABEL: Record<JobStatus, string> = {

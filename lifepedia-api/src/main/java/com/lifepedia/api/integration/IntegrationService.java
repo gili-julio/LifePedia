@@ -81,7 +81,8 @@ public class IntegrationService {
     private final TransactionTemplate transaction;
 
     public IntegrationService(IntegrationAccountRepository accounts, UserRepository users, IntegrationSyncRepository syncs,
-                              CalendarEventRepository events, List<CodeHost> codeHosts, List<AccountSyncer> syncers, GoogleCalendarClient google,
+                              CalendarEventRepository events, List<CodeHost> codeHosts, List<AccountSyncer> syncers,
+                              GoogleCalendarClient google,
                               DuolingoClient duolingo, SecretBox secrets, IntegrationSyncService sync,
                               IntegrationProperties properties, CorsProperties cors, RateLimiter rateLimiter, Clock clock,
                               PlatformTransactionManager transactions) {

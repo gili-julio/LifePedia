@@ -16,6 +16,7 @@ import {
   LayoutGridIcon,
   NotebookPenIcon,
   PackageIcon,
+  CarIcon,
   PlugZapIcon,
   ListTodoIcon,
   ReceiptTextIcon,
@@ -108,6 +109,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: '/frequencia', label: 'Frequência', icon: CalendarCheck2Icon, module: 'ATTENDANCE' },
       { to: '/notas', label: 'Notas', icon: NotebookPenIcon, module: 'NOTES' },
       { to: '/entregas', label: 'Entregas', icon: PackageIcon, module: 'DELIVERIES' },
+      { to: '/veiculos', label: 'Veículos', icon: CarIcon, module: 'VEHICLES' },
     ],
   },
   {

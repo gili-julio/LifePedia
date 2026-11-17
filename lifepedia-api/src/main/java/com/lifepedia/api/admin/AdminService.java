@@ -20,6 +20,7 @@ import com.lifepedia.api.shared.NotFoundException;
 import com.lifepedia.api.shared.RateLimiter;
 import com.lifepedia.api.user.User;
 import com.lifepedia.api.user.UserRepository;
+import com.lifepedia.api.vehicle.FipeClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,10 +47,11 @@ public class AdminService {
     private final TrackingQuota tracking;
     private final GoogleProperties google;
     private final IntegrationProperties integrations;
+    private final FipeClient fipe;
 
     public AdminService(AdminStats stats, AiProperties ai, UserRepository users, NotificationService notifications,
                         AuditService audit, RateLimiter rateLimiter, TrackingQuota tracking, GoogleProperties google,
-                        IntegrationProperties integrations) {
+                        IntegrationProperties integrations, FipeClient fipe) {
         this.stats = stats;
         this.ai = ai;
         this.users = users;
@@ -59,6 +61,7 @@ public class AdminService {
         this.tracking = tracking;
         this.google = google;
         this.integrations = integrations;
+        this.fipe = fipe;
     }
 
     @Transactional(readOnly = true)
@@ -93,6 +96,9 @@ public class AdminService {
         items.add(new ServiceLimit("GEMINI_DAILY", ai.enabled(), "DAY", stats.aiUsedLastDay(AiUsageLog.DEV_DAILY), cap, null));
         boolean calendar = google.enabled() && integrations.googleClientSecret() != null && !integrations.googleClientSecret().isBlank();
         items.add(new ServiceLimit("GOOGLE_CALENDAR", calendar, "PEOPLE", stats.googleCalendarUsers(), GOOGLE_UNVERIFIED_USERS, null));
+        FipeClient.Quota quota = fipe.quota();
+        items.add(quota == null ? new ServiceLimit("FIPE", true, "DAY", null, null, "Ainda sem consulta desde que a API subiu.")
+                : new ServiceLimit("FIPE", true, "DAY", (long) (quota.limit() - quota.remaining()), (long) quota.limit(), null));
         return items;
     }
 

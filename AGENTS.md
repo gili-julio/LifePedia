@@ -81,6 +81,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   exceção: o script/iframe do botão do Google (`accounts.google.com/gsi`, liberado no `nginx.conf` e carregado só por
   `features/auth/GoogleButton.tsx`). `'wasm-unsafe-eval'` (WebAssembly, não `eval`) e `connect-src blob:` existem só
   para comprimir/abrir maquetes 3D (`features/architecture`).
+- **Veículos** (`vehicle/`): acesso só por `VehicleAccess.require(veículo, pessoa, papel mínimo)` (sem acesso 404, papel
+  menor 403). À FIPE vão só códigos validados (`FipeClient`, `SafeHttpClient`, fora de transação); token opcional
+  `FIPE_TOKEN` só no ambiente (cabeçalho). Gasto de outra pessoa nunca mexe no financeiro dela.
 - **Entregas** (`delivery/`): ao 17TRACK vai só o código de rastreio e ao ViaCEP só o CEP, sempre pelo
   `SafeHttpClient` (`Track17Client`, `CepClient`) e fora de transação; chave `TRACK17_API_KEY` só no ambiente (cabeçalho
   `17token`). Nome, foto e endereço nunca saem do servidor. Link da transportadora só `http(s)`.
@@ -151,6 +154,10 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Entregas: `DeliveryStatus` (e o `stage` de cada um), DTOs de `DeliveryDtos` ↔ `features/deliveries/types.ts` (+ textos e
     etapas em `labels.ts`); `status` da notificação `DELIVERY_UPDATE` ↔ `deliveryText` em `notification-content.tsx`
   - Limites do admin: chaves de `AdminDtos.ServiceLimit` ↔ `features/admin/types.ts` (`LimitKey`) + `LIMIT_LABEL`
+  - Veículos: `VehicleType` (e a tabela FIPE de cada um), `FipeKind`, `VehicleFuel`, `VehicleRole`, `ExpenseKind` (e o
+    `group` dos gráficos), `DocumentKind`, `VehicleMath.Stage` e DTOs de `VehicleDtos` ↔ `features/vehicles/types.ts` (+ textos
+    em `labels.ts`, `FIPE_KIND` e `GROUPS`); `kind`/`stage` da notificação `VEHICLE_REMINDER` ↔ `vehicleText` em
+    `notification-content.tsx`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
   `InvestmentCategories`). `Totals.expense` e `MonthPoint.*Expense` vêm **sem** investimento; `invested` à parte;
@@ -222,7 +229,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@8`, anexo; importa `@1` a `@8`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@9`, anexo; importa `@1` a `@9`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
@@ -230,7 +237,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   vistas, nomes dos anexos, das variantes e dos cômodos, mais os comentários da pessoa; sem os arquivos 3D, desde o `@6`),
   `devProjects` (nome, descrição, atalhos e repositórios) e `integrations` (serviço, apelido, login, endereço; nunca token),
   desde o `@7`, `financeSimulations` (simulações do financeiro) e `deliveries` (`addresses` + `deliveries`: nome, código,
-  situação, transportadora, apelido do endereço), desde o `@8`, são só registro. Mudou o formato? Crie `@9` e mantenha
+  situação, transportadora, apelido do endereço), desde o `@8`, e `vehicles` (veículos da pessoa com leituras, gastos, itens,
+  revisões e documentos; `mine` diz se o gasto foi dela), desde o `@9`, são só registro. Mudou o formato? Crie `@10` e mantenha
   a importação dos anteriores (usuários guardam arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -385,8 +393,23 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   dias às 4h) registra os códigos novos, lê em lotes de 40 e avisa `DELIVERY_UPDATE` (`status`: `OUT_FOR_DELIVERY`,
   `PICKUP`, `DELIVERED`, `FAILED`, `EXCEPTION`, `EXPIRED`, `TAX`, `STALLED`) para o dono e os membros do grupo; nunca
   na 1ª leitura. Quem sai do grupo descompartilha as entregas dele (`GroupMemberRemovedEvent`).
+- **Veículos** (`/api/vehicles`): `GET` (`{owned, shared}`: seus, inclusive arquivados, e os ativos compartilhados com a
+  pessoa, com `owner`, `role` e `sharedVia`), `GET /summary` (até 5 vencimentos perto ou vencidos, para o Início), `GET
+  /templates?type=`, `POST` (`VehicleRequest` + `odometer` inicial e `template`; com `fipe` busca o valor na hora), `GET/PUT/DELETE
+  /{id}`, `PUT /{id}/archive`, `PUT/DELETE/GET /{id}/image`, `POST /{id}/fipe/refresh` (10 min), `GET /fipe/{kind}/brands[/{b}/models[/{m}/years[/{y}]]]`
+  (listas e preço, 60/min), compartilhamento como na arquitetura (`/shares`, `/share-options`, `PUT|DELETE
+  /shares/users/{userId}` e `/shares/groups/{groupId}` com `{role}` `VIEW|LOG|EDIT`, `DELETE /shares/me`). Dentro do veículo
+  (`/api/vehicles/{id}/...`): `GET/POST /readings`, `DELETE /readings/{rid}`, `GET /expenses?months` (1 a 36), `POST`, `PUT/DELETE
+  /expenses/{eid}` (+ `/image`), `GET /stats?months`, `GET /logs`, `POST/PUT/DELETE /items[/{iid}]`, `POST /items/{iid}/done`,
+  `POST/PUT/DELETE /revisions[/{rid}]`, `POST /revisions/plan`, `POST|DELETE /revisions/{rid}/done`, `POST/PUT/DELETE
+  /documents[/{did}]`, `POST /documents/{did}/renew`. Itens, revisões e documentos devolvem o detalhe inteiro. **Toda conta
+  é da API** (`VehicleMath`: ritmo, km de hoje, vencimento por km ou data, consumo pelo tanque cheio, km rodados); `due`
+  traz `stage`, `kmLeft`, `daysLeft` e `expectedOn`. Gasto com `finance {categoryId, groupIds}` vira despesa de quem lançou
+  (fachada `finance/transaction/ExpenseLinks`, nome "Tipo - Veículo"); `PUT` sem `finance` tira do financeiro. Aviso
+  `VEHICLE_REMINDER` (job das 9h, dono e quem lança, uma vez por etapa) e `VEHICLE_SHARED`; valor da FIPE de novo a cada 20
+  dias (5h).
 - **Limites dos serviços** (`GET /api/admin/limits`, só admin): `[{key, configured, period, used, limit, error}]` para
-  17TRACK (plano e dia, pela `getquota`, guardada 5 min), Gemini (importação e daily nas últimas 24 h contra
+  17TRACK (plano e dia, pela `getquota`, guardada 5 min), FIPE (dia, pelos cabeçalhos da última consulta), Gemini (importação e daily nas últimas 24 h contra
   `AI_DAILY_LIMIT`) e Google Agenda (pessoas com conta ligada contra 100, o teto sem verificação).
 
 ## Checklist: novo módulo

@@ -53,6 +53,7 @@ class AdminStats {
             union all select 'AI_DAILY', count(distinct user_id), count(*) from ai_usage where feature = :daily
             union all select 'DELIVERIES', count(distinct user_id), count(*) from deliveries
             union all select 'SIMULATOR', count(distinct user_id), count(*) from finance_simulations
+            union all select 'VEHICLES', count(distinct user_id), count(*) from vehicles
             ) m order by users desc, k
             """;
 
@@ -72,7 +73,8 @@ class AdminStats {
                    (select count(*) from dev_projects where user_id = :id) as dev,
                    (select count(*) from integration_accounts where user_id = :id) as integrations,
                    (select count(*) from deliveries where user_id = :id) as deliveries,
-                   (select count(*) from finance_simulations where user_id = :id) as simulations
+                   (select count(*) from finance_simulations where user_id = :id) as simulations,
+                   (select count(*) from vehicles where user_id = :id) as vehicles
             """;
 
     private final JdbcClient jdbc;

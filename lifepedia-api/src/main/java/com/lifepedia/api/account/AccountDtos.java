@@ -16,6 +16,7 @@ import com.lifepedia.api.task.TaskDtos.LabelData;
 import com.lifepedia.api.task.TaskDtos.TaskData;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import com.lifepedia.api.user.UserResponse.Preferences;
+import com.lifepedia.api.vehicle.VehicleDtos.VehicleData;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
@@ -37,11 +38,11 @@ import java.util.UUID;
 public final class AccountDtos {
 
     /** Versão do arquivo exportado; mudou o formato? Crie {@code @4} e mantenha a importação das anteriores. */
-    public static final String FORMAT = "lifepedia/account@8";
+    public static final String FORMAT = "lifepedia/account@9";
     /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência; {@code @3}: sem notas). */
     public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2",
             "lifepedia/account@3", "lifepedia/account@4", "lifepedia/account@5", "lifepedia/account@6", "lifepedia/account@7",
-            FORMAT);
+            "lifepedia/account@8", FORMAT);
 
     private AccountDtos() {
     }
@@ -71,7 +72,8 @@ public final class AccountDtos {
      * {@code commitments} (frequência, desde o {@code @3}), {@code notes} (desde o {@code @4}), {@code financings} e
      * {@code financingSimulations} (desde o {@code @5}), {@code architecture} (desde o {@code @6}), {@code devProjects} e
      * {@code integrations} (desde o {@code @7}; contas sem token), {@code financeSimulations} e {@code deliveries} (endereços e
-     * entregas, desde o {@code @8}) são só registro (não importam).
+     * entregas, desde o {@code @8}) e {@code vehicles} (veículos com km, gastos, manutenção e documentos, desde o {@code @9}) são
+     * só registro (não importam).
      *
      * @param profile ignorado na importação
      * @param tasks   tarefas pessoais (nulo no {@code @1}: a importação não mexe nas tarefas)
@@ -98,7 +100,8 @@ public final class AccountDtos {
             List<ProjectExport> devProjects,
             List<AccountExport> integrations,
             List<SavedData> financeSimulations,
-            DeliveriesExport deliveries) {
+            DeliveriesExport deliveries,
+            List<VehicleData> vehicles) {
     }
 
     /** @param preferences menu e módulos escondidos (só registro, desde o {@code @6}) */

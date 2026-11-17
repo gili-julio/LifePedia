@@ -5,6 +5,7 @@ import com.lifepedia.api.account.AccountDtos.DeletionPreview;
 import com.lifepedia.api.account.AccountDtos.GroupImpact;
 import com.lifepedia.api.architecture.ArchitectureService;
 import com.lifepedia.api.delivery.DeliveryService;
+import com.lifepedia.api.vehicle.VehicleService;
 import com.lifepedia.api.auth.AuthService;
 import com.lifepedia.api.finance.category.CategoryRepository;
 import com.lifepedia.api.finance.group.GroupRecurringEntryRepository;
@@ -53,6 +54,7 @@ public class AccountDeletionService {
     private final NoteService notes;
     private final ArchitectureService architecture;
     private final DeliveryService deliveries;
+    private final VehicleService vehicles;
 
     public AccountDeletionService(AuthService auth, UserService userService, UserRepository users, GroupService groups,
                                   GroupMemberRepository members, NotificationService notifications,
@@ -60,7 +62,8 @@ public class AccountDeletionService {
                                   RecurringEntryRepository recurring, GroupTransactionRepository groupTransactions,
                                   GroupRecurringEntryRepository groupRecurring, PlanItemRepository planItems,
                                   TaskRepository tasks, NoteService notes,
-                                  ArchitectureService architecture, DeliveryService deliveries) {
+                                  ArchitectureService architecture, DeliveryService deliveries,
+                                  VehicleService vehicles) {
         this.auth = auth;
         this.userService = userService;
         this.users = users;
@@ -77,6 +80,7 @@ public class AccountDeletionService {
         this.notes = notes;
         this.architecture = architecture;
         this.deliveries = deliveries;
+        this.vehicles = vehicles;
     }
 
     @Transactional(readOnly = true)
@@ -110,6 +114,7 @@ public class AccountDeletionService {
         notes.deleteUserImagesAfterCommit(userId);
         architecture.deleteUserFilesAfterCommit(userId);
         deliveries.deleteUserImagesAfterCommit(userId);
+        vehicles.deleteUserImagesAfterCommit(userId);
         users.delete(user);
         users.flush();
     }

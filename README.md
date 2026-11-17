@@ -28,6 +28,7 @@ compartilham usuário, autenticação, design e padrões.
 | **Dev** | ✅ v1.0 | **Projetos de trabalho** (ex.: Sebito, Gertec, Nut) com **atalhos** (board, homologação, produção, documentação) e os **repositórios** do GitLab/GitHub de cada um; painel **Hoje no dev** (reuniões do Google Agenda, seus MRs, revisões pedidas, pipelines quebradas e issues); **issues viram tarefas** (concluem sozinhas ao fechar; opcional: concluir fecha a issue); **raias automáticas** por etiqueta (MR aberto → "esperando MR", aceito → "livre para testes"); **resumo do daily** com IA; **atividade** (commits, MRs e revisões por dia); avisos de pipeline falhou, MR aprovado, aceito, comentado e revisão pedida |
 | **Integrações** | ✅ v1.0 | Central para ligar **Google Agenda** (OAuth só leitura, várias contas), **GitLab** (gitlab.com ou da empresa, token pessoal), **GitHub** (token) e **Duolingo** (perfil público): o que cada um traz, **passo a passo**, várias contas com apelido e cor, situação de cada conta, **sincronizar agora**, histórico, aviso de token vencendo ou recusado e desligar (apaga o que veio dela); eventos na **Agenda**; ofensiva do Duolingo no Início e nas **conquistas** |
 | **Entregas** | ✅ v1.0 | Cole o **código de rastreio** da compra (Correios, AliExpress, Shopee, Mercado Livre, Jadlog, Loggi... pelo **17TRACK**) com nome e **foto**; **barra de etapas** (postado, em trânsito, saiu para entrega, entregue), **linha do tempo** com todos os eventos, **previsão**, dias em trânsito e aviso de **parada há X dias**; **aviso de taxa/imposto** com link para pagar; **push** quando sai para entrega, é entregue, chega para retirar ou tem problema; **endereços** salvos com apelido e **CEP** que preenche o resto (também em *Meu perfil*); **compartilhar com um grupo** (membros veem o andamento e o apelido e a cidade do endereço); entregues vão para o **histórico** depois de 7 dias; "chega hoje" no Início |
+| **Veículos** | ✅ v1.0 | Carro, moto, caminhão, bicicleta ou outro com apelido, placa, foto e **Tabela FIPE** (marca, modelo e ano; valor atualizado todo mês); **km** com histórico, **ritmo de uso** (km por dia) e km estimado de hoje; **abastecimentos** (litros, preço do litro, posto, tanque cheio) com **consumo km/l** e outros gastos (oficina, peças, IPVA, seguro, multa, pedágio, lavagem) com **comprovante**, cada um **lançado no financeiro** de quem pagou (e no grupo, se quiser); **itens de manutenção** a cada X km ou Y meses (óleo, corrente, filtros, freios...) com **tabela sugerida** por tipo; **plano de revisões**; **documentos** com vencimento (IPVA, licenciamento, seguro, CNH); **avisos push** quando chega perto e quando vence; gráficos de **gasto por mês** e **consumo**, custo por km; **compartilhar** com amigos e grupos (ver, lançar ou editar), mostrando de quem é o veículo; cartão no Início |
 | Metas | 💡 ideia | Objetivos pessoais e financeiros com acompanhamento |
 | Saúde | 💡 ideia | Consultas, exames, medicamentos, hábitos |
 | Documentos | 💡 ideia | Documentos importantes, vencimentos, lembretes |
@@ -356,6 +357,29 @@ compartilham usuário, autenticação, design e padrões.
 - **Endereços**: apelido, quem recebe, CEP (busca no ViaCEP), rua, número, complemento, bairro, cidade e UF; um é o
   padrão. Também em *Meu perfil*. Apagar um endereço deixa as entregas sem endereço.
 
+### Veículos - conceitos
+
+- **Cadastro**: tipo, apelido, marca/modelo/ano (à mão ou pela **FIPE**, que preenche os três), placa, cor, combustível,
+  tanque, foto, km atual (vira a 1ª leitura) e, se quiser, a **tabela sugerida** de manutenção do tipo (intervalos comuns,
+  editáveis). Até 20 veículos por pessoa; vendido ou parado pode ser **arquivado** (os avisos param).
+- **Km**: leituras com data (manuais ou vindas de um gasto com km). Km fora de ordem (menor que uma leitura anterior ou
+  maior que uma posterior) é recusado. **Ritmo** = km por dia entre as leituras dos últimos 180 dias (pelo menos 7 dias
+  entre a primeira e a última); **km de hoje** = última leitura + ritmo (até 90 dias).
+- **Vencimento**: item vence em *última vez + X km* ou *última vez + Y meses*, o que vier primeiro (pelo ritmo, o app
+  calcula a data esperada do km). "Chegando": faltam até 10% do intervalo (mín. 200 km) ou 15 dias; revisão: 500 km ou 30
+  dias; documento: 30 dias. Item sem "última vez" fica sem previsão até ser marcado feito.
+- **Gastos**: abastecimento (litros, combustível, posto, tanque cheio) e outros tipos. **Consumo** = km entre dois tanques
+  cheios ÷ litros colocados nesse trecho (os parciais do meio entram; abastecimento sem litros quebra a conta). Com
+  *Lançar no meu financeiro*, vira uma despesa de quem lançou ("Abastecimento - Gol", categoria escolhida, padrão
+  Transporte) e, se marcar, vai sincronizada para grupos; editar ou excluir o gasto muda o lançamento (mês, banco e
+  observações ficam como a pessoa deixou no financeiro). Marcar manutenção feita, revisão feita ou documento pago com valor
+  também lança o gasto.
+- **Compartilhar** (só o dono): com amigos e grupos, com **Pode ver**, **Pode lançar** (km, gastos, manutenção feita,
+  documento pago) ou **Pode editar** (também dados, itens, revisões e documentos). Quem recebe vê "De Fulano". Cada um
+  edita só os próprios gastos; o lançamento vai para o financeiro de quem lançou.
+- **Avisos** (push, às 9h, dono e quem pode lançar): perto de vencer e vencido, uma vez em cada etapa (volta a valer
+  quando é feito ou renovado).
+
 ### Notas - conceitos
 
 - **Nota** (menu *Organização → Notas*, ou aba *Notas* do grupo): título e texto em **markdown** (até 200 mil
@@ -491,6 +515,7 @@ VPS de 4 GB com o Coolify) e `COOKIE_SECURE` sempre ligado.
    | `ARCHITECTURE_QUOTA` / `ARCHITECTURE_MAX_MODEL` | opcionais: espaço de cada conta para maquetes e anexos (`300MB`) e tamanho máximo de uma maquete comprimida (`100MB`); os arquivos ficam no volume de uploads |
    | `INTEGRATIONS_KEY` | opcional: chave AES (32 bytes em base64, `openssl rand -base64 32`) que cifra os tokens das contas ligadas (GitLab, GitHub, Google Agenda); vazia = só o Duolingo. **Não perca nem troque**: os tokens salvos deixam de abrir |
    | `TRACK17_API_KEY` | opcional: chave da API do **17TRACK** (rastreio das entregas, ver abaixo); vazia = entregas salvas sem atualização automática |
+   | `FIPE_TOKEN` | opcional: token da API da **Tabela FIPE** ([fipe.parallelum.com.br](https://fipe.parallelum.com.br)); vazio = 500 consultas por dia sem cadastro |
    | `GOOGLE_CLIENT_SECRET` / `APP_URL` | opcionais: Google Agenda nas integrações (ver abaixo) e o endereço público do site para a volta do Google (vazio = 1ª origem do `CORS_ORIGINS`) |
    | `DB_USER` | opcional, padrão `lifepedia` |
 
@@ -531,6 +556,11 @@ página *Integrações*. GitLab da empresa precisa abrir na internet (https, por
 um teto por dia: o uso aparece em *Dashboard → Sistema → Limites dos serviços*. A API registra o código ao cadastrar e
 consulta as entregas não entregues a cada hora (job a cada 15 min, até 400 por vez, 40 por chamada). Cada pessoa cadastra
 até 15 entregas novas por dia e tem até 60 em andamento.
+
+**Veículos / Tabela FIPE** (opcional): funciona sem nada com a API pública da parallelum (500 consultas por dia; listas de
+marcas, modelos e anos ficam 1 dia na memória da API). Para mais, crie um token grátis em
+[fipe.parallelum.com.br](https://fipe.parallelum.com.br) e coloque em `FIPE_TOKEN`. O uso do dia aparece em *Dashboard →
+Sistema → Limites dos serviços*. O valor de cada veículo é lido de novo a cada 20 dias (job às 5h).
 
 **Importação pelo site** (opcional): crie a chave no [Google AI Studio](https://aistudio.google.com/apikey), num projeto
 com **cobrança ativa**, e coloque em `AI_API_KEY` (Coolify e, se quiser local, `.env`). A assinatura Google AI (Pro ou de
@@ -588,6 +618,7 @@ Os dados são sensíveis, então a segurança é parte do projeto, não um extra
 | Arquitetura | Projeto só para o dono e para quem ele compartilhou (amigo aceito ou membro de um grupo do dono); sem acesso → **404**, papel menor → **403** (só ver < comentar < editar; compartilhar e excluir só o dono). Maquete enviada como GLB cru, conferida pela API (cabeçalho, tamanho declarado, bloco JSON) e gravada com nome aleatório; espaço por conta reservado antes do envio. Anexos: imagens regravadas em JPEG; PDF servido com `Content-Security-Policy: sandbox` e `nosniff`. **Link público** (`/maquete/<token>`): única rota de dados sem login (`GET /api/public/architecture/**`), token aleatório de 256 bits, com validade (1 a 365 dias), apagável, limite por IP; mostra só a versão atual e as vistas (nada de comentários, anexos ou e-mail) |
 | Integrações e Dev | Tokens das contas externas **cifrados** (AES-256-GCM, chave `INTEGRATIONS_KEY` só no ambiente), nunca devolvidos nem logados; contas, eventos, repositórios, MRs e issues só do dono (**404** para os outros). Chamadas ao GitLab/GitHub/Google/Duolingo só pelo `SafeHttpClient` (GitLab da empresa: só https, porta 443, IP público). Google: OAuth com `state` cifrado ligado à pessoa (10 min), só `calendar.readonly`; desligar revoga. Limites por pessoa para conectar, sincronizar e buscar repositórios. Resumo do daily: só quando a pessoa pede, com o prompt montado na API |
 | Entregas | Entrega só do dono e, se ele compartilhou com um grupo, dos membros (os outros recebem **404**); só o dono edita, arquiva, troca a foto ou exclui (**403** para membros). Membros veem só o apelido e a cidade do endereço. Ao **17TRACK** vai só o código de rastreio e ao **ViaCEP** só o CEP (os dois pelo `SafeHttpClient`); link da transportadora só `http(s)`. Limites: 15 entregas novas por dia, 60 em andamento, 30 buscas de CEP por minuto e atualizar à mão no máximo a cada 5 min |
+| Veículos | Acesso por `VehicleAccess` (dono, amigo ou grupo com quem foi compartilhado; sem acesso **404**, papel menor **403**): ver < lançar < editar; compartilhar, arquivar e excluir só o dono. Cada um edita só os próprios gastos; o dono e quem edita podem apagar o de outro (o financeiro da pessoa não muda). Lançamento no financeiro só pela fachada `ExpenseLinks` (mesmas regras de categoria e grupo do financeiro). À FIPE vão só os códigos de marca/modelo/ano (validados, `SafeHttpClient`). Limites: 20 veículos, 200 lançamentos por dia, 60 consultas à FIPE por minuto |
 | Rede | Portas só em `127.0.0.1`; banco com senha aleatória; API e nginx rodam **sem root**; `no-new-privileges` |
 | Navegador | CSP restritiva (única origem externa: `accounts.google.com/gsi`, para o botão do Google; `wasm-unsafe-eval` só para o WebAssembly que comprime e abre as maquetes, sem `eval` de JS), `Cross-Origin-Opener-Policy: same-origin-allow-popups` (popup do Google), `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy: no-referrer`, sem versão do servidor |
 | Notificações push | Web Push com chaves VAPID (a privada só no ambiente). O conteúdo vai **cifrado de ponta a ponta** até o aparelho (RFC 8291): o serviço de push do navegador (Google, Mozilla, Apple, Microsoft) não lê o texto. A API só envia para esses serviços (lista fixa, `https` na porta 443, sem redirecionamento). Cada aparelho fica ligado à **sessão de login**: sair, sessão vencida ou excluir a conta param o envio; outra pessoa no mesmo navegador não herda o push. Com o app em foco nada aparece. O texto da notificação aparece na tela de bloqueio, conforme o aparelho |

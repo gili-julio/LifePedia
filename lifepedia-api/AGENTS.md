@@ -55,7 +55,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `AuditService.record` na mesma transação. Bloqueio e "encerrar sessões" por `TokenService.revokeAll` (publica
   `SessionsRevokedEvent`). `last_seen_at` só pelo `UserRepository.touchLastSeen` (nativo; a entidade não grava a coluna).
   Uso da IA só por `AiUsageLog.record`. Limites dos serviços (`AdminService.limits`, sem transação: lê a cota do 17TRACK
-  pela fachada `delivery/TrackingQuota`); serviço novo com cota = linha em `limits` + chave em `LimitKey`/`LIMIT_LABEL` no
+  pela fachada `delivery/TrackingQuota` e a da FIPE por `vehicle/FipeClient.quota`); serviço novo com cota = linha em `limits` + chave em `LimitKey`/`LIMIT_LABEL` no
   web. Teste em `AdminIntegrationTest` (o perfil de teste fixa `lifepedia.admin.email`).
 - **Arquitetura** (`architecture/`): acesso só por `ArchitectureAccess.require(projeto, usuário, papel mínimo)` (dono,
   compartilhamento direto ou por grupo do qual a pessoa é membro na hora; o maior papel vale). Arquivos só por
@@ -89,6 +89,19 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   fim e ajustes). Taxas só pela fachada `financing/MarketRates` (CDI e Selic são valores de `CorrectionIndex` com
   `correction = false`: `FinancingService` recusa como correção). Simulação salva guarda só o `Input` em JSON. Teste em
   `SimulatorIntegrationTest` (`@MockitoBean BcbClient`).
+- **Veículos** (`vehicle/`): papel só por `VehicleAccess.require(veículo, pessoa, mínimo)` (dono, amigo ou grupo com
+  `vehicle_shares`; vale o maior; sem acesso 404, menor 403). Contas só em `VehicleMath` (puro, `VehicleMathTest`: ritmo
+  dos últimos 180 dias, km de hoje até 90 dias, vencimento por km ou data, consumo entre tanques cheios, km rodados) e as
+  respostas montadas em `VehicleViews` (puro, tudo carregado antes). Km sempre coerente com as outras leituras
+  (`checkKm`); o odômetro do veículo é a última leitura (`refreshOdometer`), e a leitura de um gasto some/muda com ele.
+  Financeiro só pela fachada `finance/transaction/ExpenseLinks` (cria pelo `TransactionService`, com categoria e grupos
+  validados; editar mantém mês, banco e observações do lançamento; lançamento apagado no financeiro só solta a ligação,
+  `ON DELETE SET NULL`); gasto de outra pessoa nunca toca no financeiro dela. FIPE só por `FipeClient` (parallelum v2 via
+  `SafeHttpClient.exchange`, códigos validados, listas 1 dia na memória, cota pelos cabeçalhos para o admin), fora de
+  transação. Avisos em `VehicleReminderJob.remind` (uma vez por etapa: `warned` no item/revisão/documento, zerado quando
+  feito ou renovado). Fotos e comprovantes por `VehicleImageStore`; conta excluída apaga os do dono
+  (`deleteUserImagesAfterCommit`). Saiu do grupo → `onMemberRemoved` tira o compartilhamento dos veículos dele ali. Teste
+  em `VehicleIntegrationTest` (`@MockitoBean FipeClient`).
 - **Entregas** (`delivery/`): ver = dono ou membro do grupo da entrega (`visible`, senão 404); mudar = só o dono (`own`,
   membro → 403). HTTP só por `Track17Client` (17TRACK v2.4, 40 códigos por chamada, 3 por segundo: pausa de 400 ms) e
   `CepClient` (ViaCEP), via `SafeHttpClient`, fora de transação; `DeliverySyncService.sync` evita a mesma entrega em duas
@@ -202,7 +215,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@8`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@8`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações e entregas só como registro); mudou o arquivo ⇒ `@9` e importação dos
+  (`lifepedia/account@9`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@9`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas e veículos só como registro); mudou o arquivo ⇒ `@10` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para

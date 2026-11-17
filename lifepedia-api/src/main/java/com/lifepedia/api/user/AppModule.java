@@ -12,5 +12,6 @@ public enum AppModule {
     FRIENDS,
     ARCHITECTURE,
     DEV,
-    DELIVERIES
+    DELIVERIES,
+    VEHICLES
 }

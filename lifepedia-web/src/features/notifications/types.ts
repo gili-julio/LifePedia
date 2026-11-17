@@ -25,6 +25,8 @@ export type NotificationType =
   | 'DEV_MR_COMMENTED'
   | 'DEV_REVIEW_REQUESTED'
   | 'DELIVERY_UPDATE'
+  | 'VEHICLE_SHARED'
+  | 'VEHICLE_REMINDER'
 
 export type AppNotification = {
   id: string

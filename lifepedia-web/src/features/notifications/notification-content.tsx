@@ -3,6 +3,8 @@ import {
   BellIcon,
   BellRingIcon,
   PackageIcon,
+  CarIcon,
+  WrenchIcon,
   CircleXIcon,
   GitMergeIcon,
   GitPullRequestIcon,
@@ -216,9 +218,27 @@ export function notificationContent(n: AppNotification): Content {
       return { text: <>{strong(n.data.author)} pediu sua revisão: {devItem(n)}</>, link: devLink(n), icon: GitPullRequestIcon }
     case 'DELIVERY_UPDATE':
       return { text: <>{strong(n.data.name)}: {deliveryText(n.data)}</>, link: `/entregas/${n.data.deliveryId}`, icon: PackageIcon }
+    case 'VEHICLE_SHARED':
+      return {
+        text: <>{strong(n.data.actorName)} compartilhou o veículo {strong(n.data.vehicleName)}
+          {n.data.groupName ? <> com o grupo {strong(n.data.groupName)}</> : ' com você'}</>,
+        link: `/veiculos/${n.data.vehicleId}`,
+        icon: CarIcon,
+      }
+    case 'VEHICLE_REMINDER':
+      return { text: <>{strong(n.data.vehicleName)}: {vehicleText(n.data)}</>, link: `/veiculos/${n.data.vehicleId}`, icon: WrenchIcon }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
   }
+}
+
+/** Espelha `PushTexts.vehicleText`. */
+function vehicleText(data: Record<string, string>) {
+  const due = data.stage === 'DUE'
+  const day = data.date ? ` (${formatDate(data.date)})` : ''
+  if (data.kind === 'DOCUMENT') return `${data.name} ${due ? 'venceu' : 'vence'}${day}`
+  const km = data.kmLeft && !data.kmLeft.startsWith('-') && data.kmLeft !== '0' ? ` (faltam ${data.kmLeft} km)` : day
+  return `${due ? 'passou da hora' : 'está chegando'}: ${data.name}${km}`
 }
 
 /** Espelha `PushTexts.deliveryText`. */

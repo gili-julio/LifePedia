@@ -62,6 +62,10 @@ export function PrivacyPage() {
             descrição), a transportadora, a previsão e, se você escolher, o grupo com quem compartilha. Endereços de
             entrega salvos: apelido, quem recebe (opcional), CEP, rua, número, complemento, bairro, cidade e estado.</li>
           <li>Simulações do financeiro que você salvar (nome e os valores digitados).</li>
+          <li>Veículos: tipo, apelido, marca, modelo, ano, placa, cor, combustível, foto e a referência na Tabela FIPE com o
+            valor; leituras do km; gastos (tipo, data, valor, km, litros, posto, observações e foto do comprovante) com quem
+            lançou; itens de manutenção, revisões, o histórico do que foi feito e documentos com vencimento (IPVA,
+            licenciamento, seguro, CNH).</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
         <List>
@@ -145,6 +149,12 @@ export function PrivacyPage() {
           <li><strong>Grupos nas entregas</strong>: se você compartilhar uma entrega com um grupo, os membros veem o nome,
             a foto, o código, o andamento e o apelido e a cidade do endereço (nunca a rua e o número) e recebem os
             avisos. Quem sai do grupo deixa de ver.</li>
+          <li><strong>Amigos e grupos nos veículos</strong>: se você compartilhar um veículo, quem recebe vê seu nome como
+            dono e todos os dados do veículo (km, gastos com quem lançou e os comprovantes, manutenção e documentos) e, com
+            a permissão, lança ou edita. O gasto que uma pessoa lança vai para o financeiro dela, nunca para o seu. Você
+            pode tirar o acesso a qualquer momento.</li>
+          <li><strong>Tabela FIPE</strong>: para mostrar o valor do veículo, enviamos só os códigos de marca, modelo e ano
+            à API pública da FIPE (parallelum). Placa, km e gastos nunca saem do LifePedia.</li>
           <li><strong>Administradores do LifePedia</strong>: pessoas da equipe com acesso ao painel de administração
             veem seu nome, @, e-mail, foto, datas de cadastro e de último acesso, a versão dos termos aceita, se a conta
             usa Google ou notificações e <strong>quantos</strong> itens você tem em cada parte do app. Nunca veem o
@@ -194,6 +204,8 @@ export function PrivacyPage() {
           <li>Projetos de arquitetura ficam até você excluí-los (maquetes, anexos e capa saem do servidor junto). Envios de
             maquete que não terminaram são descartados em até 2 horas, e links públicos vencidos são apagados depois de 30
             dias.</li>
+          <li>Veículos e tudo o que foi lançado neles ficam até você excluir o veículo (arquivar guarda o histórico e para
+            os avisos). Lançamentos que já foram para o financeiro ficam lá até você apagá-los.</li>
           <li>Entregas ficam até você excluí-las; entregues vão para o histórico uma semana depois. Endereços ficam até
             você apagá-los (entregas que usavam o endereço ficam sem ele).</li>
           <li>Sessões vencidas são apagadas todos os dias. Ao sair da conta, o aparelho para de receber notificações.</li>

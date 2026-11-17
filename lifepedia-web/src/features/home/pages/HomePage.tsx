@@ -8,6 +8,7 @@ import {
   FlameIcon,
   PinIcon,
   TruckIcon,
+  WrenchIcon,
   UsersIcon,
   WalletIcon,
 } from 'lucide-react'
@@ -22,6 +23,8 @@ import { useAuth } from '@/features/auth/auth-context'
 import { useHiddenModules } from '@/features/auth/preferences'
 import type { AppModule } from '@/features/auth/types'
 import { useDeliverySummary } from '@/features/deliveries/api'
+import { useVehicleSummary } from '@/features/vehicles/api'
+import { STAGE_LABEL, dueText } from '@/features/vehicles/labels'
 import { useDevToday } from '@/features/dev/api'
 import { useSummary } from '@/features/finance/api'
 import { useFinancingOverview } from '@/features/financing/api'
@@ -48,7 +51,7 @@ function taskLink(item: TaskItem) {
 }
 
 /** Módulos com cartão no Início. */
-const HOME_MODULES: AppModule[] = ['TASKS', 'ATTENDANCE', 'FINANCE', 'FINANCING', 'NOTES', 'DEV', 'DELIVERIES']
+const HOME_MODULES: AppModule[] = ['TASKS', 'ATTENDANCE', 'FINANCE', 'FINANCING', 'NOTES', 'DEV', 'DELIVERIES', 'VEHICLES']
 
 /** Início: tarefas de hoje, hábitos, frequência, o mês no financeiro, financiamentos, notas, o dia no Dev, contas ligadas e as mudanças do sistema. */
 export function HomePage() {
@@ -75,6 +78,7 @@ export function HomePage() {
           {show('NOTES') && <NotesCard />}
           {show('DEV') && <DevCard />}
           {show('DELIVERIES') && <DeliveriesCard />}
+          {show('VEHICLES') && <VehiclesCard />}
           <AccountsCard />
         </div>
       ) : (
@@ -392,6 +396,32 @@ function DevCard() {
             )}
           </div>
         )}
+    </HomeCard>
+  )
+}
+
+/** Manutenção, revisão ou documento perto de vencer nos veículos (só aparece com algum). */
+function VehiclesCard() {
+  const { data, isError } = useVehicleSummary()
+  if (isError || !data || !data.upcoming.length) return null
+  return (
+    <HomeCard title="Veículos" to="/veiculos"
+      description={`${data.upcoming.length} ${data.upcoming.length === 1 ? 'item pede atenção' : 'itens pedem atenção'}`}>
+      <ul className="space-y-1.5 text-sm">
+        {data.upcoming.map((u) => (
+          <li key={`${u.vehicleId}-${u.upcoming.kind}-${u.upcoming.id}`}>
+            <Link to={`/veiculos/${u.vehicleId}`} className="flex items-start gap-2 hover:underline">
+              <WrenchIcon className={cn('mt-0.5 size-4 shrink-0', u.upcoming.due.stage === 'DUE' ? 'text-destructive' : 'text-data')} aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">{u.upcoming.name} ({u.vehicleName})</span>
+                <span className="block truncate text-xs text-muted-foreground">
+                  {STAGE_LABEL[u.upcoming.due.stage]}{dueText(u.upcoming.due) ? ` · ${dueText(u.upcoming.due)}` : ''}
+                </span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </HomeCard>
   )
 }

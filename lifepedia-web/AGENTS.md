@@ -185,6 +185,15 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   Link da transportadora só o que a API mandou (`http(s)`), nova aba, `noopener noreferrer`. CEP só pela API
   (`lookupCep`). Dialog de endereço aberto de dentro do de entrega fica **fora** do `<form>` (senão o submit sobe para o
   formulário de fora). `AddressList` serve à aba Endereços e ao `AddressesProfileCard` do perfil.
+- **Veículos** (`features/vehicles`): chaves `['vehicles', ...]`; mutações invalidam o módulo, as notificações e
+  `['finance']` (gasto vira lançamento). Ritmo, km de hoje, vencimentos (`due`), consumo, custo por km e totais **sempre da
+  API**; o front só formata (`dueText`, `formatKm`). Papel por `canAct(role, ...)` só esconde botões (a API confere).
+  Itens, revisões e documentos por `useCare` (ação tipada, devolve o detalhe). Situação (`StageBadge`) sempre com ícone e
+  texto. FIPE só pela API (`useFipeBrands/Models/Years/Price`, `FipePicker` com filtro de modelos). "Lançar no meu
+  financeiro" por `FinanceFields` + `finance-link.ts` (padrão: categoria Transporte; grupos só ao criar); formulários que o
+  usam esperam as categorias carregarem (Select não mostra valor que chega depois). Comprovante por `shrinkPhoto` (1600 px,
+  sem recorte), foto do veículo por `ImagePicker shape="rect"`. Gráfico de gasto empilhado com a paleta categórica validada
+  em ordem fixa por grupo (`GROUPS`), legenda na mesma ordem; consumo em linha com `--data`.
 - **Admin, limites**: `LimitsCard` (aba Sistema) lê `useAdminLimits`; texto e unidade de cada chave em `LIMIT_LABEL`.
 - **Arquitetura** (`features/architecture`): chaves `['architecture', ...]`; mutações invalidam o módulo e as
   notificações. Papel sempre da API (`canAct(role, 'EDIT')` só esconde botões). **Conversão no navegador**
@@ -220,7 +229,7 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações e entregas do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@8`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas e veículos do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@9`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.

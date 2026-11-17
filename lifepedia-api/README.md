@@ -44,6 +44,7 @@ Imagem Docker: `docker build -t lifepedia-api .` (o `docker-compose.yml` da raiz
 | `ARCHITECTURE_QUOTA` | `300MB` | Espaço de cada conta para maquetes e anexos dos projetos dela (inclui versões reservadas) |
 | `ARCHITECTURE_MAX_MODEL` | `100MB` | Tamanho máximo de uma maquete (GLB já comprimido no navegador) |
 | `TRACK17_API_KEY` | vazio (entregas sem atualização automática) | Chave da API do 17TRACK (cabeçalho `17token`) para o rastreio das entregas |
+| `FIPE_TOKEN` | vazio (500 consultas por dia sem cadastro) | Token da API da Tabela FIPE (parallelum v2, cabeçalho `X-Subscription-Token`) |
 | `INTEGRATIONS_KEY` | vazio (só o Duolingo) | Chave AES de 32 bytes em base64 que cifra os tokens das contas ligadas. Trocar ou perder = cada pessoa conecta de novo |
 | `GOOGLE_CLIENT_SECRET` | vazio (Google Agenda desligado) | Segredo do mesmo OAuth Client do `GOOGLE_CLIENT_ID` (código de autorização, só `calendar.readonly`) |
 | `APP_URL` | 1ª origem do `CORS_ORIGINS` | Endereço público do site; a volta do Google é `<APP_URL>/api/integrations/google/callback` |
@@ -104,7 +105,7 @@ no controller). Toda escrita grava em `admin_audit_log`.
 | GET | `/overview` | `{totalUsers, newUsers7, newUsers30, activeUsers7, activeUsers30, admins, blocked, signupsDaily (30), signupsWeekly (26)}` (dias no fuso `TIME_ZONE`, sem buraco) |
 | GET | `/modules` | `{totalUsers, modules: [{key, users, items}]}` (mais usado primeiro; tarefas e notas de grupo contam para quem criou) |
 | GET | `/ai` | Importação pelo site: `enabled`, `model`, `timeoutSeconds`, `dailyLimit`, `last24h`, `running`, `users30`, `avgDurationMs`, `outcomes` (30 dias) e `daily` (concluídas x falhas) |
-| GET | `/limits` | `[{key, configured, period, used, limit, error}]`: `TRACK17` (plano) e `TRACK17_DAILY` (hoje) pela cota do 17TRACK (guardada 5 min), `GEMINI_IMPORT` e `GEMINI_DAILY` (usos nas últimas 24 h contra `AI_DAILY_LIMIT`), `GOOGLE_CALENDAR` (pessoas com Google Agenda ligado contra 100) |
+| GET | `/limits` | `[{key, configured, period, used, limit, error}]`: `TRACK17` (plano) e `TRACK17_DAILY` (hoje) pela cota do 17TRACK (guardada 5 min), `GEMINI_IMPORT` e `GEMINI_DAILY` (usos nas últimas 24 h contra `AI_DAILY_LIMIT`), `GOOGLE_CALENDAR` (pessoas com Google Agenda ligado contra 100), `FIPE` (consultas do dia pelos cabeçalhos `x-ratelimit-*` da última resposta; erro até a 1ª consulta) |
 | GET | `/status` | Versão e data da build, uptime, Java, fuso, memória, banco (`up`, latência, versão, tamanho, migration), recursos ligados e tarefas agendadas (última execução, situação, próxima) |
 | GET | `/users?q=&filter=ALL\|ADMIN\|BLOCKED&page=&size=&sort=createdAt\|lastSeenAt\|name,asc\|desc` | Paginado: `{id, name, username, email, imageUrl, createdAt, lastSeenAt, admin, blocked, fixedAdmin, self}` |
 | GET | `/users/{id}` | Detalhe: Google, senha, termos, `blockedAt`, sessões ativas, aparelhos com push e `counts` por módulo (nunca conteúdo) · `404` |
@@ -125,9 +126,9 @@ acesso: `users.last_seen_at`, gravado pelo `LastSeenTracker` (interceptor em `/a
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@8` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas), só registro · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@9` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) e `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), só registro · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
-| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@8`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
+| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@9`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
 | DELETE | `/` | `{password, confirmation: "EXCLUIR"}` → `204` + cookie apagado · `400` senha errada · `429` após 5 erros |
 
@@ -173,6 +174,9 @@ quem pode editar). Integrações (sem ator): `INTEGRATION_FAILED` (`provider`, `
 `DEV_REVIEW_REQUESTED` (+ `author`). Entregas (sem ator, para o dono e os membros do grupo da entrega):
 `DELIVERY_UPDATE` (`deliveryId`, `name`, `status` = `OUT_FOR_DELIVERY`, `PICKUP`, `DELIVERED`, `FAILED`, `EXCEPTION`,
 `EXPIRED`, `TAX` ou `STALLED`, `text` = último evento, `days` na parada; push urgente quando sai para entrega).
+Veículos: `VEHICLE_SHARED` (`vehicleId`, `vehicleName`, `role`, `groupName` se pelo grupo) e `VEHICLE_REMINDER` (sem ator,
+para o dono e quem pode lançar; `vehicleId`, `vehicleName`, `kind` = `ITEM`/`REVISION`/`DOCUMENT`, `name`, `stage` =
+`SOON`/`DUE`, `date` esperada e `kmLeft`).
 
 **Push**: toda notificação vira também push (texto em `PushTexts`, link para a tela) e cada mensagem nova do chat vai
 para os outros membros (tag por grupo, a última substitui). O envio roda depois do commit, numa thread virtual, e
@@ -514,6 +518,43 @@ Resposta: `status`, `stage` (0 postado, 1 em trânsito, 2 saiu para entrega/reti
 `tracking` (chave configurada) e `syncError`. `DeliverySyncJob`: a cada 15 min lê as não entregues sem sincronizar há
 50 min (lotes de 40, 400 por vez) e às 4h arquiva as entregues há 7 dias.
 
+### Veículos (`/api/vehicles`)
+
+Papel por `VehicleAccess`: dono (`OWNER`) ou compartilhado com a pessoa ou com um grupo dela (`VIEW` < `LOG` < `EDIT`, vale o
+maior). Sem acesso → 404; papel menor → 403.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/` | `{owned, shared}`: seus (com arquivados) e os ativos compartilhados com você (`owner`, `role`, `sharedVia`). Cartão: km de hoje estimado, ritmo, `next` (vencimento mais urgente), `alerts`, `fipeValue` |
+| GET | `/summary` | `{vehicles, upcoming}` (até 5 vencimentos perto ou vencidos dos ativos; Início) |
+| GET | `/templates?type=` | Tabela sugerida de manutenção do tipo (`{name, intervalKm, intervalMonths}`) |
+| POST | `/` | `{type, name, brand?, model?, modelYear?, plate?, color?, fuel?, tankLiters?, odometer?, notes?, fipe?: {kind, brand, model, year}, template?}` → 201 (detalhe); `odometer` vira a 1ª leitura, `template` cria os itens, `fipe` busca o valor · até 20 |
+| GET / PUT / DELETE | `/{id}` | Detalhe (`vehicle`, `fipe`, `items`, `revisions`, `documents`, `upcoming`) · edita (`EDIT`; `fipe` nulo tira) · exclui (dono; os lançamentos no financeiro ficam) |
+| PUT | `/{id}/archive` | `{archived}` (dono; arquivado não recebe aviso) |
+| PUT / DELETE / GET | `/{id}/image` | Foto (multipart `file`, 768 px) |
+| POST | `/{id}/fipe/refresh` | Lê o valor da FIPE agora (`EDIT`; 1 a cada 10 min por veículo; 503 se a FIPE não responder) |
+| GET | `/fipe/{kind}/brands[/{brand}/models[/{model}/years[/{year}]]]` | Listas da FIPE (`CARS`, `MOTORCYCLES`, `TRUCKS`; guardadas 1 dia) e o preço do ano · 60/min |
+| GET / PUT / DELETE | `/{id}/shares`, `/{id}/share-options`, `/{id}/shares/users/{userId}`, `/{id}/shares/groups/{groupId}` | Compartilhar (só dono, `{role}` `VIEW`/`LOG`/`EDIT`; amigos e grupos do dono; até 30) |
+| DELETE | `/{id}/shares/me` | Sair (quem recebeu direto) |
+| GET / POST | `/{id}/readings` | Leituras (mais nova primeiro) · `{km, date}` (`LOG`; km fora de ordem ou data futura → 400) |
+| DELETE | `/{id}/readings/{rid}` | Quem lançou ou `EDIT` (leitura de gasto muda pelo gasto) |
+| GET | `/{id}/expenses?months=` | Gastos dos últimos 1 a 36 meses (padrão 12) com `pricePerLiter`, `user`, `mine`, `canDelete` e `finance` (só de quem lançou) |
+| POST / PUT / DELETE | `/{id}/expenses[/{eid}]` | `{kind, date, amount, description?, odometer?, liters?, fuel?, fullTank?, station?, notes?, finance?: {categoryId, groupIds?}}` (`LOG`; editar só quem lançou; apagar quem lançou ou `EDIT`) · 200 lançamentos por dia |
+| PUT / DELETE / GET | `/{id}/expenses/{eid}/image` | Comprovante (multipart `file`, 1600 px; só quem lançou muda) |
+| GET | `/{id}/stats?months=` | `byMonth` (combustível, manutenção, documentos e taxas, outros), `consumption` (trechos entre tanques cheios), `total`, `kmDriven`, `costPerKm`, `avgKmPerLiter`, `lastKmPerLiter`, `avgFuelPrice`, `liters` |
+| GET | `/{id}/logs` | Histórico do que foi feito (100), com o valor do gasto |
+| POST / PUT / DELETE | `/{id}/items[/{iid}]` | Item `{name, intervalKm?, intervalMonths?, lastKm?, lastOn?, alert?}` (`EDIT`; até 40) |
+| POST | `/{id}/items/{iid}/done` | `{date, km?, amount?, shop?, notes?, finance?}` (`LOG`): vira a última vez, histórico e, com valor, gasto de manutenção |
+| POST / PUT / DELETE | `/{id}/revisions[/{rid}]` | `{name, dueKm?, dueOn?, notes?}` (`EDIT`; até 30) |
+| POST | `/{id}/revisions/plan` | `{everyKm?, everyMonths?, since?, count}`: próximas revisões (as abaixo do km atual ficam de fora; meses de `since` ou, sem ela, de hoje) |
+| POST / DELETE | `/{id}/revisions/{rid}/done` | Feita (`LOG`, como o item + `itemIds` trocados nela) · desfaz (`EDIT`) |
+| POST / PUT / DELETE | `/{id}/documents[/{did}]` | `{kind, name, dueOn, amount?, notes?}` (`EDIT`; até 20) |
+| POST | `/{id}/documents/{did}/renew` | `{nextDue, paidOn?, amount?, finance?}` (`LOG`): próximo vencimento e, com valor, o gasto do tipo |
+
+Itens, revisões e documentos devolvem o detalhe inteiro com `due` (`stage` `OK`/`SOON`/`DUE`, `dueKm`, `dueOn`, `kmLeft`,
+`daysLeft`, `expectedOn`), calculado em `VehicleMath`. `VehicleReminderJob`: às 9h avisa (`VEHICLE_REMINDER`) e às 5h relê
+a FIPE dos veículos lidos há mais de 20 dias (até 200 por vez).
+
 ### Financeiro
 
 | Método | Rota | Descrição |
@@ -609,6 +650,10 @@ src/main/java/com/lifepedia/api/
 ├── delivery/      entregas (DeliveryService: lista, grupo, foto, endereços, CEP), rastreio (Track17Client, TrackSnapshot
 │                  puro, DeliverySyncService + job: registro, leitura em lotes, avisos, arquivo), CepClient (ViaCEP),
 │                  TrackingQuota (cota do 17TRACK para o admin)
+├── vehicle/       veículos (VehicleService: cadastro, lista, FIPE, foto), papéis (VehicleAccess), compartilhamento
+│                  (VehicleShareService), km e gastos com o financeiro (VehicleLogService + ExpenseLinks), manutenção,
+│                  revisões e documentos (VehicleCareService), contas puras (VehicleMath), tabela sugerida
+│                  (VehicleTemplates), FipeClient, VehicleReminderJob (avisos e FIPE)
 ├── chat/          chat do grupo: mensagens (cursor), leitura/não lidas, stream SSE (ChatStreams, em memória)
 ├── achievement/   conquistas (Achievement: níveis; AchievementService: contagens + níveis gravados; AchievementProgress)
 ├── task/         tarefas: regra de repetição (Recurrence, pura), ocorrências, agenda (e choque de horário),

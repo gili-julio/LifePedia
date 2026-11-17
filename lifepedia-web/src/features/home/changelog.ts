@@ -17,6 +17,7 @@ export type ChangeModule =
   | 'Dev'
   | 'Integrações'
   | 'Entregas'
+  | 'Veículos'
 
 export type Change = {
   id: string
@@ -31,6 +32,22 @@ export type Change = {
 
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
+  {
+    id: 'veiculos',
+    date: '2026-11-16',
+    title: 'Veículos: km, abastecimentos, manutenção e documentos',
+    modules: ['Veículos', 'Finanças', 'Grupos', 'Amigos', 'Notificações', 'Conta', 'Privacidade', 'Integrações'],
+    details: [
+      'Nova área Veículos: cadastre carro, moto, caminhão ou bicicleta com foto, placa e o modelo da Tabela FIPE, que mostra o valor do veículo e atualiza todo mês.',
+      'Anote o km de tempos em tempos: o app calcula quantos km você roda por dia e prevê quando cada troca vai chegar.',
+      'Lance abastecimentos (litros, posto, tanque cheio) e outros gastos com foto do comprovante; cada um já entra no seu financeiro e, se quiser, no do grupo.',
+      'Veja o consumo em km/l, o custo por km, o preço médio do litro e o gasto de cada mês em gráficos.',
+      'Itens de manutenção (óleo, corrente, filtros, freios...) a cada tantos km ou meses, com uma tabela sugerida pronta, plano de revisões e documentos como IPVA, licenciamento, seguro e CNH.',
+      'Avisos no celular quando algo está chegando e quando passou da hora.',
+      'Compartilhe com amigos ou grupos escolhendo se a pessoa só vê, pode lançar ou pode editar; quem recebe vê de quem é o veículo.',
+      'Conectar o Google Agenda voltou a funcionar: a volta do Google não dava mais erro.',
+    ],
+  },
   {
     id: 'entregas-e-simulador',
     date: '2026-11-12',

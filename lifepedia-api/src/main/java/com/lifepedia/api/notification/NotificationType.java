@@ -54,5 +54,12 @@ public enum NotificationType {
      * Novidade numa entrega (dono e membros do grupo dela). data: deliveryId, name, status (OUT_FOR_DELIVERY, PICKUP,
      * DELIVERED, FAILED, EXCEPTION, EXPIRED, TAX = aguardando pagamento, STALLED = parada), text (último evento), days
      */
-    DELIVERY_UPDATE
+    DELIVERY_UPDATE,
+    /** Veículo compartilhado. data: actorName, actorUsername, vehicleId, vehicleName, role, groupName (grupo) */
+    VEHICLE_SHARED,
+    /**
+     * Item de manutenção, revisão ou documento perto de vencer ou vencido (dono e quem lança). data: vehicleId,
+     * vehicleName, kind (ITEM, REVISION, DOCUMENT), name, stage (SOON, DUE), date (data esperada), kmLeft
+     */
+    VEHICLE_REMINDER
 }

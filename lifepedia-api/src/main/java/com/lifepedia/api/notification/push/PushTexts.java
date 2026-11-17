@@ -76,6 +76,10 @@ public final class PushTexts {
             case DELIVERY_UPDATE -> new PushMessage(data.getOrDefault("name", APP), deliveryText(data),
                     "/entregas/" + URLEncoder.encode(data.getOrDefault("deliveryId", ""), StandardCharsets.UTF_8),
                     type.name() + ":" + data.getOrDefault("deliveryId", ""), "OUT_FOR_DELIVERY".equals(data.get("status")));
+            case VEHICLE_SHARED -> new PushMessage(title, actor + " compartilhou o veículo " + data.getOrDefault("vehicleName", "")
+                    + (group == null ? " com você" : " com o grupo"), vehicleLink(data), type.name() + ":" + data.get("vehicleId"), false);
+            case VEHICLE_REMINDER -> new PushMessage(data.getOrDefault("vehicleName", APP), vehicleText(data), vehicleLink(data),
+                    type.name() + ":" + data.get("vehicleId") + ":" + data.getOrDefault("name", ""), false);
         };
     }
 
@@ -97,6 +101,19 @@ public final class PushTexts {
             case "STALLED" -> "Sem novidades há " + data.getOrDefault("days", "") + " dias";
             default -> data.getOrDefault("text", "Novidade no rastreio");
         };
+    }
+
+    private static String vehicleText(Map<String, String> data) {
+        String name = data.getOrDefault("name", "");
+        boolean due = "DUE".equals(data.get("stage"));
+        if ("DOCUMENT".equals(data.get("kind"))) return name + (due ? " venceu" : " vence") + onDay(data);
+        String km = data.get("kmLeft");
+        String tail = km != null && !km.startsWith("-") && !"0".equals(km) ? " (faltam " + km + " km)" : onDay(data);
+        return (due ? "Passou da hora: " : "Está chegando: ") + name + tail;
+    }
+
+    private static String vehicleLink(Map<String, String> data) {
+        return "/veiculos/" + URLEncoder.encode(data.getOrDefault("vehicleId", ""), StandardCharsets.UTF_8);
     }
 
     private static String provider(Map<String, String> data) {

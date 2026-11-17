@@ -72,6 +72,9 @@ lifepedia:
   deliveries:
     # Chave da API do 17TRACK (rastreio). Vazia = entregas sem atualização automática.
     api-key: ${TRACK17_API_KEY:}
+  vehicles:
+    # Token da API da FIPE (fipe.parallelum.com.br). Vazio = 500 consultas por dia sem cadastro.
+    fipe-token: ${FIPE_TOKEN:}
   integrations:
     # Chave AES de 32 bytes em base64 que cifra os tokens das contas externas (GitLab, GitHub, Google Agenda).
     # Vazia = só o Duolingo (sem token). Gerar: openssl rand -base64 32. Trocar a chave invalida os tokens salvos.
