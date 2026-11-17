@@ -84,6 +84,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 - **Veículos** (`vehicle/`): acesso só por `VehicleAccess.require(veículo, pessoa, papel mínimo)` (sem acesso 404, papel
   menor 403). À FIPE vão só códigos validados (`FipeClient`, `SafeHttpClient`, fora de transação); token opcional
   `FIPE_TOKEN` só no ambiente (cabeçalho). Gasto de outra pessoa nunca mexe no financeiro dela.
+- **Carteira** (`finance/wallet`): cartão, conta e fatura só do dono (404); só os 4 últimos números do cartão. O aviso de
+  compra colado é lido só no navegador. No grupo, só os cartões que o dono marcou e só para membros (404).
 - **Entregas** (`delivery/`): ao 17TRACK vai só o código de rastreio e ao ViaCEP só o CEP, sempre pelo
   `SafeHttpClient` (`Track17Client`, `CepClient`) e fora de transação; chave `TRACK17_API_KEY` só no ambiente (cabeçalho
   `17token`). Nome, foto e endereço nunca saem do servidor. Link da transportadora só `http(s)`.
@@ -158,6 +160,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
     `group` dos gráficos), `DocumentKind`, `VehicleMath.Stage` e DTOs de `VehicleDtos` ↔ `features/vehicles/types.ts` (+ textos
     em `labels.ts`, `FIPE_KIND` e `GROUPS`); `kind`/`stage` da notificação `VEHICLE_REMINDER` ↔ `vehicleText` em
     `notification-content.tsx`
+  - Carteira: `finance/wallet/CardCycle` (fechamento, vencimento e fatura de uma data) ↔ `features/finance/wallet/cycle.ts`;
+    `InvoiceStatus` e DTOs de `WalletDtos` ↔ `features/finance/wallet/types.ts` (+ textos em `labels.ts`); `kind` da
+    notificação `CARD_REMINDER` ↔ `cardText` em `notification-content.tsx`
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
   `InvestmentCategories`). `Totals.expense` e `MonthPoint.*Expense` vêm **sem** investimento; `invested` à parte;
@@ -229,7 +234,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@9`, anexo; importa `@1` a `@9`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@10`, anexo; importa `@1` a `@10`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
@@ -238,7 +243,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   `devProjects` (nome, descrição, atalhos e repositórios) e `integrations` (serviço, apelido, login, endereço; nunca token),
   desde o `@7`, `financeSimulations` (simulações do financeiro) e `deliveries` (`addresses` + `deliveries`: nome, código,
   situação, transportadora, apelido do endereço), desde o `@8`, e `vehicles` (veículos da pessoa com leituras, gastos, itens,
-  revisões e documentos; `mine` diz se o gasto foi dela), desde o `@9`, são só registro. Mudou o formato? Crie `@10` e mantenha
+  revisões e documentos; `mine` diz se o gasto foi dela), desde o `@9`, e `wallet` (cartões com ciclo, limite, meta e
+  pagamentos; contas com o saldo informado), desde o `@10`, são só registro. Mudou o formato? Crie `@11` e mantenha
   a importação dos anteriores (usuários guardam arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -307,6 +313,25 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   criado por último) e `PUT /api/finance/banks/assign {transactionIds, recurringIds, bank}` (lote, tudo ou nada; `bank`
   nulo tira; sincronizados acompanham). Financiamento guarda `bank` (nome) + `bankCode`; o fixo ligado herda o banco como
   conta (nome digitado antes do catálogo vira `OTHER`). O banco **não** entra no arquivo da conta.
+- **Carteira** (`/api/finance/wallet`): cartão (`finance_cards`) e conta (`finance_accounts`), um de cada por banco (chave do
+  `BankRef`), ligados aos lançamentos pelo banco + `kind` (`CARD`/`ACCOUNT`). **Fatura = mês do vencimento**; fecha no último
+  dia de fechamento antes do vencimento; compra no dia do fechamento ou depois vai para a seguinte; parcela "(n/total)" vai
+  n-1 faturas depois (`CardCycle`). Lançamento no cartão **sem `month`** (pessoal, lote, rápido) recebe a fatura do ciclo
+  (`CardMonths`); com `month`, vale o informado. Totais, situação (`FUTURE`/`OPEN`/`CLOSED`/`PAID`/`OVERDUE`; fatura sem
+  valor ou vencida antes do cadastro do cartão conta como paga), previsão (fixos e parcelas + compras à vista do ciclo no
+  ritmo dos dias passados, a partir do 3º dia), média das 3 últimas, meta, limite (fechada a pagar + aberta + parcelas
+  futuras) e saldo projetado das contas **sempre da API** (`CardBook`). `GET` (`{cards, accounts, openTotal, toPay,
+  today}`), `POST /cards`, `GET/PUT/DELETE /cards/{id}` (`?month=` = fatura; detalhe com `invoice`, `history` e `upcoming`
+  de 6; excluir não apaga lançamentos), `PUT|DELETE /cards/{id}/invoices/{month}/paid` (`{paidOn, amount, accountId}`, tudo
+  opcional; não cria lançamento), `GET /cards/{id}/recalculate?from=` (feitos à mão, não conferidos, fora do ciclo) e
+  `POST /cards/{id}/recalculate {from, ids}` (só os marcados; grupos sincronizados acompanham), `POST /accounts`, `PUT
+  /accounts/{id}`, `PUT /accounts/{id}/balance {balance, balanceOn}`, `DELETE /accounts/{id}`, `POST /purchases` (`cardId`
+  ou `accountId`, `description`, `amount` total, `date`, `installments` só no cartão, `categoryId` opcional = a do último
+  com o mesmo nome ou "Outros", `groupIds`). Até 20 cartões e 20 contas. Grupo: `GET /api/groups/{id}/finance/cards`
+  (membro; cartões que os donos mostram ali, com a fatura aberta e `groupSpent`); quem sai do grupo tira os cartões dele.
+  **Conferido** (`transactions.checked`): veio de documento (lote com `originalDescription`) ou foi casado na importação
+  (`POST /api/finance/import` com `checks: [{transactionId, amount?, month?}]`). Aviso `CARD_REMINDER` às 9h
+  (`WalletReminderJob`, uma vez por fatura: `CLOSING`, `DUE`, `BUDGET` em 80 e 100).
 - **Importação pelo site** (`AI_API_KEY`): `GET /api/finance/import/assistant` (`enabled`, limites de arquivo e `quota`),
   `POST /analyze` (multipart `files`, **202**: valida, grava `import_drafts` em `RUNNING` e a API chama o Gemini em segundo
   plano; o front nunca manda prompt), `GET /prompt` (o mesmo prompt, para o agente da pessoa). Limites por conta em

@@ -51,7 +51,7 @@ export function DevPage() {
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
             <CodeXmlIcon className="size-8 text-muted-foreground" aria-hidden />
             <p className="max-w-md text-sm text-muted-foreground">
-              Crie um projeto para cada trabalho (ex.: Sebito, Gertec, Nut), ligue as contas do GitLab, GitHub e Google em
+              Crie um projeto para cada trabalho (ex.: Acme, Loja Online, Freela), ligue as contas do GitLab, GitHub e Google em
               Integrações e escolha os repositórios de cada um.
             </p>
             <div className="flex flex-wrap justify-center gap-2">

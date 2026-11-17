@@ -40,7 +40,7 @@ export function forecast(delivery: Delivery) {
 }
 
 
-/** "Rua A, 10 · Apto 2 · Centro · Natal/RN". */
+/** "Rua A, 10 · Apto 2 · Centro · São Paulo/SP". */
 export function addressLine(a: DeliveryAddress) {
   const street = [a.street, a.number].filter(Boolean).join(', ')
   return [street, a.complement, a.district, `${a.city}/${a.state}`].filter(Boolean).join(' · ')

@@ -50,6 +50,14 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/finance/pages/BanksPage')).BanksPage }),
           },
           {
+            path: '/financeiro/carteira',
+            lazy: async () => ({ Component: (await import('@/features/finance/wallet/pages/WalletPage')).WalletPage }),
+          },
+          {
+            path: '/financeiro/carteira/:cardId',
+            lazy: async () => ({ Component: (await import('@/features/finance/wallet/pages/CardPage')).CardPage }),
+          },
+          {
             path: '/entregas',
             lazy: async () => ({ Component: (await import('@/features/deliveries/pages/DeliveriesPage')).DeliveriesPage }),
           },

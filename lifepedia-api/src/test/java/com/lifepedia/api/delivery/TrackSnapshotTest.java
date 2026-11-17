@@ -17,14 +17,14 @@ class TrackSnapshotTest {
         TrackSnapshot s = TrackSnapshot.parse(JSON.readTree("""
                 {"latest_status":{"status":"OutForDelivery","sub_status":"OutForDelivery_Other"},
                  "latest_event":{"time_iso":"2026-11-12T08:10:00-03:00","description":"Objeto saiu para entrega ao destinatário",
-                                 "location":"NATAL - RN"},
+                                 "location":"SAO PAULO - SP"},
                  "shipping_info":{"shipper_address":{"country":"CN","city":"Shenzhen"}},
                  "time_metrics":{"estimated_delivery_date":{"from":"2026-11-12T00:00:00Z","to":"2026-11-14T00:00:00Z"}},
                  "tracking":{"providers":[{"provider":{"key":2151,"name":"Correios","homepage":"https://www.correios.com.br"},
                    "events":[
                      {"time_iso":"2026-11-05T10:00:00-03:00","description":"Objeto postado","location":"CURITIBA - PR"},
                      {"time_iso":"2026-11-12T08:10:00-03:00","description":"Objeto saiu para entrega ao destinatário",
-                      "location":"NATAL - RN"},
+                      "location":"SAO PAULO - SP"},
                      {"time_iso":"2026-11-08T16:00:00-03:00","description":"Objeto em transferência",
                       "description_translation":{"lang":"pt","description":"Em transferência"},
                       "address":{"city":"Recife","state":"PE","country":"BR"}}]}]}}"""));
@@ -34,7 +34,7 @@ class TrackSnapshotTest {
         assertThat(s.carrierName()).isEqualTo("Correios");
         assertThat(s.carrierUrl()).isEqualTo("https://www.correios.com.br");
         assertThat(s.latestAt()).isEqualTo(OffsetDateTime.parse("2026-11-12T08:10:00-03:00"));
-        assertThat(s.latestLocation()).isEqualTo("NATAL - RN");
+        assertThat(s.latestLocation()).isEqualTo("SAO PAULO - SP");
         assertThat(s.origin()).isEqualTo("Shenzhen, CN");
         assertThat(s.estimatedFrom()).isEqualTo(LocalDate.of(2026, 11, 12));
         assertThat(s.estimatedTo()).isEqualTo(LocalDate.of(2026, 11, 14));

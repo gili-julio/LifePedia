@@ -6,6 +6,7 @@ import com.lifepedia.api.finance.importing.ImportDtos.FixedBank;
 import com.lifepedia.api.finance.importing.ImportDtos.ImportRequest;
 import com.lifepedia.api.finance.importing.ImportDtos.ImportResponse;
 import com.lifepedia.api.finance.recurring.RecurringEntryService;
+import com.lifepedia.api.finance.transaction.TransactionDtos.CheckRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import com.lifepedia.api.finance.transaction.TransactionService;
 import com.lifepedia.api.shared.BusinessException;
@@ -37,7 +38,8 @@ public class ImportService {
         List<TransactionRequest> transactions = request.transactionsOrEmpty();
         List<FixedAdjustment> adjustments = request.fixedAdjustmentsOrEmpty();
         List<FixedBank> banks = request.fixedBanksOrEmpty();
-        if (transactions.isEmpty() && adjustments.isEmpty() && banks.isEmpty()) {
+        List<CheckRequest> checks = request.checksOrEmpty();
+        if (transactions.isEmpty() && adjustments.isEmpty() && banks.isEmpty() && checks.isEmpty()) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "Nada para importar.");
         }
         if (!transactions.isEmpty()) {
@@ -54,7 +56,8 @@ public class ImportService {
         for (FixedBank fixed : banks) {
             recurringEntryService.fillBank(userId, fixed.recurringEntryId(), BankRef.clean(fixed.bank()));
         }
+        int checked = checks.isEmpty() ? 0 : transactionService.check(userId, checks);
         if (request.draftId() != null) drafts.finish(userId, request.draftId());
-        return new ImportResponse(transactions.size(), adjustments.size());
+        return new ImportResponse(transactions.size(), adjustments.size(), checked);
     }
 }

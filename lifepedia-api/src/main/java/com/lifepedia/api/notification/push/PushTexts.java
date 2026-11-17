@@ -80,6 +80,9 @@ public final class PushTexts {
                     + (group == null ? " com você" : " com o grupo"), vehicleLink(data), type.name() + ":" + data.get("vehicleId"), false);
             case VEHICLE_REMINDER -> new PushMessage(data.getOrDefault("vehicleName", APP), vehicleText(data), vehicleLink(data),
                     type.name() + ":" + data.get("vehicleId") + ":" + data.getOrDefault("name", ""), false);
+            case CARD_REMINDER -> new PushMessage(data.getOrDefault("cardName", APP), cardText(data),
+                    "/financeiro/carteira/" + URLEncoder.encode(data.getOrDefault("cardId", ""), StandardCharsets.UTF_8),
+                    type.name() + ":" + data.get("cardId") + ":" + data.getOrDefault("kind", ""), false);
         };
     }
 
@@ -110,6 +113,15 @@ public final class PushTexts {
         String km = data.get("kmLeft");
         String tail = km != null && !km.startsWith("-") && !"0".equals(km) ? " (faltam " + km + " km)" : onDay(data);
         return (due ? "Passou da hora: " : "Está chegando: ") + name + tail;
+    }
+
+    private static String cardText(Map<String, String> data) {
+        return switch (data.getOrDefault("kind", "")) {
+            case "CLOSING" -> "A fatura fecha" + onDay(data) + " com " + money(data);
+            case "DUE" -> "A fatura de " + money(data) + " vence" + onDay(data);
+            case "BUDGET" -> "A fatura chegou a " + data.getOrDefault("percent", "") + "% da meta: " + money(data);
+            default -> "Novidade na fatura";
+        };
     }
 
     private static String vehicleLink(Map<String, String> data) {

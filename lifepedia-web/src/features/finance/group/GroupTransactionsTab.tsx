@@ -51,7 +51,7 @@ type Props = {
 function asTransaction(g: GroupTransaction): Transaction {
   return {
     id: g.id, description: g.description, type: g.type, categoryId: g.category.id, amount: g.amount,
-    date: g.date, month: g.month, notes: g.notes, originalDescription: null, bank: g.bank,
+    date: g.date, month: g.month, notes: g.notes, originalDescription: null, bank: g.bank, checked: false,
   }
 }
 

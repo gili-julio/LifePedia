@@ -229,13 +229,22 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas e veículos do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@9`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos e carteira do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@10`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.
 - **Ações do cabeçalho**: muitas ações? Marque as menos usadas como `secondary` (vão para o ⋮ no desktop). Excluir
   leva `destructive` (vermelho no menu).
 - **Fixos**: vigência e valor do mês sempre por `features/finance/fixed.ts` (`isActiveIn`, `valueIn`).
+- **Carteira** (`features/finance/wallet`): chaves `['finance', 'wallet', ...]` e `['finance', 'groups', groupId, 'cards']`
+  (qualquer mutação do financeiro recarrega: lançamento muda a fatura). Totais, situação, previsão, média, meta, limite e
+  saldos **sempre da API**; o front só formata (`invoiceHint`, `STATUS` com ícone e texto). `cycle.ts` (espelho de
+  `CardCycle`) só sugere o mês no `TransactionDialog` e mostra "vai para a fatura de..." no lançamento rápido; a API decide.
+  Aviso de compra colado é lido só no front (`notification.ts`, `parsePurchase`) e nunca vai para a API; sempre mostrar os
+  campos antes de salvar. Cartão desenhado (`CardFace`) com a cor do usuário e texto branco sobre gradiente escurecido.
+  Importação: `matchLaunched` casa linha com lançamento feito à mão (não conferido) e o plano manda `checks` em vez de criar;
+  "já importado" só considera lançamentos conferidos ou vindos de documento; `MatchNote` explica e deixa desfazer.
+  Lista de lançamentos mostra o ícone de conferido (`checked`).
 - **Bancos**: catálogo em `lib/banks.ts` (espelha `Bank.java`; `matchBank` reconhece o banco em texto livre, como nomes
   do Banco Central). Mostrar: `components/bank/BankLogo` (`BankLogo`; `BankBadge` com nome; `BankMark` só logo, em linha sem espaço; coluna *Banco* só em `xl`); escolher: `BankSelect` (só a lista) e
   `BankField` (lista + conta ou cartão + nome em outro banco; `bankSchema` no Zod). Logos em `assets/banks/<code>.svg`,

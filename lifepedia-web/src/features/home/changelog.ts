@@ -33,6 +33,25 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'carteira',
+    date: '2026-11-17',
+    title: 'Carteira: acompanhe a fatura do cartão enquanto ela está aberta',
+    modules: ['Finanças', 'Grupos', 'Notificações', 'Conta', 'Privacidade'],
+    details: [
+      'Nova tela Carteira: cada cartão aparece desenhado com o valor da fatura atual, se está aberta, fechada, paga ou vencida, e uma linha do ciclo até o fechamento e o vencimento.',
+      'Com o dia do fechamento e do vencimento cadastrados, a compra no cartão vai sozinha para a fatura certa, e as parcelas para as seguintes.',
+      'Na fatura: previsão de quanto vai fechar pelo seu ritmo de compras, média das últimas, meta da fatura, limite livre e as próximas faturas já comprometidas.',
+      'Contas com o saldo de hoje e do fim do mês, já descontando as faturas que ela paga.',
+      'Lançamento rápido com valor, descrição e cartão, e a opção de colar o aviso de compra do banco para preencher tudo.',
+      'Botão "Paguei" para marcar a fatura como paga sem contar o gasto duas vezes.',
+      'Ao importar a fatura fechada, o que você já tinha lançado fica conferido em vez de duplicar, e aparece o que você lançou e não veio na fatura. Também dá para importar a fatura ainda aberta.',
+      'Recalcular faturas: mostra os lançamentos antigos que estão na fatura errada e só muda os que você marcar.',
+      'Avisos no celular 3 dias antes de fechar e de vencer, e quando a fatura passa de 80% e 100% da meta.',
+      'No financeiro do grupo, os cartões que os membros escolherem mostrar, com a fatura aberta e quanto do gasto do grupo está em cada um.',
+      'Os exemplos de nomes nas telas de Dev e nos textos de ajuda agora são fictícios.',
+    ],
+  },
+  {
     id: 'veiculos',
     date: '2026-11-16',
     title: 'Veículos: km, abastecimentos, manutenção e documentos',

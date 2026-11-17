@@ -4,6 +4,7 @@ import {
   BellRingIcon,
   PackageIcon,
   CarIcon,
+  CreditCardIcon,
   WrenchIcon,
   CircleXIcon,
   GitMergeIcon,
@@ -34,7 +35,7 @@ const IMPORT_LINK = '/financeiro/importar'
 const INTEGRATIONS_LINK = '/integracoes'
 const PROVIDER_LABEL: Record<string, string> = { GOOGLE: 'Google Agenda', GITLAB: 'GitLab', GITHUB: 'GitHub', DUOLINGO: 'Duolingo' }
 
-/** "!31 Tela de login (gertec/app) · Gertec" */
+/** "!31 Tela de login (acme/app) · Acme" */
 function devItem(n: AppNotification) {
   const title = n.data.title ?? n.data.branch ?? ''
   return <>{n.data.number ? `!${n.data.number} ` : ''}{strong(title)} ({n.data.repoName}) no {n.data.projectName}</>
@@ -227,8 +228,22 @@ export function notificationContent(n: AppNotification): Content {
       }
     case 'VEHICLE_REMINDER':
       return { text: <>{strong(n.data.vehicleName)}: {vehicleText(n.data)}</>, link: `/veiculos/${n.data.vehicleId}`, icon: WrenchIcon }
+    case 'CARD_REMINDER':
+      return { text: <>{strong(n.data.cardName)}: {cardText(n.data)}</>, link: `/financeiro/carteira/${n.data.cardId}`, icon: CreditCardIcon }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
+  }
+}
+
+/** Espelha `PushTexts.cardText`. */
+function cardText(data: Record<string, string>): ReactNode {
+  const value = <Amount value={data.amount} />
+  const day = data.date ? ` (${formatDate(data.date)})` : ''
+  switch (data.kind) {
+    case 'CLOSING': return <>a fatura fecha{day} com {value}</>
+    case 'DUE': return <>a fatura de {value} vence{day}</>
+    case 'BUDGET': return <>a fatura chegou a {data.percent}% da meta: {value}</>
+    default: return 'novidade na fatura'
   }
 }
 

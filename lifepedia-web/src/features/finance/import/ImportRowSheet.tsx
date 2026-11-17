@@ -14,6 +14,7 @@ import { TypeToggle } from '../components/TypeToggle'
 import type { Category, RecurringEntry } from '../types'
 import { FixedOutcomeNote } from './FixedOutcomeNote'
 import { FixedSelect } from './FixedSelect'
+import { MatchNote } from './MatchNote'
 import { CountsIn } from './ImportRowItem'
 import { rowErrors, rowMonth, withBank, withSource, type ImportRow } from './parse'
 import { SOURCE_LABEL, type ImportSource } from './format'
@@ -50,6 +51,7 @@ export function ImportRowSheet({ open, onOpenChange, row, categoriesById, fixedE
         </DrawerHeader>
         <div className="overflow-y-auto px-4">
           <FieldGroup className="gap-4">
+            <MatchNote row={draft} onUnlink={() => set({ match: null })} />
             <TypeToggle
               value={draft.type}
               onChange={(type) =>

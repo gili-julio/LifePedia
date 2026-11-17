@@ -15,9 +15,12 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { ApiError } from '@/lib/api'
 import { bankSchema, type BankRef } from '@/lib/banks'
-import { amountToInput, parseAmount, todayIso } from '@/lib/format'
+import { amountToInput, formatDate, formatMonth, parseAmount, todayIso } from '@/lib/format'
 import { useLastBank, useSaveTransaction } from '../api'
 import { ShareFields } from '../group/GroupShareSection'
+import { bankKey } from '../import/parse'
+import { useWallet } from '../wallet/api'
+import { dueOn, invoiceOf } from '../wallet/cycle'
 import type { EntryType, Transaction, TransactionRequest } from '../types'
 import { useCategoryLookup } from '../use-category-lookup'
 import { CategorySelect } from './CategorySelect'
@@ -76,6 +79,26 @@ export function TransactionDialog({ open, onOpenChange, transaction, defaultType
   const { byId } = useCategoryLookup()
   const type = useWatch({ control: form.control, name: 'type' })
   const canShare = !transaction && !onSave
+  const cards = useWallet().data?.cards
+  const bank = useWatch({ control: form.control, name: 'bank' })
+  const date = useWatch({ control: form.control, name: 'date' })
+  const cardOf = (ref: BankRef | null) =>
+    ref?.kind === 'CARD' ? cards?.find((c) => bankKey(c.bank) === bankKey(ref)) : undefined
+  /** Mês sugerido: no cartão cadastrado, o da fatura; senão, o da data. */
+  const suggest = (day: string, ref: BankRef | null) => {
+    const card = cardOf(ref)
+    return card && /^\d{4}-\d{2}-\d{2}$/.test(day) ? invoiceOf(card, day) : day.slice(0, 7)
+  }
+  const card = cardOf(bank)
+  const invoice = card ? suggest(date, bank) : null
+
+  /** Troca data ou banco: o mês acompanha se ainda era o sugerido (ou ficaria antes da data). */
+  function follow(nextDate: string, nextBank: BankRef | null) {
+    const month = form.getValues('month')
+    const before = suggest(form.getValues('date'), form.getValues('bank'))
+    const after = suggest(nextDate, nextBank)
+    if (month === before || month < nextDate.slice(0, 7)) form.setValue('month', after)
+  }
 
   useEffect(() => {
     if (open) form.reset(toForm(transaction, defaultType, initialDate, lastBank))
@@ -162,10 +185,7 @@ export function TransactionDialog({ open, onOpenChange, transaction, defaultType
                 <Controller control={form.control} name="date" render={({ field }) => (
                   <DatePicker id="tx-date" value={field.value} invalid={!!errors.date}
                     onChange={(value) => {
-                      const previous = field.value.slice(0, 7)
-                      const next = value.slice(0, 7)
-                      const month = form.getValues('month')
-                      if (month === previous || month < next) form.setValue('month', next)
+                      follow(value, form.getValues('bank'))
                       field.onChange(value)
                     }} />
                 )} />
@@ -180,13 +200,20 @@ export function TransactionDialog({ open, onOpenChange, transaction, defaultType
                     <MonthField id="tx-month" value={field.value} onChange={field.onChange} invalid={!!errors.month} />
                   )}
                 />
-                <FieldDescription>Compra no cartão? Use o mês da fatura.</FieldDescription>
+                <FieldDescription>
+                  {card && invoice
+                    ? `${card.label}: compra nesta data cai na fatura de ${formatMonth(invoice).toLowerCase()} (vence ${formatDate(dueOn(card, invoice))}).`
+                    : 'Compra no cartão? Use o mês da fatura (cadastre o cartão na Carteira e o mês vem sozinho).'}
+                </FieldDescription>
                 <FieldError errors={[errors.month]} />
               </Field>
               <Field data-invalid={!!errors.bank}>
                 <FieldLabel htmlFor="tx-bank">Banco</FieldLabel>
                 <Controller control={form.control} name="bank" render={({ field }) => (
-                  <BankField id="tx-bank" value={field.value} onChange={field.onChange} invalid={!!errors.bank} />
+                  <BankField id="tx-bank" value={field.value} invalid={!!errors.bank} onChange={(value) => {
+                    follow(form.getValues('date'), value)
+                    field.onChange(value)
+                  }} />
                 )} />
                 <FieldError errors={[errors.bank]} />
               </Field>

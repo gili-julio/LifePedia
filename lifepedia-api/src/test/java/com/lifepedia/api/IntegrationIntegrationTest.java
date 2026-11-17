@@ -139,7 +139,7 @@ class IntegrationIntegrationTest extends ApiTestSupport {
         assertThat(JsonPath.<String>read(body(send("GET", me, "/api/integrations", null)), "$.accounts[0].status")).isEqualTo("ACTIVE");
 
         jdbc.sql("insert into dev_projects (id, user_id, name, color, links, position, created_at, updated_at) "
-                        + "values (:p, :u, 'Sebito', '#000000', '[]', 1, now(), now())")
+                        + "values (:p, :u, 'Loja Online', '#000000', '[]', 1, now(), now())")
                 .param("p", UUID.randomUUID()).param("u", UUID.fromString(userId(me))).update();
         UUID project = jdbc.sql("select id from dev_projects where user_id = :u").param("u", UUID.fromString(userId(me)))
                 .query(UUID.class).single();
@@ -154,7 +154,7 @@ class IntegrationIntegrationTest extends ApiTestSupport {
         String overview = body(send("GET", me, "/api/integrations", null));
         assertThat(JsonPath.<String>read(overview, "$.accounts[0].status")).isEqualTo("ERROR");
         assertThat(JsonPath.<String>read(overview, "$.accounts[0].lastError")).contains("recusou");
-        assertThat(JsonPath.<List<String>>read(overview, "$.accounts[0].projects")).containsExactly("Sebito");
+        assertThat(JsonPath.<List<String>>read(overview, "$.accounts[0].projects")).containsExactly("Loja Online");
         assertThat(JsonPath.<List<String>>read(body(send("GET", me, "/api/notifications", null)),
                 "$.items[?(@.type == 'INTEGRATION_FAILED')].id")).hasSize(1);
         assertThat(JsonPath.<Integer>read(body(send("GET", me, "/api/integrations/summary", null)), "$.problems")).isEqualTo(1);

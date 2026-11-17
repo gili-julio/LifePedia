@@ -14,6 +14,7 @@ import { Money } from '../components/Money'
 import { TotalCard } from '../components/TotalCard'
 import { useGroupBankOverview, useGroupCategoryItems, useGroupHistory, useGroupSummary } from './api'
 import type { MemberTotals } from './types'
+import { GroupCards } from '../wallet/components/GroupCards'
 
 type Props = {
   groupId: string
@@ -191,6 +192,8 @@ export function GroupOverview({ groupId, month, onBring }: Props) {
           </CardContent>
         </Card>
       </div>
+
+      <GroupCards groupId={groupId} />
 
       {banks && banks.banks.some((b) => b.history.some((v) => v > 0)) && (
         <div className="grid gap-4 lg:grid-cols-2">

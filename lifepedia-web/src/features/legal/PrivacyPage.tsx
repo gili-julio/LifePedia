@@ -66,6 +66,10 @@ export function PrivacyPage() {
             valor; leituras do km; gastos (tipo, data, valor, km, litros, posto, observações e foto do comprovante) com quem
             lançou; itens de manutenção, revisões, o histórico do que foi feito e documentos com vencimento (IPVA,
             licenciamento, seguro, CNH).</li>
+          <li>Carteira: cartões (banco, apelido, os 4 últimos números se você informar, cor, dias de fechamento e
+            vencimento, limite, meta da fatura e os grupos em que aparece), as faturas marcadas como pagas (dia, valor e
+            conta) e contas com o saldo que você informou e o dia dele. Nunca pedimos o número completo do cartão nem
+            senhas do banco. O texto do aviso de compra que você colar é lido só no seu aparelho e não é enviado.</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
         <List>
@@ -153,6 +157,10 @@ export function PrivacyPage() {
             dono e todos os dados do veículo (km, gastos com quem lançou e os comprovantes, manutenção e documentos) e, com
             a permissão, lança ou edita. O gasto que uma pessoa lança vai para o financeiro dela, nunca para o seu. Você
             pode tirar o acesso a qualquer momento.</li>
+          <li><strong>Grupos nos cartões</strong>: se você mostrar um cartão num grupo, os membros veem o nome dele, o
+            banco, os 4 últimos números (se informados), a fatura aberta (valor e datas) e quanto dos gastos do grupo que
+            você lançou está nesse cartão. Você pode tirar o grupo a qualquer momento, e quem sai do grupo deixa de mostrar
+            os cartões nele.</li>
           <li><strong>Tabela FIPE</strong>: para mostrar o valor do veículo, enviamos só os códigos de marca, modelo e ano
             à API pública da FIPE (parallelum). Placa, km e gastos nunca saem do LifePedia.</li>
           <li><strong>Administradores do LifePedia</strong>: pessoas da equipe com acesso ao painel de administração
@@ -206,6 +214,8 @@ export function PrivacyPage() {
             dias.</li>
           <li>Veículos e tudo o que foi lançado neles ficam até você excluir o veículo (arquivar guarda o histórico e para
             os avisos). Lançamentos que já foram para o financeiro ficam lá até você apagá-los.</li>
+          <li>Cartões, pagamentos de fatura e contas da Carteira ficam até você excluí-los. Excluir um cartão não apaga os
+            lançamentos dele.</li>
           <li>Entregas ficam até você excluí-las; entregues vão para o histórico uma semana depois. Endereços ficam até
             você apagá-los (entregas que usavam o endereço ficam sem ele).</li>
           <li>Sessões vencidas são apagadas todos os dias. Ao sair da conta, o aparelho para de receber notificações.</li>

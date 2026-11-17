@@ -13,6 +13,8 @@ import com.lifepedia.api.finance.Installments.Installment;
 import com.lifepedia.api.finance.Installments.MoveRequest;
 import com.lifepedia.api.finance.Installments.MoveResult;
 import com.lifepedia.api.finance.group.GroupFinanceSync;
+import com.lifepedia.api.finance.wallet.CardMonths;
+import com.lifepedia.api.finance.transaction.TransactionDtos.CheckRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionResponse;
 import com.lifepedia.api.shared.BusinessException;
@@ -31,6 +33,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
@@ -46,15 +49,17 @@ public class TransactionService {
     private final GroupFinanceService groupFinance;
     private final GroupFinanceSync groupSync;
     private final ApplicationEventPublisher events;
+    private final CardMonths cardMonths;
 
     public TransactionService(TransactionRepository repository, CategoryService categoryService,
                               GroupFinanceService groupFinance, GroupFinanceSync groupSync,
-                              ApplicationEventPublisher events) {
+                              ApplicationEventPublisher events, CardMonths cardMonths) {
         this.repository = repository;
         this.categoryService = categoryService;
         this.groupFinance = groupFinance;
         this.groupSync = groupSync;
         this.events = events;
+        this.cardMonths = cardMonths;
     }
 
     private static final Map<String, String> SORT_FIELDS = Map.of(
@@ -105,8 +110,8 @@ public class TransactionService {
     @Transactional
     public TransactionResponse create(UUID userId, TransactionRequest request) {
         categoryService.requireUsable(userId, request.categoryId(), request.type());
-        requireValidMonth(request);
-        Transaction transaction = repository.save(newTransaction(userId, request));
+        YearMonth month = monthOf(userId, request);
+        Transaction transaction = repository.save(newTransaction(userId, request, month));
         events.publishEvent(new AchievementProgress(userId, EnumSet.of(Achievement.TRANSACTIONS)));
         groupFinance.shareNew(userId, request.groupIds(), request.shareMode(), transaction);
         return TransactionResponse.from(transaction);
@@ -125,8 +130,9 @@ public class TransactionService {
                     throw new BusinessException(HttpStatus.BAD_REQUEST, "Categoria inválida.");
                 }
                 CategoryService.requireMatchingType(category, request.type());
-                requireValidMonth(request);
-                transactions.add(newTransaction(userId, request));
+                Transaction transaction = newTransaction(userId, request, monthOf(userId, request));
+                transaction.setChecked(transaction.getOriginalDescription() != null);
+                transactions.add(transaction);
             } catch (BusinessException e) {
                 throw new BusinessException(e.getStatus(), "Linha " + (i + 1) + ": " + e.getMessage());
             }
@@ -139,10 +145,32 @@ public class TransactionService {
     public TransactionResponse update(UUID userId, UUID id, TransactionRequest request) {
         Transaction transaction = find(userId, id);
         categoryService.requireUsable(userId, request.categoryId(), request.type());
-        requireValidMonth(request);
-        apply(transaction, request);
+        apply(transaction, request, monthOf(userId, request));
         groupSync.transactionChanged(transaction);
         return TransactionResponse.from(transaction);
+    }
+
+    /** Confere lançamentos com o documento importado (tudo ou nada); devolve quantos. */
+    @Transactional
+    public int check(UUID userId, List<CheckRequest> checks) {
+        Map<UUID, CheckRequest> byId = new HashMap<>();
+        checks.forEach(c -> byId.put(c.transactionId(), c));
+        List<Transaction> found = repository.findByUserIdAndIdIn(userId, byId.keySet());
+        if (found.size() != byId.size()) throw new NotFoundException("Lançamento a conferir não encontrado.");
+        for (Transaction t : found) {
+            CheckRequest check = byId.get(t.getId());
+            if (check.amount() != null) t.setAmount(check.amount());
+            if (check.month() != null) {
+                if (check.month().isBefore(YearMonth.from(t.getDate()))) {
+                    throw new BusinessException(HttpStatus.BAD_REQUEST, "O mês do lançamento não pode ser anterior à data.");
+                }
+                t.setMonth(check.month());
+            }
+            t.setChecked(true);
+        }
+        // A sincronização limpa o contexto do JPA: tudo muda antes dela.
+        found.forEach(groupSync::transactionChanged);
+        return found.size();
     }
 
     /** Adianta ou adia o mês da parcela; com {@code following}, as próximas parcelas da compra vão junto. */
@@ -173,28 +201,33 @@ public class TransactionService {
                 .orElseThrow(() -> new NotFoundException("Lançamento não encontrado."));
     }
 
-    private static void requireValidMonth(TransactionRequest request) {
-        if (request.effectiveMonth().isBefore(YearMonth.from(request.date()))) {
+    /** Mês informado; sem ele, a fatura do cartão (se o banco tiver cartão cadastrado) ou o mês da data. */
+    private YearMonth monthOf(UUID userId, TransactionRequest request) {
+        YearMonth month = request.month() != null ? request.month()
+                : cardMonths.monthOf(userId, BankRef.clean(request.bank()), request.date(), request.description())
+                        .orElse(YearMonth.from(request.date()));
+        if (month.isBefore(YearMonth.from(request.date()))) {
             throw new BusinessException(HttpStatus.BAD_REQUEST, "O mês do lançamento não pode ser anterior à data.");
         }
+        return month;
     }
 
     /** A descrição original só é gravada na criação. */
-    private static Transaction newTransaction(UUID userId, TransactionRequest request) {
+    private static Transaction newTransaction(UUID userId, TransactionRequest request, YearMonth month) {
         Transaction transaction = new Transaction(userId);
-        apply(transaction, request);
+        apply(transaction, request, month);
         String original = request.originalDescription();
         transaction.setOriginalDescription(original == null || original.isBlank() ? null : original.trim());
         return transaction;
     }
 
-    private static void apply(Transaction transaction, TransactionRequest request) {
+    private static void apply(Transaction transaction, TransactionRequest request, YearMonth month) {
         transaction.setDescription(request.description().trim());
         transaction.setType(request.type());
         transaction.setCategoryId(request.categoryId());
         transaction.setAmount(request.amount());
         transaction.setDate(request.date());
-        transaction.setMonth(request.effectiveMonth());
+        transaction.setMonth(month);
         transaction.setNotes(request.notes());
         transaction.setBank(BankRef.clean(request.bank()));
     }

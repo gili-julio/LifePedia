@@ -69,19 +69,19 @@ class DeliveryIntegrationTest extends ApiTestSupport {
         String bearer = registerAndGetBearer();
         String code = code();
         remote.put(code, info("InTransit", "Objeto em transferência", "2026-11-10T10:00:00-03:00"));
-        when(cep.find("59000000")).thenReturn(Optional.of(new CepClient.Address("59000000", "Rua A", "Centro", "Natal", "RN")));
+        when(cep.find("01001000")).thenReturn(Optional.of(new CepClient.Address("01001000", "Rua A", "Centro", "São Paulo", "SP")));
 
-        assertThat(send("GET", bearer, "/api/deliveries/cep/59000-000", null)).bodyJson()
-                .extractingPath("$.city").isEqualTo("Natal");
+        assertThat(send("GET", bearer, "/api/deliveries/cep/01001-000", null)).bodyJson()
+                .extractingPath("$.city").isEqualTo("São Paulo");
         assertThat(send("GET", bearer, "/api/deliveries/cep/12345678", null)).hasStatus(404);
         String home = JsonPath.read(post(bearer, "/api/deliveries/addresses", """
-                {"label":"Casa","cep":"59000-000","street":"Rua A","number":"10","city":"Natal","state":"rn"}"""), "$.id");
+                {"label":"Casa","cep":"01001-000","street":"Rua A","number":"10","city":"São Paulo","state":"sp"}"""), "$.id");
         String work = JsonPath.read(post(bearer, "/api/deliveries/addresses", """
-                {"label":"Trabalho","cep":"59000001","street":"Rua B","city":"Natal","state":"RN","defaultAddress":true}"""), "$.id");
+                {"label":"Trabalho","cep":"01001001","street":"Rua B","city":"São Paulo","state":"SP","defaultAddress":true}"""), "$.id");
         assertThat(send("GET", bearer, "/api/deliveries/addresses", null)).bodyJson().satisfies(json -> {
             assertThat(json).extractingPath("$[0].id").isEqualTo(work);
             assertThat(json).extractingPath("$[1].defaultAddress").isEqualTo(false);
-            assertThat(json).extractingPath("$[1].state").isEqualTo("RN");
+            assertThat(json).extractingPath("$[1].state").isEqualTo("SP");
         });
 
         String created = post(bearer, "/api/deliveries", """
@@ -141,7 +141,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
         String code = code();
         remote.put(code, info("InTransit", "Em trânsito", "2026-11-10T10:00:00-03:00"));
         String address = JsonPath.read(post(alice, "/api/deliveries/addresses", """
-                {"label":"Casa","cep":"59000000","street":"Rua A","number":"10","city":"Natal","state":"RN"}"""), "$.id");
+                {"label":"Casa","cep":"01001000","street":"Rua A","number":"10","city":"São Paulo","state":"SP"}"""), "$.id");
         String id = JsonPath.read(post(alice, "/api/deliveries", """
                 {"trackingCode":"%s","name":"Sofá","addressId":"%s","groupId":"%s"}""".formatted(code, address, groupId)), "$.id");
 
@@ -149,7 +149,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
             assertThat(json).extractingPath("$[0].id").isEqualTo(id);
             assertThat(json).extractingPath("$[0].mine").isEqualTo(false);
             assertThat(json).extractingPath("$[0].address").isNull();
-            assertThat(json).extractingPath("$[0].addressShort.city").isEqualTo("Natal");
+            assertThat(json).extractingPath("$[0].addressShort.city").isEqualTo("São Paulo");
             assertThat(json).extractingPath("$[0].group.name").isEqualTo("Casa");
         });
         assertThat(send("PUT", bob, "/api/deliveries/" + id, """
@@ -157,7 +157,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
         assertThat(send("GET", carol, "/api/deliveries/" + id, null)).hasStatus(404);
         assertThat(send("DELETE", carol, "/api/deliveries/" + id, null)).hasStatus(404);
         assertThat(send("PUT", carol, "/api/deliveries/addresses/" + address, """
-                {"label":"X","cep":"59000000","street":"Rua","city":"Natal","state":"RN"}""")).hasStatus(404);
+                {"label":"X","cep":"01001000","street":"Rua","city":"São Paulo","state":"SP"}""")).hasStatus(404);
         assertThat(send("POST", carol, "/api/deliveries", """
                 {"trackingCode":"%s","name":"X","groupId":"%s"}""".formatted(code(), groupId))).hasStatus(404);
         assertThat(send("POST", carol, "/api/deliveries", """
@@ -180,9 +180,9 @@ class DeliveryIntegrationTest extends ApiTestSupport {
     private static JsonNode info(String status, String text, String time) {
         return JSON.readTree("""
                 {"latest_status":{"status":"%s"},
-                 "latest_event":{"time_iso":"%s","description":"%s","location":"NATAL - RN"},
+                 "latest_event":{"time_iso":"%s","description":"%s","location":"SAO PAULO - SP"},
                  "tracking":{"providers":[{"provider":{"key":2151,"name":"Correios","homepage":"https://www.correios.com.br"},
-                   "events":[{"time_iso":"%s","description":"%s","location":"NATAL - RN"}]}]}}
+                   "events":[{"time_iso":"%s","description":"%s","location":"SAO PAULO - SP"}]}]}}
                 """.formatted(status, time, text, time, text));
     }
 }

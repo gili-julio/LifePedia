@@ -34,7 +34,12 @@ export type ImportRow = {
   bankName: string
   /** Não impedem importar */
   warnings: string[]
+  /** Lançamento já feito à mão que é este item: em vez de criar, fica conferido (ausente em revisões antigas) */
+  match?: LaunchedMatch | null
 }
+
+/** Resumo do lançamento existente casado com a linha. */
+export type LaunchedMatch = { id: string; description: string; date: string; amount: number; month: YearMonth }
 
 export class ImportParseError extends Error {}
 
@@ -99,7 +104,7 @@ function parseNumber(raw: unknown): number {
   return negative ? -parsed : parsed
 }
 
-/** Mesmas palavras em qualquer ordem = mesmo nome ("Natal IMD" = "IMD Natal"). */
+/** Mesmas palavras em qualquer ordem = mesmo nome ("Padaria Centro" = "Centro Padaria"). */
 export function nameKey(name: string) {
   return normalizeName(name).split(/[^a-z0-9]+/).filter(Boolean).sort().join(' ')
 }
@@ -293,6 +298,48 @@ export function markDuplicates(rows: ImportRow[], existing: Transaction[]): Impo
       include: row.include && !sameDescription,
       warnings: [...row.warnings, sameDescription ? 'Já importado antes (desmarcado).' : 'Possível duplicado: mesmo valor e data.'],
     }
+  })
+}
+
+const MATCH_DAYS = 3
+
+function dayNumber(iso: string) {
+  return Date.UTC(+iso.slice(0, 4), +iso.slice(5, 7) - 1, +iso.slice(8, 10)) / 86_400_000
+}
+
+/** Chave do banco sem conta/cartão (outro banco: pelo nome). */
+export function bankKey(bank: Pick<BankRef, 'code' | 'name'>) {
+  return bank.code === OTHER_BANK ? `${bank.code}:${(bank.name ?? '').trim().toLowerCase()}` : bank.code
+}
+
+/**
+ * Casa a linha com um lançamento feito à mão (não conferido): mesmo tipo e banco, até 3 dias de diferença e valor igual,
+ * ou nome parecido com valor até 20% diferente. Cada lançamento casa com uma linha só.
+ */
+export function matchLaunched(rows: ImportRow[], existing: Transaction[]): ImportRow[] {
+  const candidates = existing.filter((t) => !t.checked && !t.originalDescription)
+  const used = new Set<string>()
+  return rows.map((row) => {
+    const amount = parseAmount(row.amount)
+    if (row.fixedEntryId || !row.include || !row.date || !(amount > 0)) return row
+    const bank = rowBank(row)
+    let best: { t: Transaction; score: number; days: number } | null = null
+    for (const t of candidates) {
+      if (used.has(t.id) || t.type !== row.type) continue
+      if (bank && t.bank && bankKey(t.bank) !== bankKey(bank)) continue
+      const days = Math.abs(dayNumber(t.date) - dayNumber(row.date))
+      if (days > MATCH_DAYS) continue
+      const sameAmount = Math.abs(t.amount - amount) < 0.005
+      const similar = similarNames(t.description, row.description)
+        || (!!row.originalDescription && similarNames(t.description, row.originalDescription))
+      if (!sameAmount && !(similar && Math.abs(t.amount - amount) <= Math.max(1, amount * 0.2))) continue
+      const score = (sameAmount ? 2 : 0) + (similar ? 2 : 0) + (bank && t.bank ? 1 : 0)
+      if (!best || score > best.score || (score === best.score && days < best.days)) best = { t, score, days }
+    }
+    if (!best) return row
+    used.add(best.t.id)
+    const { id, description, date, amount: value, month } = best.t
+    return { ...row, match: { id, description, date, amount: value, month } }
   })
 }
 

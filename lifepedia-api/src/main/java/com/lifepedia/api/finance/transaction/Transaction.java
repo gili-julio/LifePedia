@@ -56,6 +56,10 @@ public class Transaction extends BaseEntity {
     @Embedded
     private BankRef bank;
 
+    /** Conferido com a fatura ou o extrato (veio de um documento ou foi casado na importação). */
+    @Column(nullable = false)
+    private boolean checked;
+
     protected Transaction() {
     }
 
@@ -137,5 +141,13 @@ public class Transaction extends BaseEntity {
 
     public void setBank(BankRef bank) {
         this.bank = bank;
+    }
+
+    public boolean isChecked() {
+        return checked;
+    }
+
+    public void setChecked(boolean checked) {
+        this.checked = checked;
     }
 }

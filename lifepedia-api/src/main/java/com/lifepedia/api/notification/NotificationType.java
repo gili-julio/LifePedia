@@ -61,5 +61,10 @@ public enum NotificationType {
      * Item de manutenção, revisão ou documento perto de vencer ou vencido (dono e quem lança). data: vehicleId,
      * vehicleName, kind (ITEM, REVISION, DOCUMENT), name, stage (SOON, DUE), date (data esperada), kmLeft
      */
-    VEHICLE_REMINDER
+    VEHICLE_REMINDER,
+    /**
+     * Fatura do cartão: fechando em até 3 dias (CLOSING), fechada vencendo em até 3 dias (DUE) ou meta da fatura em 80% e
+     * 100% (BUDGET). data: cardId, cardName, kind, amount, date (fechamento ou vencimento), percent (só BUDGET)
+     */
+    CARD_REMINDER
 }

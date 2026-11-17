@@ -79,13 +79,13 @@ function DevProjectForm({ onOpenChange, project, onSaved }: Props) {
     <>
       <DialogHeader>
         <DialogTitle>{project ? 'Editar projeto' : 'Novo projeto'}</DialogTitle>
-        <DialogDescription>Um por trabalho ou cliente (ex.: Sebito, Gertec, Nut). Os repositórios entram depois.</DialogDescription>
+        <DialogDescription>Um por trabalho ou cliente (ex.: Acme, Loja Online, Freela). Os repositórios entram depois.</DialogDescription>
       </DialogHeader>
       <DialogBody>
         <form id="dev-project-form" onSubmit={submit} noValidate className="space-y-4">
           <Field data-invalid={!!errors.name}>
             <FieldLabel htmlFor="dev-name">Nome</FieldLabel>
-            <Input id="dev-name" value={name} maxLength={60} placeholder="Ex.: Gertec" className="text-base md:text-sm"
+            <Input id="dev-name" value={name} maxLength={60} placeholder="Ex.: Acme" className="text-base md:text-sm"
               aria-invalid={!!errors.name} onChange={(e) => setName(e.target.value)} />
             <FieldError>{errors.name}</FieldError>
           </Field>

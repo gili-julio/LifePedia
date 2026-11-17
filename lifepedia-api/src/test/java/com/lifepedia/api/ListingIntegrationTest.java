@@ -114,8 +114,8 @@ class ListingIntegrationTest extends ApiTestSupport {
     void categoryItemsGroupOccasionalsByDescription() {
         String bearer = registerAndGetBearer();
         String food = categoryId(bearer, "EXPENSE", "Alimentação");
-        createTransaction(bearer, food, "Lanche IMD", 4, "2026-09-02");
-        createTransaction(bearer, food, "LANCHE IMD", 6, "2026-09-09");
+        createTransaction(bearer, food, "Lanche Faculdade", 4, "2026-09-02");
+        createTransaction(bearer, food, "LANCHE FACULDADE", 6, "2026-09-09");
         createTransaction(bearer, food, "Mercado", 200, "2026-09-10");
         post(bearer, "/api/finance/recurring", """
                 {"description":"Marmita","type":"EXPENSE","categoryId":"%s","amount":300,"startMonth":"%s"}

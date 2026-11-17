@@ -1,4 +1,5 @@
 import { AlertTriangleIcon, CheckIcon, Loader2Icon, Trash2Icon } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { toast } from 'sonner'
@@ -12,12 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ApiError } from '@/lib/api'
 import { OTHER_BANK } from '@/lib/banks'
-import { currentYearMonth, parseAmount } from '@/lib/format'
+import { currentYearMonth, formatDate, parseAmount } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
-import { useDiscardDraft, useImport } from '../api'
+import { fetchTransactions, useDiscardDraft, useImport } from '../api'
 import { CategorySelect } from '../components/CategorySelect'
-import type { EntryType, ImportDraft, ImportRequest, RecurringEntry } from '../types'
+import type { EntryType, ImportDraft, ImportRequest, RecurringEntry, Transaction } from '../types'
 import { useCategoryLookup } from '../use-category-lookup'
 import { FixedOutcomeNote } from './FixedOutcomeNote'
 import { FixedSelect } from './FixedSelect'
@@ -25,7 +26,8 @@ import { SOURCE_LABEL, type ImportSource } from './format'
 import { CountsIn, ImportRowItem } from './ImportRowItem'
 import { ImportRowSheet } from './ImportRowSheet'
 import { OriginalDescription } from './OriginalDescription'
-import { fixedOutcome, monthsOf, rowBank, rowErrors, rowMonth, withBank, withSource, type ImportRow } from './parse'
+import { MatchNote } from './MatchNote'
+import { bankKey, fixedOutcome, monthsOf, rowBank, rowErrors, rowMonth, withBank, withSource, type ImportRow } from './parse'
 import { Step } from './Step'
 import { useDraftAutosave, type DraftSaveState } from './use-draft-autosave'
 
@@ -64,7 +66,9 @@ export function ImportReview({ draft, initialRows, fixedEntries }: Props) {
   const errorsOf = (row: ImportRow) => (row.include ? rowErrors(row, byId, fixedById) : [])
   const invalidCount = selected.filter((r) => errorsOf(r).length > 0).length
   const plan = buildPlan(selected, fixedById)
-  const hasWork = plan.request.transactions.length + plan.request.fixedAdjustments.length + plan.request.fixedBanks.length > 0
+  const hasWork = plan.request.transactions.length + plan.request.fixedAdjustments.length + plan.request.fixedBanks.length
+    + plan.request.checks.length > 0
+  const missing = useMissing(selected)
 
   /** Mesmo banco em todas as linhas selecionadas. */
   function applyBank() {
@@ -76,7 +80,7 @@ export function ImportReview({ draft, initialRows, fixedEntries }: Props) {
       await autosave.flush()
       const saved = await importMutation.mutateAsync({ ...plan.request, draftId: draft.id })
       const banks = plan.request.fixedBanks.length
-      toast.success(`${saved.transactions} lançamento(s) importado(s) · ${saved.fixedAdjustments} fixo(s) atualizado(s)${banks ? ` · ${banks} fixo(s) com banco definido` : ''}.`)
+      toast.success(`${saved.transactions} lançamento(s) importado(s) · ${saved.fixedAdjustments} fixo(s) atualizado(s)${banks ? ` · ${banks} fixo(s) com banco definido` : ''}${saved.checked ? ` · ${saved.checked} conferido(s)` : ''}.`)
       const month = monthsOf(selected).sort().at(-1) ?? currentYearMonth()
       navigate(month === currentYearMonth() ? '/financeiro/lancamentos' : `/financeiro/lancamentos?mes=${month}`)
     } catch (error) {
@@ -174,6 +178,7 @@ export function ImportReview({ draft, initialRows, fixedEntries }: Props) {
                         </p>
                       ))}
                       {fixed && row.include && <div className="mt-1"><FixedOutcomeNote row={row} fixed={fixed} /></div>}
+                      <MatchNote row={row} className="mt-1" onUnlink={() => updateRow(row.key, { match: null })} />
                     </TableCell>
                     <TableCell className="align-top">
                       <Select value={row.type}
@@ -233,6 +238,8 @@ export function ImportReview({ draft, initialRows, fixedEntries }: Props) {
           </Table>
         </div>
 
+        {missing.length > 0 && <MissingList items={missing} />}
+
         <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-sm">
             <p>
@@ -241,6 +248,7 @@ export function ImportReview({ draft, initialRows, fixedEntries }: Props) {
               <span className="tabular-nums">{formatCurrency(plan.income)}</span>) ·{' '}
               <span className="font-medium">{plan.request.fixedAdjustments.length}</span> fixo(s) com valor real ·{' '}
               {plan.covered} já coberto(s) por fixos
+              {plan.request.checks.length > 0 && <> · <span className="font-medium">{plan.request.checks.length}</span> já lançado(s) por você, que ficam conferidos</>}
             </p>
             {invalidCount > 0 && (
               <p className="text-destructive">{invalidCount} linha(s) com campos a corrigir.</p>
@@ -276,9 +284,46 @@ export function ImportReview({ draft, initialRows, fixedEntries }: Props) {
   )
 }
 
+/** Lançamentos feitos à mão no cartão, nas faturas do documento, que não casaram com nenhuma linha. */
+function useMissing(selected: ImportRow[]) {
+  const queryClient = useQueryClient()
+  const cards = selected.filter((r) => r.source === 'card' && r.bankCode && r.month)
+  const keys = [...new Set(cards.map((r) => bankKey({ code: r.bankCode, name: r.bankName })))]
+  const months = [...new Set(cards.map((r) => r.month))].sort()
+  const matched = new Set(selected.map((r) => r.match?.id).filter(Boolean))
+  const { data } = useQuery({
+    queryKey: ['finance', 'import', 'missing', months],
+    queryFn: async () => (await Promise.all(months.map((m) => fetchTransactions(queryClient, m)))).flat(),
+    enabled: months.length > 0,
+  })
+  return (data ?? []).filter((t) => t.bank?.kind === 'CARD' && keys.includes(bankKey(t.bank)) && months.includes(t.month)
+    && !t.checked && !t.originalDescription && !matched.has(t.id))
+}
+
+function MissingList({ items }: { items: Transaction[] }) {
+  const { formatCurrency } = useMoney()
+  return (
+    <div className="space-y-2 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-sm" role="note">
+      <p className="flex items-center gap-1.5 font-medium"><AlertTriangleIcon className="size-4 shrink-0" /> Lançados por você e que não vieram no documento</p>
+      <p className="text-xs text-muted-foreground">
+        Se a fatura já fechou, confira: podem ter caído em outra fatura, sido estornados ou digitados com valor diferente.
+      </p>
+      <ul className="divide-y divide-amber-500/20">
+        {items.map((t) => (
+          <li key={t.id} className="flex gap-2 py-1.5">
+            <span className="min-w-0 flex-1 truncate">{t.description}</span>
+            <span className="shrink-0 text-xs text-muted-foreground">{formatDate(t.date).slice(0, 5)}</span>
+            <span className="shrink-0 tabular-nums">{formatCurrency(t.amount)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 /** Separa as linhas selecionadas em ocasionais novos, ajustes de fixos e itens já cobertos. */
 function buildPlan(selected: ImportRow[], fixedById: Map<string, RecurringEntry>) {
-  const request: ImportRequest = { transactions: [], fixedAdjustments: [], fixedBanks: [] }
+  const request: ImportRequest = { transactions: [], fixedAdjustments: [], fixedBanks: [], checks: [] }
   const adjustments = new Map<string, ImportRequest['fixedAdjustments'][number]>()
   const banks = new Map<string, ImportRequest['fixedBanks'][number]>()
   let covered = 0
@@ -296,6 +341,15 @@ function buildPlan(selected: ImportRow[], fixedById: Map<string, RecurringEntry>
       continue
     }
     const amount = parseAmount(row.amount)
+    if (row.match) {
+      const month = rowMonth(row)
+      request.checks.push({
+        transactionId: row.match.id,
+        ...(Math.abs(row.match.amount - amount) >= 0.005 && { amount }),
+        ...(month !== row.match.month && month >= row.match.date.slice(0, 7) && { month }),
+      })
+      continue
+    }
     if (row.type === 'EXPENSE') expense += amount || 0
     else income += amount || 0
     request.transactions.push({

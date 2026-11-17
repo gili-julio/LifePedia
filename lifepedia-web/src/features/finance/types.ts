@@ -80,10 +80,12 @@ export type Transaction = {
   /** Descrição como veio no documento importado (não muda) */
   originalDescription: string | null
   bank: BankRef | null
+  /** Conferido com a fatura ou o extrato (veio de um documento ou foi casado na importação) */
+  checked: boolean
 }
 
 /** Sem `month`, conta no mês da data. `originalDescription` só vale na criação. */
-export type TransactionRequest = Omit<Transaction, 'id' | 'month' | 'originalDescription'> & ShareOnCreate & {
+export type TransactionRequest = Omit<Transaction, 'id' | 'month' | 'originalDescription' | 'checked'> & ShareOnCreate & {
   month?: YearMonth
   originalDescription?: string | null
 }
@@ -132,11 +134,13 @@ export type ImportRequest = {
   fixedAdjustments: (FixedAdjustment & { recurringEntryId: string })[]
   /** Banco para fixos que ainda não têm */
   fixedBanks: { recurringEntryId: string; bank: BankRef }[]
+  /** Lançamentos já existentes que vieram no documento: ficam conferidos (valor e mês do documento, se vierem) */
+  checks: { transactionId: string; amount?: number; month?: YearMonth }[]
   /** Revisão que fecha junto com a importação */
   draftId?: string
 }
 
-export type ImportResponse = { transactions: number; fixedAdjustments: number }
+export type ImportResponse = { transactions: number; fixedAdjustments: number; checked: number }
 
 /** Limites de envio à IA por conta. `nextAt` nulo = pode enviar agora. */
 export type ImportQuota = {

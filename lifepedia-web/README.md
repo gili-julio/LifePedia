@@ -83,6 +83,8 @@ O site instala como app no celular e no desktop (Chrome, Edge, Android; no iPhon
 | `/financeiro` | Visão geral do mês (`?novo=1` abre o novo lançamento): totais, **investido** (fora das despesas, com % dos ganhos), % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, investido nos últimos 12 meses (se houver), categorias (expandem os itens agrupados pelo nome), maiores bancos |
 | `/financeiro/fixos` | Ganhos e despesas fixas (mensais), paginados; filtro por banco (`?banco=`) e seleção para definir o banco em lote |
 | `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; filtro por banco (`?banco=`), seleção para definir o banco em lote, ação **Tornar fixo** em cada item e **Adiantar ou adiar parcela** nos que têm "(n/total)" no nome (só esta ou esta e as seguintes) |
+| `/financeiro/carteira` | Carteira: cartões desenhados com a fatura atual, situação e ciclo, fechada a pagar, limite livre; contas com saldo de hoje e do fim do mês; lançamento rápido (`?rapido=1`, `?rapido=colar` abre colando o aviso do banco) |
+| `/financeiro/carteira/:cardId` | Fatura do cartão (`?fatura=yyyy-MM`): previsão, média, meta, limite, ciclo, composição, gráfico das faturas vizinhas, itens conferidos; Paguei, editar, recalcular faturas |
 | `/financeiro/bancos` | Gastos do mês por banco: maior banco, valor sem banco, lista com conta e cartão, comparação de 6 meses e um cartão por banco com as maiores categorias |
 | `/financeiro/simulador` | **Simulador** (`?aba=simular\|salvas`): ponto de partida (saldo de hoje, prazo de 6 meses a 20 anos ou até 600 meses), *Seu mês hoje* (somar fixos, média dos ocasionais de 3/6/12 meses, com o que entrou na conta), **ganhos e gastos** livres (valor, mês, só uma vez ou até um mês), **investimento** (já investido, aporte por mês, % do CDI, Tesouro Selic, IPCA+, prefixado ou poupança, IR, aporte saindo do saldo). Resultado: cards (saldo no fim, diferença, rendimento, 1º mês negativo), **saldo sem mudanças x simulado** e **aportado x rendimento**; *Mostrar em reais de hoje*. *Salvar simulação*/*Salvar alterações*/*Salvar como nova*; aba **Salvas** com abrir, excluir e **comparar** 2 ou 3 no mesmo gráfico |
 | `/financeiro/importar` | Importar extratos e faturas com IA (juntos, um ou vários meses). **Pelo site** (padrão, com a API configurada): envia os arquivos, vê os limites e o quanto já usou e pode sair; a leitura segue em segundo plano e avisa ao terminar. **Com o seu agente**: copia o prompt, cola a resposta. Nos dois, revisa numa prévia editável, salva como rascunho a cada edição, e importa ou descarta |
@@ -131,7 +133,7 @@ categorias, os fixos ativos ou encerrados há até 12 meses (com a vigência) e 
 {
   "format": "lifepedia/transactions@4",
   "items": [
-    { "source": "card", "date": "2026-09-05", "descriptionOficial": "PAG*SUPERM NORDESTAO NATAL", "descriptionNormal": "Supermercado Nordestão", "category": "Alimentação", "type": "EXPENSE", "amount": 245.9, "invoiceMonth": "2026-10" },
+    { "source": "card", "date": "2026-09-05", "descriptionOficial": "PAG*SUPERM BOM PRECO CENTRO", "descriptionNormal": "Supermercado Bom Preço", "category": "Alimentação", "type": "EXPENSE", "amount": 245.9, "invoiceMonth": "2026-10" },
     { "source": "statement", "date": "2026-09-10", "descriptionOficial": "PIX ENVIADO JOAO S", "descriptionNormal": "João S.", "category": "Moradia", "type": "EXPENSE", "amount": 1800, "fixed": "Aluguel" }
   ]
 }
@@ -279,6 +281,11 @@ src/
 │       ├── simulator/                simulador: types, api, form.ts (formulário ↔ pedido, prazos, onde rende),
 │       │                             SimulatorForm, SimulationResults, charts (saldo, aportado x rendimento,
 │       │                             comparar), FinanceSimulatorPage
+│       ├── wallet/                   carteira: types, api, cycle.ts (espelho de CardCycle), labels, notification.ts
+│       │                             (lê o aviso de compra colado), CardFace, CardDialog, AccountDialog,
+│       │                             QuickPurchaseDialog, PayDialog, RecalculateDialog, InvoiceChart, GroupCards,
+│       │                             WalletStrip, WalletPage, CardPage
+│       ├── import/MatchNote.tsx      aviso de lançamento já feito que fica conferido na importação
 │       ├── fixed.ts                  vigência e valor do fixo no mês (valueIn)
 │       ├── installments.ts           parcela no nome ("(3/10)"), espelho de Installments.java
 │       ├── components/MoveInstallmentDialog.tsx  adiantar/adiar parcela (pessoal e grupo)

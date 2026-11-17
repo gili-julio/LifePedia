@@ -20,6 +20,7 @@ import { RecurringEntryDialog } from '../components/RecurringEntryDialog'
 import { TransactionDialog } from '../components/TransactionDialog'
 import type { EntryType, MonthlySummary } from '../types'
 import { useMonthParam } from '../use-month-param'
+import { WalletStrip } from '../wallet/components/WalletStrip'
 
 function commitmentHint(percent: number | null) {
   if (percent === null) return 'Cadastre seus ganhos fixos para calcular.'
@@ -88,6 +89,8 @@ export function FinanceDashboardPage() {
               </span>
             </StatCard>
           </div>
+
+          <WalletStrip />
 
           {isEmpty(data) && (
             <Card className="border-dashed">

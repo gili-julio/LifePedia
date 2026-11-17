@@ -126,9 +126,9 @@ acesso: `users.last_seen_at`, gravado pelo `LastSeenTracker` (interceptor em `/a
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@9` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) e `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), só registro · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@10` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) e `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), só registro · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
-| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@9`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
+| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@10`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
 | DELETE | `/` | `{password, confirmation: "EXCLUIR"}` → `204` + cookie apagado · `400` senha errada · `429` após 5 erros |
 
@@ -177,6 +177,8 @@ quem pode editar). Integrações (sem ator): `INTEGRATION_FAILED` (`provider`, `
 Veículos: `VEHICLE_SHARED` (`vehicleId`, `vehicleName`, `role`, `groupName` se pelo grupo) e `VEHICLE_REMINDER` (sem ator,
 para o dono e quem pode lançar; `vehicleId`, `vehicleName`, `kind` = `ITEM`/`REVISION`/`DOCUMENT`, `name`, `stage` =
 `SOON`/`DUE`, `date` esperada e `kmLeft`).
+Carteira: `CARD_REMINDER` (sem ator; `cardId`, `cardName`, `kind` = `CLOSING`/`DUE`/`BUDGET`, `amount`, `date` do
+fechamento ou vencimento, `percent` na meta).
 
 **Push**: toda notificação vira também push (texto em `PushTexts`, link para a tela) e cada mensagem nova do chat vai
 para os outros membros (tag por grupo, a última substitui). O envio roda depois do commit, numa thread virtual, e
@@ -587,6 +589,17 @@ a FIPE dos veículos lidos há mais de 20 dias (até 200 por vez).
 | PUT | `/api/finance/import/draft/{id}` | `{rows, itemCount}`: grava a prévia (`rows` é JSON do front, até 2 milhões de caracteres) |
 | DELETE | `/api/finance/import/draft/{id}` | Descarta a revisão ou tira o aviso da leitura que falhou; `409` enquanto lê |
 | GET | `/api/finance/banks/last` | `{bank}`: banco do item com banco criado por último (nulo se nenhum), para o formulário abrir com ele |
+| GET | `/api/finance/wallet` | Carteira: `cards` (fatura aberta `current`, fechada a pagar `pending`, `limit`, `groups`), `accounts` (`today`, `endOfMonth`, `pendingInvoices`), `openTotal`, `toPay`, `today` |
+| POST | `/api/finance/wallet/cards` | `{bank, nickname, lastDigits, color, closingDay, dueDay, creditLimit, budget, reminders, accountId, groupIds}` → `201` com o detalhe · `409` se o banco já tem cartão · até 20 |
+| GET | `/api/finance/wallet/cards/{id}?month=` | Fatura (padrão: a aberta) com itens, `purchases`/`committed`/`credits`, `projection` e 6 faturas antes e depois |
+| PUT / DELETE | `/api/finance/wallet/cards/{id}` | Edita / exclui o cartão (os lançamentos ficam) |
+| PUT / DELETE | `/api/finance/wallet/cards/{id}/invoices/{yyyy-MM}/paid` | `{paidOn, amount, accountId}` (opcionais) marca paga, sem criar lançamento / desfaz |
+| GET | `/api/finance/wallet/cards/{id}/recalculate?from=` | Lançamentos feitos à mão, não conferidos, numa fatura diferente da do ciclo (`month` e `expected`) |
+| POST | `/api/finance/wallet/cards/{id}/recalculate` | `{from, ids}` move só os escolhidos para a fatura do ciclo → `{moved}` |
+| POST / PUT / DELETE | `/api/finance/wallet/accounts[/{id}]` | Conta `{bank, nickname, balance, balanceOn}` (dia não pode ser futuro) · `409` se o banco já tem conta |
+| PUT | `/api/finance/wallet/accounts/{id}/balance` | `{balance, balanceOn}`: novo saldo informado |
+| POST | `/api/finance/wallet/purchases` | Lançamento rápido `{cardId \| accountId, description, amount, date, installments, categoryId?, groupIds?}` → `201 {created, firstMonth, categoryId}` |
+| GET | `/api/groups/{groupId}/finance/cards` | Cartões que os membros mostram no grupo: `owner`, `mine`, fatura aberta e `groupSpent` |
 | PUT | `/api/finance/banks/assign` | `{transactionIds, recurringIds, bank}` — define o banco de até 500 itens de cada tipo, tudo ou nada; `bank` nulo tira; sincronizados acompanham · `404` se algum item não for do usuário |
 | GET | `/api/finance/summary/banks?month=&months=6` | Uma linha por banco (`key`, `code`, `name`, `income`, `expense`, `invested`, `fixed`, `occasional`, `account`, `card`, `categories`, `history`), sem banco por último. Mesma rota no grupo: `/api/groups/{id}/finance/summary/banks` |
 | GET | `/api/finance/summary?month=2026-09&bank=&bankKind=` | Comparativo do mês, opcionalmente só de um banco (fixos x ocasionais, % comprometido, `investedPercent`, categorias). `Totals` = `{income, expense, invested, balance}`: despesa em categoria "Investir"/"Investimento(s)" vai para `invested`, fica fora de `expense` e de `expensesByCategory` e desconta do `balance` |
@@ -677,6 +690,8 @@ src/main/java/com/lifepedia/api/
     ├── transaction/   lançamentos ocasionais
     ├── summary/       comparativo e histórico
     ├── simulation/    simulador do saldo e investimento (FinanceSimulator, puro), simulações salvas
+    ├── wallet/        carteira: cartões (CardCycle, CardBook puros), contas, faturas pagas, lançamento rápido,
+    │                  recálculo, CardMonths (fatura de um lançamento), cartões no grupo, WalletReminderJob
     └── group/         itens em grupos (sincronizados/cópias), sync com o pessoal, métricas do grupo
 src/main/resources/
 ├── application.yml, application-dev.yml

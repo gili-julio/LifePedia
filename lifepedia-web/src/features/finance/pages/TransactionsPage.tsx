@@ -1,4 +1,4 @@
-import { CalendarClockIcon, PencilIcon, PlusIcon, RepeatIcon, SparklesIcon, Trash2Icon } from 'lucide-react'
+import { CalendarClockIcon, CheckCircle2Icon, PencilIcon, PlusIcon, RepeatIcon, SparklesIcon, Trash2Icon } from 'lucide-react'
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { toast } from 'sonner'
@@ -153,7 +153,8 @@ export function TransactionsPage() {
                       key={t.id}
                       type={t.type}
                       title={t.description}
-                      details={<>{t.bank && <BankMark bank={t.bank} />}<CategoryBadge categoryId={t.categoryId} /> · {formatDate(t.date).slice(0, 5)}</>}
+                      details={<>{t.bank && <BankMark bank={t.bank} />}<CategoryBadge categoryId={t.categoryId} /> · {formatDate(t.date).slice(0, 5)}
+                        {t.checked && <CheckCircle2Icon className="size-3 shrink-0 text-income" aria-label="Conferido" />}</>}
                       amount={<Money value={t.amount} type={t.type} />}
                       onMore={() => setMenu({ open: true, item: t })}
                       selected={selection.selected.has(t.id)}
@@ -191,7 +192,10 @@ export function TransactionsPage() {
                           <TypeIcon type={t.type} />
                           {t.bank && <BankMark bank={t.bank} className="xl:hidden" />}
                           <div className="min-w-0">
-                            <p className="truncate font-medium">{t.description}</p>
+                            <p className="flex items-center gap-1.5">
+                              <span className="truncate font-medium">{t.description}</span>
+                              {t.checked && <CheckCircle2Icon className="size-3.5 shrink-0 text-income" aria-label="Conferido com a fatura ou o extrato" />}
+                            </p>
                             {t.notes && <p className="truncate text-xs text-muted-foreground">{t.notes}</p>}
                           </div>
                         </div>

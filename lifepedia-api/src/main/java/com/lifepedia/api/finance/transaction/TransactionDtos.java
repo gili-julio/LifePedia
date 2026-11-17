@@ -44,6 +44,14 @@ public final class TransactionDtos {
         }
     }
 
+    /** Lançamento já existente que veio no documento importado: fica conferido; valor e mês do documento valem, se vierem. */
+    public record CheckRequest(
+            @NotNull(message = "Informe o lançamento.") UUID transactionId,
+            @DecimalMin(value = "0.01", message = "O valor deve ser maior que zero.")
+            @Digits(integer = 12, fraction = 2, message = "Valor inválido.") BigDecimal amount,
+            YearMonth month) {
+    }
+
     /** Importação em lote, tudo ou nada. */
     public record TransactionBatchRequest(
             @NotEmpty(message = "Nenhum lançamento para importar.")
@@ -61,11 +69,12 @@ public final class TransactionDtos {
             YearMonth month,
             String notes,
             String originalDescription,
-            BankRef bank) {
+            BankRef bank,
+            boolean checked) {
 
         public static TransactionResponse from(Transaction t) {
             return new TransactionResponse(t.getId(), t.getDescription(), t.getType(), t.getCategoryId(),
-                    t.getAmount(), t.getDate(), t.getMonth(), t.getNotes(), t.getOriginalDescription(), t.getBank());
+                    t.getAmount(), t.getDate(), t.getMonth(), t.getNotes(), t.getOriginalDescription(), t.getBank(), t.isChecked());
         }
     }
 }

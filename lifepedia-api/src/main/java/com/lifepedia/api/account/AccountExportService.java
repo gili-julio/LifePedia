@@ -14,6 +14,7 @@ import com.lifepedia.api.architecture.ArchitectureService;
 import com.lifepedia.api.dev.DevService;
 import com.lifepedia.api.finance.simulation.SimulatorService;
 import com.lifepedia.api.delivery.DeliveryService;
+import com.lifepedia.api.finance.wallet.WalletService;
 import com.lifepedia.api.vehicle.VehicleService;
 import com.lifepedia.api.integration.IntegrationService;
 import com.lifepedia.api.attendance.AttendanceService;
@@ -88,6 +89,7 @@ public class AccountExportService {
     private final SimulatorService financeSimulator;
     private final DeliveryService deliveries;
     private final VehicleService vehicles;
+    private final WalletService wallet;
     private final RateLimiter rateLimiter;
 
     public AccountExportService(UserService users, CategoryRepository categories, RecurringEntryRepository recurring,
@@ -98,7 +100,8 @@ public class AccountExportService {
                                 AttendanceService attendance, NoteService notes, FinancingService financings,
                                 FinancingSimulationService simulations, ArchitectureService architecture, DevService dev,
                                 IntegrationService integrations, SimulatorService financeSimulator,
-                                DeliveryService deliveries, VehicleService vehicles, RateLimiter rateLimiter) {
+                                DeliveryService deliveries, VehicleService vehicles, WalletService wallet,
+                                RateLimiter rateLimiter) {
         this.users = users;
         this.categories = categories;
         this.recurring = recurring;
@@ -120,6 +123,7 @@ public class AccountExportService {
         this.financeSimulator = financeSimulator;
         this.deliveries = deliveries;
         this.vehicles = vehicles;
+        this.wallet = wallet;
         this.rateLimiter = rateLimiter;
     }
 
@@ -155,7 +159,8 @@ public class AccountExportService {
                 fixed, occasional, groups(userId, names), own.lists(), own.tags(), own.tasks(), attendance.export(userId),
                 notes.export(userId), financings.export(userId), simulations.export(userId),
                 architecture.exportData(userId), dev.exportData(userId), integrations.exportData(userId),
-                financeSimulator.exportData(userId), deliveries.exportData(userId), vehicles.exportData(userId));
+                financeSimulator.exportData(userId), deliveries.exportData(userId), vehicles.exportData(userId),
+                wallet.exportData(userId));
     }
 
     /** Planilha com as mesmas informações, para abrir no Excel/Google Planilhas. */

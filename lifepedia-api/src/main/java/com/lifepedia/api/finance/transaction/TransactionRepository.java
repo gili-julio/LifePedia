@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Collection;
 import java.util.List;
@@ -43,6 +44,19 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID> 
     List<Transaction> search(UUID userId, YearMonth from, YearMonth to, EntryType type, String description);
 
     List<Transaction> findByUserIdAndIdIn(UUID userId, Collection<UUID> ids);
+
+    /** Itens do banco (conta e cartão) entre os meses; o nome em OTHER e o tipo ficam para quem chama. */
+    @Query("select t from Transaction t where t.userId = :userId and t.bank.code = :code and t.month >= :from and t.month <= :to")
+    List<Transaction> ofBankInMonths(UUID userId, String code, YearMonth from, YearMonth to);
+
+    /** Itens do banco com data a partir de {@code from}. */
+    @Query("select t from Transaction t where t.userId = :userId and t.bank.code = :code and t.date >= :from")
+    List<Transaction> ofBankSince(UUID userId, String code, LocalDate from);
+
+    /** Último lançamento com a descrição (já normalizada), para sugerir a categoria. */
+    @Query("select t from Transaction t where t.userId = :userId and t.type = :type and lower(trim(t.description)) = :description "
+            + "order by t.date desc, t.createdAt desc")
+    List<Transaction> lastWithDescription(UUID userId, EntryType type, String description, Pageable pageable);
 
     /** Ocasionais do mês na categoria, agrupados pela descrição. */
     @Query("select min(t.description) as description, count(t) as count, sum(t.amount) as total from Transaction t "

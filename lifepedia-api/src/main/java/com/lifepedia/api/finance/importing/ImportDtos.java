@@ -3,6 +3,7 @@ package com.lifepedia.api.finance.importing;
 import com.lifepedia.api.finance.bank.BankRef;
 import com.lifepedia.api.finance.importing.ImportDraft.Origin;
 import com.lifepedia.api.finance.importing.ImportDraft.Status;
+import com.lifepedia.api.finance.transaction.TransactionDtos.CheckRequest;
 import com.lifepedia.api.finance.transaction.TransactionDtos.TransactionRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
@@ -32,7 +33,13 @@ public final class ImportDtos {
             List<@Valid @NotNull FixedAdjustment> fixedAdjustments,
             @Size(max = 200, message = "Máximo de 200 fixos por vez.")
             List<@Valid @NotNull FixedBank> fixedBanks,
+            @Size(max = 500, message = "Confira no máximo 500 lançamentos por vez.")
+            List<@Valid @NotNull CheckRequest> checks,
             UUID draftId) {
+
+        public List<CheckRequest> checksOrEmpty() {
+            return checks == null ? List.of() : checks;
+        }
 
         public List<TransactionRequest> transactionsOrEmpty() {
             return transactions == null ? List.of() : transactions;
@@ -61,7 +68,8 @@ public final class ImportDtos {
             @Digits(integer = 12, fraction = 2, message = "Valor inválido.") BigDecimal amount) {
     }
 
-    public record ImportResponse(int transactions, int fixedAdjustments) {
+    /** @param checked lançamentos que já existiam e foram conferidos com o documento */
+    public record ImportResponse(int transactions, int fixedAdjustments, int checked) {
     }
 
     /** O que a tela precisa saber da leitura pelo site, com os limites para mostrar. */

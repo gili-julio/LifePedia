@@ -8,6 +8,7 @@ import { ColorDot } from '../components/CategoryBadge'
 import { Money } from '../components/Money'
 import type { Category, RecurringEntry } from '../types'
 import { FixedOutcomeNote } from './FixedOutcomeNote'
+import { MatchNote } from './MatchNote'
 import { OriginalDescription } from './OriginalDescription'
 import type { ImportRow } from './parse'
 import { SOURCE_LABEL } from './format'
@@ -57,6 +58,7 @@ export function ImportRowItem({ row, errors, category, fixed, onToggle, onOpen }
           </p>
           <CountsIn row={row} />
           {fixed && row.include && <FixedOutcomeNote row={row} fixed={fixed} />}
+          <MatchNote row={row} />
           {errors.length > 0 && <p className="text-xs text-destructive">Corrigir: {errors.join(', ')}</p>}
           {row.warnings.map((w) => (
             <p key={w} className="flex items-center gap-1 text-xs text-muted-foreground">

@@ -51,20 +51,20 @@ class TransactionMonthIntegrationTest extends ApiTestSupport {
         String day = YearMonth.now().atDay(1).toString();
         assertThat(send("POST", bearer, "/api/finance/import", """
                 {"transactions":[
-                  {"description":"Natal IMD","originalDescription":"PAG*IMD NATAL RN","type":"EXPENSE","categoryId":"%1$s","amount":12,"date":"%2$s"},
-                  {"description":"natal imd ","type":"EXPENSE","categoryId":"%1$s","amount":8,"date":"%2$s"},
+                  {"description":"Padaria Centro","originalDescription":"PAG*PADARIA CENTRO SP","type":"EXPENSE","categoryId":"%1$s","amount":12,"date":"%2$s"},
+                  {"description":"padaria centro ","type":"EXPENSE","categoryId":"%1$s","amount":8,"date":"%2$s"},
                   {"description":"Padaria","type":"EXPENSE","categoryId":"%1$s","amount":5,"date":"%2$s"}],
                  "fixedAdjustments":[]}
                 """.formatted(food, day))).hasStatus(201);
 
         List<String> ids = JsonPath.read(body(send("GET", bearer, "/api/finance/transactions/all", null)),
-                "$[?(@.originalDescription == 'PAG*IMD NATAL RN')].id");
+                "$[?(@.originalDescription == 'PAG*PADARIA CENTRO SP')].id");
         assertThat(ids).hasSize(1);
         assertThat(send("PUT", bearer, "/api/finance/transactions/" + ids.getFirst(), """
-                {"description":"IMD","originalDescription":"outra","type":"EXPENSE","categoryId":"%s","amount":12,"date":"%s"}
+                {"description":"Café Centro","originalDescription":"outra","type":"EXPENSE","categoryId":"%s","amount":12,"date":"%s"}
                 """.formatted(food, day))).bodyJson().satisfies(json -> {
-                    assertThat(json).extractingPath("$.description").isEqualTo("IMD");
-                    assertThat(json).extractingPath("$.originalDescription").isEqualTo("PAG*IMD NATAL RN");
+                    assertThat(json).extractingPath("$.description").isEqualTo("Café Centro");
+                    assertThat(json).extractingPath("$.originalDescription").isEqualTo("PAG*PADARIA CENTRO SP");
                 });
 
         assertThat(send("GET", bearer, "/api/finance/transactions/descriptions", null))

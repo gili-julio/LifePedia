@@ -54,13 +54,14 @@ final class ImportPrompt {
             Compras parceladas: inclua só a parcela cobrada na fatura, com a parcela na descrição (ex.: "Loja X (3/10)"); a data é a \
             da compra mostrada na fatura, que pode ser de meses anteriores (até do ano anterior), nunca depois do mês da fatura.
             11. "invoiceMonth": só nos itens "card": mês de VENCIMENTO da fatura em que o item veio, no formato AAAA-MM (ex.: fatura \
-            que vence em 10/11/2026 → "2026-11").
+            que vence em 10/11/2026 → "2026-11"). Fatura ainda aberta (parcial, "lançamentos atuais" ou "próxima fatura") também \
+            vale: use o mês de vencimento dela.
             12. "descriptionOficial": o texto do lançamento como aparece no documento, no máximo 200 caracteres. Não inclua números \
             de conta/cartão nem documentos (CPF/CNPJ).
             13. "descriptionNormal": nome curto e padronizado do estabelecimento ou pessoa, no máximo 120 caracteres, sem códigos, \
             prefixos ("PAG*", "PIX", "COMPRA"), cidade/UF ou números (exceto a parcela). O mesmo lugar tem SEMPRE o mesmo nome, mesmo \
-            que no documento venha abreviado ou com as palavras em outra ordem (ex.: "SUPERM NORDESTAO NATAL" e "NATAL NORDESTAO" → \
-            "Supermercado Nordestão").
+            que no documento venha abreviado ou com as palavras em outra ordem (ex.: "SUPERM BOM PRECO CENTRO" e "CENTRO BOM PRECO" → \
+            "Supermercado Bom Preço").
             14. "fixed": só quando o item corresponder a um dos fixos listados; senão omita.
             15. "notes": opcional; só inclua se houver informação útil.""";
 
@@ -83,7 +84,7 @@ final class ImportPrompt {
         String banks = Arrays.stream(Bank.values()).filter(b -> b != Bank.OTHER).map(Bank::label).collect(Collectors.joining(", "));
 
         String example = """
-                { "source": "card", "bank": "Nubank", "date": "%s-05", "descriptionOficial": "PAG*SUPERM EXEMPLO NATAL", "descriptionNormal": "Supermercado Exemplo", "category": "%s", "type": "EXPENSE", "amount": 245.9, "invoiceMonth": "%s" }"""
+                { "source": "card", "bank": "Nubank", "date": "%s-05", "descriptionOficial": "PAG*SUPERM EXEMPLO CENTRO", "descriptionNormal": "Supermercado Exemplo", "category": "%s", "type": "EXPENSE", "amount": 245.9, "invoiceMonth": "%s" }"""
                 .formatted(exampleMonth, exampleExpense, month);
 
         return """
