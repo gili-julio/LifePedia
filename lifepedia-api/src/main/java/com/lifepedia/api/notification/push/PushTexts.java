@@ -83,6 +83,9 @@ public final class PushTexts {
             case CARD_REMINDER -> new PushMessage(data.getOrDefault("cardName", APP), cardText(data),
                     "/financeiro/carteira/" + URLEncoder.encode(data.getOrDefault("cardId", ""), StandardCharsets.UTF_8),
                     type.name() + ":" + data.get("cardId") + ":" + data.getOrDefault("kind", ""), false);
+            case PRICE_ALERT -> new PushMessage(data.getOrDefault("name", APP), priceText(data),
+                    "/precos/" + URLEncoder.encode(data.getOrDefault("watchId", ""), StandardCharsets.UTF_8),
+                    type.name() + ":" + data.get("watchId"), false);
         };
     }
 
@@ -122,6 +125,12 @@ public final class PushTexts {
             case "BUDGET" -> "A fatura chegou a " + data.getOrDefault("percent", "") + "% da meta: " + money(data);
             default -> "Novidade na fatura";
         };
+    }
+
+    private static String priceText(Map<String, String> data) {
+        String store = data.get("store") == null ? "" : " em " + data.get("store");
+        return "TARGET".equals(data.get("kind")) ? "Chegou no seu preço: " + money(data) + store
+                : "Caiu " + data.getOrDefault("percent", "") + "%: " + money(data) + store;
     }
 
     private static String vehicleLink(Map<String, String> data) {

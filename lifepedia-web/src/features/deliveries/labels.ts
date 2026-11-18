@@ -1,5 +1,5 @@
 import { CircleCheckBigIcon, PackageIcon, TruckIcon, WarehouseIcon, type LucideIcon } from 'lucide-react'
-import type { Delivery, DeliveryAddress, DeliveryStatus } from './types'
+import type { Delivery, DeliveryAddress, DeliveryStatus, ManualStatus } from './types'
 
 /** Etapas da barra (índice = `stage` da API). */
 export const STAGES: { label: string; icon: LucideIcon }[] = [
@@ -26,6 +26,30 @@ export function stageLabel(delivery: Delivery, index: number) {
   if (index === 2 && delivery.status === 'PICKUP') return 'Para retirar'
   return STAGES[index].label
 }
+
+/** Espelha `DeliveryCarrier` (código do 17TRACK). */
+export const CARRIERS: { key: number; label: string }[] = [
+  { key: 2151, label: 'Correios' },
+  { key: 101332, label: 'Shopee (SPX Express)' },
+  { key: 100457, label: 'Loggi' },
+  { key: 100797, label: 'J&T Express' },
+  { key: 101052, label: 'Jadlog' },
+  { key: 101415, label: 'Total Express' },
+  { key: 100887, label: 'Kangu' },
+  { key: 100727, label: 'Americanas Entrega' },
+  { key: 191915, label: 'Anjun Express' },
+  { key: 190271, label: 'Cainiao' },
+  { key: 190625, label: 'AliExpress' },
+]
+
+/** Etapas que a pessoa lança à mão, na ordem. */
+export const MANUAL_STEPS: { status: ManualStatus; label: string }[] = [
+  { status: 'POSTED', label: 'Postado' },
+  { status: 'IN_TRANSIT', label: 'Em trânsito' },
+  { status: 'OUT_FOR_DELIVERY', label: 'Saiu para entrega' },
+  { status: 'PICKUP', label: 'Disponível para retirada' },
+  { status: 'DELIVERED', label: 'Entregue' },
+]
 
 /** A partir de quantos dias sem novidade a entrega aparece como parada (igual ao aviso da API). */
 export const STALL_DAYS = 7

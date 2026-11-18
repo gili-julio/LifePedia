@@ -17,6 +17,7 @@ import com.lifepedia.api.task.TaskDtos.TaskData;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import com.lifepedia.api.user.UserResponse.Preferences;
 import com.lifepedia.api.finance.wallet.WalletDtos.WalletData;
+import com.lifepedia.api.price.PriceDtos.WatchData;
 import com.lifepedia.api.vehicle.VehicleDtos.VehicleData;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
@@ -39,11 +40,11 @@ import java.util.UUID;
 public final class AccountDtos {
 
     /** Versão do arquivo exportado; mudou o formato? Crie {@code @4} e mantenha a importação das anteriores. */
-    public static final String FORMAT = "lifepedia/account@10";
+    public static final String FORMAT = "lifepedia/account@11";
     /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência; {@code @3}: sem notas). */
     public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2",
             "lifepedia/account@3", "lifepedia/account@4", "lifepedia/account@5", "lifepedia/account@6", "lifepedia/account@7",
-            "lifepedia/account@8", "lifepedia/account@9", FORMAT);
+            "lifepedia/account@8", "lifepedia/account@9", "lifepedia/account@10", FORMAT);
 
     private AccountDtos() {
     }
@@ -104,7 +105,8 @@ public final class AccountDtos {
             List<SavedData> financeSimulations,
             DeliveriesExport deliveries,
             List<VehicleData> vehicles,
-            WalletData wallet) {
+            WalletData wallet,
+            List<WatchData> prices) {
     }
 
     /** @param preferences menu e módulos escondidos (só registro, desde o {@code @6}) */

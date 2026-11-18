@@ -25,6 +25,7 @@ import {
   UserPlusIcon,
   UserRoundCheckIcon,
   UsersIcon,
+  TagIcon,
 } from 'lucide-react'
 import { formatDate } from '@/lib/format'
 import { Amount } from './Amount'
@@ -228,11 +229,20 @@ export function notificationContent(n: AppNotification): Content {
       }
     case 'VEHICLE_REMINDER':
       return { text: <>{strong(n.data.vehicleName)}: {vehicleText(n.data)}</>, link: `/veiculos/${n.data.vehicleId}`, icon: WrenchIcon }
+    case 'PRICE_ALERT':
+      return { text: <>{strong(n.data.name)}: {priceText(n.data)}</>, link: `/precos/${n.data.watchId}`, icon: TagIcon }
     case 'CARD_REMINDER':
       return { text: <>{strong(n.data.cardName)}: {cardText(n.data)}</>, link: `/financeiro/carteira/${n.data.cardId}`, icon: CreditCardIcon }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
   }
+}
+
+/** Espelha `PushTexts.priceText`. */
+function priceText(data: Record<string, string>): ReactNode {
+  const value = <Amount value={data.amount} />
+  const store = data.store ? <> em {data.store}</> : null
+  return data.kind === 'TARGET' ? <>chegou no seu preço: {value}{store}</> : <>caiu {data.percent}%: {value}{store}</>
 }
 
 /** Espelha `PushTexts.cardText`. */

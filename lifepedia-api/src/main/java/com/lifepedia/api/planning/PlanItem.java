@@ -106,6 +106,11 @@ public class PlanItem extends BaseEntity {
         this.notes = notes;
     }
 
+    /** Valor atualizado pelo acompanhamento de preço. */
+    public void setAmount(BigDecimal amount) {
+        this.amount = amount;
+    }
+
     public void setLink(String url, String title, String site, BigDecimal price) {
         this.url = url;
         this.linkTitle = title;

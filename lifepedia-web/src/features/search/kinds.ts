@@ -16,6 +16,7 @@ import {
   ReceiptTextIcon,
   RepeatIcon,
   ShoppingBagIcon,
+  TagIcon,
   TagsIcon,
   UsersIcon,
   WalletCardsIcon,
@@ -49,12 +50,14 @@ export const KINDS: Record<SearchKind, { label: string; icon: LucideIcon }> = {
   DEV_PROJECT: { label: 'Projetos Dev', icon: CodeXmlIcon },
   DEV_ITEM: { label: 'Issues e MRs', icon: GitPullRequestIcon },
   ARCH_PROJECT: { label: 'Arquitetura', icon: Building2Icon },
+  PRICE_WATCH: { label: 'Preços acompanhados', icon: TagIcon },
 }
 
 /** Módulos do filtro, na ordem do menu. */
 export const MODULES: { id: AppModule; label: string }[] = [
   { id: 'FINANCE', label: 'Financeiro' },
   { id: 'FINANCING', label: 'Financiamentos' },
+  { id: 'PRICES', label: 'Preços' },
   { id: 'TASKS', label: 'Tarefas' },
   { id: 'AGENDA', label: 'Agenda' },
   { id: 'ATTENDANCE', label: 'Frequência' },

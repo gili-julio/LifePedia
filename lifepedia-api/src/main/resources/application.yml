@@ -72,6 +72,10 @@ lifepedia:
   deliveries:
     # Chave da API do 17TRACK (rastreio). Vazia = entregas sem atualização automática.
     api-key: ${TRACK17_API_KEY:}
+  prices:
+    # Consultas de preço por dia no total (Buscapé e lojas); o job para quando passa. E itens por pessoa.
+    daily-checks: ${PRICE_DAILY_CHECKS:300}
+    max-watches: ${PRICE_MAX_WATCHES:30}
   vehicles:
     # Token da API da FIPE (fipe.parallelum.com.br). Vazio = 500 consultas por dia sem cadastro.
     fipe-token: ${FIPE_TOKEN:}

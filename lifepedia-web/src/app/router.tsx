@@ -66,6 +66,18 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/deliveries/pages/DeliveryPage')).DeliveryPage }),
           },
           {
+            path: '/precos',
+            lazy: async () => ({ Component: (await import('@/features/prices/pages/PricesPage')).PricesPage }),
+          },
+          {
+            path: '/precos/capturar',
+            lazy: async () => ({ Component: (await import('@/features/prices/pages/CapturePage')).CapturePage }),
+          },
+          {
+            path: '/precos/:watchId',
+            lazy: async () => ({ Component: (await import('@/features/prices/pages/PricePage')).PricePage }),
+          },
+          {
             path: '/veiculos',
             lazy: async () => ({ Component: (await import('@/features/vehicles/pages/VehiclesPage')).VehiclesPage }),
           },

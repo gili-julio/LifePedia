@@ -84,6 +84,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 - **Veículos** (`vehicle/`): acesso só por `VehicleAccess.require(veículo, pessoa, papel mínimo)` (sem acesso 404, papel
   menor 403). À FIPE vão só códigos validados (`FipeClient`, `SafeHttpClient`, fora de transação); token opcional
   `FIPE_TOKEN` só no ambiente (cabeçalho). Gasto de outra pessoa nunca mexe no financeiro dela.
+- **Preços** (`price/`): item pessoal só do dono, do grupo só para membros (404); excluir só criador ou admin (403). Rede
+  só pelo `SafeHttpClient` e fora de transação (`PriceCheckService`); ao Buscapé vai só o nome. Botão do navegador só abre o
+  app com nome, preço e link para a pessoa confirmar.
 - **Busca** (`search/` + um `SearchProvider` por módulo): cada fonte filtra por quem vê (dono, grupos em que é membro,
   compartilhados) e pula módulos escondidos; busca num grupo exige membro (404). Texto sempre como parâmetro (`SearchSql`),
   `LIKE` escapado (`SearchText.like`). Amigos só por nome e @username. Recentes só no aparelho, apagados ao sair.
@@ -168,6 +171,10 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
     notificação `CARD_REMINDER` ↔ `cardText` em `notification-content.tsx`
   - Busca: `SearchKind` (e o módulo de cada um) e DTOs de `SearchDtos`/`SearchHit` ↔ `features/search/types.ts` (+ textos e
     ícones em `kinds.ts`); `search_norm` (V41) ↔ `SearchText.normalize` ↔ `lib/search-text.ts` (`normalizeText`)
+  - Entregas (passos à mão): `DeliveryCarrier` (código do 17TRACK) ↔ `CARRIERS` em `features/deliveries/labels.ts`;
+    `DeliveryTimeline.MANUAL` ↔ `MANUAL_STEPS`; `DeliveryTimeline.Event` ↔ `TimelineEvent`
+  - Preços: `PriceDtos` e `PricePoint.Source` ↔ `features/prices/types.ts` (+ `SOURCE_LABEL`); `kind` da notificação
+    `PRICE_ALERT` ↔ `priceText` em `notification-content.tsx`; `AppModule.PRICES` ↔ `AppModule` do front
   - DTOs da API ↔ `types.ts` de cada feature no front
 - **Investimento** = despesa em categoria de despesa chamada "Investir"/"Investimento(s)" (sem acento/maiúscula;
   `InvestmentCategories`). `Totals.expense` e `MonthPoint.*Expense` vêm **sem** investimento; `invested` à parte;
@@ -239,7 +246,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@10`, anexo; importa `@1` a `@10`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@11`, anexo; importa `@1` a `@11`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
@@ -249,7 +256,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   desde o `@7`, `financeSimulations` (simulações do financeiro) e `deliveries` (`addresses` + `deliveries`: nome, código,
   situação, transportadora, apelido do endereço), desde o `@8`, e `vehicles` (veículos da pessoa com leituras, gastos, itens,
   revisões e documentos; `mine` diz se o gasto foi dela), desde o `@9`, e `wallet` (cartões com ciclo, limite, meta e
-  pagamentos; contas com o saldo informado), desde o `@10`, são só registro. Mudou o formato? Crie `@11` e mantenha
+  pagamentos; contas com o saldo informado), desde o `@10`, e `prices` (itens acompanhados com alvo, links e preços
+  anotados), desde o `@11`, são só registro. Mudou o formato? Crie `@12` e mantenha
   a importação dos anteriores (usuários guardam arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -337,6 +345,16 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   **Conferido** (`transactions.checked`): veio de documento (lote com `originalDescription`) ou foi casado na importação
   (`POST /api/finance/import` com `checks: [{transactionId, amount?, month?}]`). Aviso `CARD_REMINDER` às 9h
   (`WalletReminderJob`, uma vez por fatura: `CLOSING`, `DUE`, `BUDGET` em 80 e 100).
+- **Preços** (`/api/prices`): `GET ?groupId=` (sem grupo: pessoais + dos grupos da pessoa), `POST {name, groupId?,
+  planItemId?, settings{targetPrice, dropPercent, notifyGroup, updatePlan, active}, links?, price?}` (já consulta), `GET /{id}`
+  (`watch`, `buscapeUrl`, `offers`, `history` de 180 dias, `stats`, `links`, `manual`), `PUT /{id} {name, settings}`, `DELETE
+  /{id}`, `POST /{id}/refresh`, `POST|DELETE /{id}/links[/{linkId}]`, `POST|DELETE /{id}/prices[/{pointId}]` (anotado),
+  `GET /{id}/image`. Consulta e contas só na API (`PriceCheckService`, `PriceBook` puro, `BuscapeProduct` puro): ofertas de uma
+  loja por origem, menor preço, histórico por dia, aviso `PRICE_ALERT` (`TARGET`/`DROP`), valor do item do planejamento
+  (`PlanItemPrices`). Job diário 8h30 até `PRICE_DAILY_CHECKS`.
+- **Entregas, passos à mão**: `POST /api/deliveries/{id}/steps {status, at?, text?, location?}`, `DELETE
+  /api/deliveries/{id}/steps/{stepId}` e `PUT /api/deliveries/{id}/carrier {carrier}` (só o dono). `status` = mais avançada
+  entre `trackedStatus` (17TRACK) e os passos (`DeliveryTimeline`); `events` junta os dois (`manual`, `id`).
 - **Busca** (`/api/search?q=&modules=&kinds=&groupId=&from=&to=&min=&max=&type=&categoryId=&limit=`): junta o que cada
   `SearchProvider` acha (um por módulo, no pacote do módulo) em `groups` (tipo, módulo, até `limit` itens, `more`), do tipo mais
   relevante ao menos, e `totals` (contagem e soma de entradas e saídas dos lançamentos achados). Cada item traz `link` (rota da

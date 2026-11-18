@@ -7,6 +7,7 @@ import {
   PencilIcon,
   PlusIcon,
   SlidersHorizontalIcon,
+  TagIcon,
   Trash2Icon,
   Undo2Icon,
   XIcon,
@@ -24,7 +25,10 @@ import { Field, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ConfirmDelete } from '@/components/ConfirmDelete'
+import { useAuth } from '@/features/auth/auth-context'
 import { Money } from '@/features/finance/components/Money'
+import { usePriceWatches } from '@/features/prices/api'
+import { WatchDialog } from '@/features/prices/components/WatchDialog'
 import { ApiError } from '@/lib/api'
 import { currentYearMonth, formatDate, formatMonth, parseAmount } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
@@ -80,6 +84,11 @@ export function PlanningTab({ groupId }: { groupId: string }) {
   const unacquire = useUnacquireItem()
   const [dialog, setDialog] = useState<Dialog>(null)
   const [menu, setMenu] = useState<{ open: boolean; item?: PlanItem }>({ open: false })
+  const [watching, setWatching] = useState<PlanItem | null>(null)
+  const { user } = useAuth()
+  const pricesOn = !user?.preferences.hiddenModules.includes('PRICES')
+  const prices = usePriceWatches(groupId, pricesOn)
+  const watchOf = new Map((prices.data ?? []).filter((w) => w.planItemId).map((w) => [w.planItemId!, w]))
   const data = simulation.data
   // Ordem arrastada, válida até chegar a simulação nova
   const [order, setOrder] = useState<{ ids: string[]; basis: Simulation } | null>(null)
@@ -126,10 +135,18 @@ export function PlanningTab({ groupId }: { groupId: string }) {
     void reorderTo(ids)
   }
 
+  function priceAction(item: PlanItem): RowAction[] {
+    const watch = watchOf.get(item.id)
+    if (watch) return [{ label: 'Ver preços', icon: TagIcon, onSelect: () => navigate(`/precos/${watch.id}`) }]
+    if (!pricesOn || item.kind !== 'PURCHASE' || item.acquiredOn) return []
+    return [{ label: 'Acompanhar preço', icon: TagIcon, onSelect: () => setWatching(item) }]
+  }
+
   function actionsOf(item: PlanItem): RowAction[] {
-    if (!item.canEdit) return []
+    if (!item.canEdit) return priceAction(item)
     return [
       { label: 'Editar', icon: PencilIcon, onSelect: () => setDialog({ kind: 'item', item }) },
+      ...priceAction(item),
       {
         label: item.kind === 'INVESTMENT' ? 'Marcar como feito' : 'Marcar como comprado',
         icon: CircleCheckBigIcon,
@@ -225,7 +242,7 @@ export function PlanningTab({ groupId }: { groupId: string }) {
                       <PlanItemRow key={result.item.id} result={result} index={index} count={items.length} busy={busy}
                         onToggle={(considered) => toggle(result.item, considered)}
                         onMove={(direction) => move(index, direction)}
-                        actions={actionsOf(result.item)}
+                        actions={actionsOf(result.item)} watch={watchOf.get(result.item.id)}
                         onMore={() => setMenu({ open: true, item: result.item })} />
                     ))}
                   </ul>
@@ -261,6 +278,8 @@ export function PlanningTab({ groupId }: { groupId: string }) {
           void run(() => remove.mutateAsync({ groupId, id: item.id }), 'Item excluído.')
         }}
       />
+      <WatchDialog open={!!watching} onOpenChange={(open) => !open && setWatching(null)}
+        defaults={watching ? { name: watching.name, groupId, planItemId: watching.id, link: watching.url } : undefined} />
       <ActionSheet
         open={menu.open}
         onOpenChange={(open) => setMenu((m) => ({ ...m, open }))}

@@ -83,6 +83,9 @@ O site instala como app no celular e no desktop (Chrome, Edge, Android; no iPhon
 | `/financeiro` | Visão geral do mês (`?novo=1` abre o novo lançamento): totais, **investido** (fora das despesas, com % dos ganhos), % da renda fixa comprometida, fixos x ocasionais, últimos 6 meses, investido nos últimos 12 meses (se houver), categorias (expandem os itens agrupados pelo nome), maiores bancos |
 | `/financeiro/fixos` | Ganhos e despesas fixas (mensais), paginados; filtro por banco (`?banco=`) e seleção para definir o banco em lote |
 | `/financeiro/lancamentos` | Lançamentos ocasionais do mês, paginados; filtro por banco (`?banco=`), seleção para definir o banco em lote, ação **Tornar fixo** em cada item e **Adiantar ou adiar parcela** nos que têm "(n/total)" no nome (só esta ou esta e as seguintes) |
+| `/precos` | Preços: lista de desejos e itens dos grupos com menor preço, variação e alvo; `?novo=1` abre o formulário |
+| `/precos/:id` | Item: menor preço, variação, mínimo/média/máximo, gráfico, lojas, links e preços anotados |
+| `/precos/capturar` | Chegada do botão do navegador (`?url=&nome=&preco=&loja=`): confirmar e salvar |
 | `/financeiro/carteira` | Carteira: cartões desenhados com a fatura atual, situação e ciclo, fechada a pagar, limite livre; contas com saldo de hoje e do fim do mês; lançamento rápido (`?rapido=1`, `?rapido=colar` abre colando o aviso do banco) |
 | `/financeiro/carteira/:cardId` | Fatura do cartão (`?fatura=yyyy-MM`): previsão, média, meta, limite, ciclo, composição, gráfico das faturas vizinhas, itens conferidos; Paguei, editar, recalcular faturas |
 | `/financeiro/bancos` | Gastos do mês por banco: maior banco, valor sem banco, lista com conta e cartão, comparação de 6 meses e um cartão por banco com as maiores categorias |
@@ -231,6 +234,8 @@ src/
 │   │                         painéis, popovers e barras da maquete; ModelStage, ModelTab com comentários e cena,
 │   │                         NewVersionDialog, ShareDialog, VersionsTab,
 │   │                         AttachmentsTab, ProjectFormDialog, UsageBar, WalkJoystick); páginas (lista, projeto, link público)
+│   ├── prices/               preços: types, api, labels (variação, bookmarklet), ChangeBadge, PriceChart, OffersTable,
+│   │                         WatchDialog, ManualPriceDialog, BookmarkletCard, WatchCard, PricesPage, PricePage, CapturePage
 │   ├── search/               busca geral: SearchProvider (Ctrl K, "/", grupo da página), SearchPalette (resultados,
 │   │                         teclado, prévia), SearchFiltersBar, SearchPreview, api, query.ts (valor no texto, período),
 │   │                         kinds.ts (textos e ícones), actions.ts (telas e ações), recent.ts (recentes até sair)

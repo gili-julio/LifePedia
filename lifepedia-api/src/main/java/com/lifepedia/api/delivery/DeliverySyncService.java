@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -22,6 +21,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -47,19 +47,19 @@ public class DeliverySyncService {
     private final Track17Client track17;
     private final NotificationService notifications;
     private final TransactionTemplate transaction;
-    private final JsonMapper json;
+    private final DeliverySteps steps;
     private final Clock clock;
     private final Set<UUID> running = ConcurrentHashMap.newKeySet();
 
     public DeliverySyncService(DeliveryRepository deliveries, GroupMemberRepository members, Track17Client track17,
-                               NotificationService notifications, PlatformTransactionManager transactions, JsonMapper json,
+                               NotificationService notifications, PlatformTransactionManager transactions, DeliverySteps steps,
                                Clock clock) {
         this.deliveries = deliveries;
         this.members = members;
         this.track17 = track17;
         this.notifications = notifications;
         this.transaction = new TransactionTemplate(transactions);
-        this.json = json;
+        this.steps = steps;
         this.clock = clock;
     }
 
@@ -90,23 +90,38 @@ public class DeliverySyncService {
         return archived == null ? 0 : archived;
     }
 
+    /**
+     * Registra os novos (com a transportadora escolhida ou a do formato do código), troca a transportadora dos já
+     * registrados quando o 17TRACK detectou outra, e lê os eventos.
+     */
     private void run(List<UUID> ids) {
         List<Delivery> items = deliveries.findAllById(ids);
         if (items.isEmpty()) return;
-        Set<String> toRegister = new LinkedHashSet<>();
+        Map<String, Integer> toRegister = new LinkedHashMap<>();
+        Map<String, Integer> toChange = new LinkedHashMap<>();
         Set<String> codes = new LinkedHashSet<>();
         for (Delivery d : items) {
-            codes.add(d.getTrackingCode());
-            if (!d.isRegistered()) toRegister.add(d.getTrackingCode());
+            String code = d.getTrackingCode();
+            codes.add(code);
+            Integer wanted = DeliveryCarrier.wanted(d.getCarrierChoice(), code);
+            if (!d.isRegistered()) toRegister.put(code, wanted);
+            else if (wanted != null && !wanted.equals(d.getCarrierRequested()) && !wanted.equals(d.getCarrierKey())) {
+                toChange.put(code, wanted);
+            }
         }
         Set<String> registered = new HashSet<>();
         Map<String, String> errors = new HashMap<>();
+        Map<String, String> changeErrors = new HashMap<>();
         Map<String, JsonNode> infos = new HashMap<>();
         try {
-            for (List<String> batch : batches(toRegister)) {
+            for (Map<String, Integer> batch : batches(toRegister)) {
                 Registered result = track17.register(batch);
                 registered.addAll(result.accepted());
                 errors.putAll(result.rejected());
+                pause();
+            }
+            for (Map<String, Integer> batch : batches(toChange)) {
+                changeErrors.putAll(track17.changeCarrier(batch).rejected());
                 pause();
             }
             List<String> readable = codes.stream().filter(c -> !errors.containsKey(c)).toList();
@@ -122,10 +137,18 @@ public class DeliverySyncService {
             OffsetDateTime now = OffsetDateTime.now(clock);
             for (Delivery d : deliveries.findAllById(ids)) {
                 String code = d.getTrackingCode();
-                if (registered.contains(code)) d.setRegistered(true);
+                if (registered.contains(code)) {
+                    d.setRegistered(true);
+                    d.setCarrierRequested(toRegister.get(code));
+                }
+                // Recusada também conta: o 17TRACK limita as trocas, então só tenta de novo com outra escolha.
+                if (toChange.containsKey(code) && !errors.containsKey(code)) d.setCarrierRequested(toChange.get(code));
                 JsonNode info = infos.get(code);
                 if (info != null && !info.isMissingNode() && !info.isNull()) {
                     apply(d, TrackSnapshot.parse(info), now);
+                    if (changeErrors.containsKey(code)) {
+                        d.failSync(trim("Não deu para trocar a transportadora: " + changeErrors.get(code)), now);
+                    }
                 } else if (errors.containsKey(code)) {
                     d.failSync(trim(errors.get(code)), now);
                 } else {
@@ -138,17 +161,17 @@ public class DeliverySyncService {
     private void apply(Delivery d, TrackSnapshot snapshot, OffsetDateTime now) {
         boolean first = d.getNotifiedStatus() == null && d.getLatestAt() == null;
         boolean hadTax = d.isTaxPending();
-        d.apply(snapshot, json.writeValueAsString(snapshot.events()), now);
+        d.track(snapshot, steps.trackedJson(snapshot), now);
+        steps.settle(d, now);
+        DeliveryStatus status = d.getStatus();
         if (first) {
-            d.setNotifiedStatus(snapshot.status());
+            d.setNotifiedStatus(status);
             return;
         }
-        if (NOTIFY.contains(snapshot.status()) && snapshot.status() != d.getNotifiedStatus()) {
-            notify(d, snapshot.status().name(), Map.of());
-        }
-        d.setNotifiedStatus(snapshot.status());
+        if (NOTIFY.contains(status) && status != d.getNotifiedStatus()) notify(d, status.name(), Map.of());
+        d.setNotifiedStatus(status);
         if (snapshot.taxPending() && !hadTax) notify(d, "TAX", Map.of());
-        if (snapshot.status() != DeliveryStatus.DELIVERED && snapshot.latestAt() != null && !d.isStallWarned()) {
+        if (status != DeliveryStatus.DELIVERED && snapshot.latestAt() != null && !d.isStallWarned()) {
             long days = ChronoUnit.DAYS.between(snapshot.latestAt(), now);
             if (days >= STALL_DAYS) {
                 d.setStallWarned(true);
@@ -171,8 +194,18 @@ public class DeliverySyncService {
         for (UUID userId : to) notifications.notify(userId, NotificationType.DELIVERY_UPDATE, null, d.getGroupId(), data);
     }
 
-    private static List<List<String>> batches(Set<String> codes) {
-        return batches(new ArrayList<>(codes));
+    private static List<Map<String, Integer>> batches(Map<String, Integer> codes) {
+        List<Map<String, Integer>> result = new ArrayList<>();
+        Map<String, Integer> current = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : codes.entrySet()) {
+            current.put(entry.getKey(), entry.getValue());
+            if (current.size() == Track17Client.BATCH) {
+                result.add(current);
+                current = new LinkedHashMap<>();
+            }
+        }
+        if (!current.isEmpty()) result.add(current);
+        return result;
     }
 
     private static List<List<String>> batches(List<String> codes) {

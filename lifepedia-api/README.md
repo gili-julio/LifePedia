@@ -126,9 +126,9 @@ acesso: `users.last_seen_at`, gravado pelo `LastSeenTracker` (interceptor em `/a
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@10` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) e `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), só registro · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@11` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), `wallet` e `prices` (itens acompanhados), só registro · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
-| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@10`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
+| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@11`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
 | DELETE | `/` | `{password, confirmation: "EXCLUIR"}` → `204` + cookie apagado · `400` senha errada · `429` após 5 erros |
 
@@ -603,6 +603,14 @@ a FIPE dos veículos lidos há mais de 20 dias (até 200 por vez).
 | POST / PUT / DELETE | `/api/finance/wallet/accounts[/{id}]` | Conta `{bank, nickname, balance, balanceOn}` (dia não pode ser futuro) · `409` se o banco já tem conta |
 | PUT | `/api/finance/wallet/accounts/{id}/balance` | `{balance, balanceOn}`: novo saldo informado |
 | POST | `/api/finance/wallet/purchases` | Lançamento rápido `{cardId \| accountId, description, amount, date, installments, categoryId?, groupIds?}` → `201 {created, firstMonth, categoryId}` |
+| GET | `/api/prices?groupId=` | Itens com preço acompanhado: sem grupo, os pessoais e os dos grupos da pessoa; com grupo, os dele (membro) |
+| POST | `/api/prices` | `{name, groupId?, planItemId?, settings?, links?, price?}` → `201` já consultado · até `PRICE_MAX_WATCHES` por pessoa · `409` item do planejamento já acompanhado |
+| GET / PUT / DELETE | `/api/prices/{id}` | Detalhe (`offers`, `history`, `stats`, `links`, `manual`) / `{name, settings}` / excluir (criador ou admin do grupo) |
+| POST | `/api/prices/{id}/refresh` | Consulta agora · `429` se consultou há menos de 15 min, 20/h por pessoa ou cota do dia |
+| POST / DELETE | `/api/prices/{id}/links[/{linkId}]` | Link de loja `{url}` (até 5; já consulta) |
+| POST / DELETE | `/api/prices/{id}/prices[/{pointId}]` | Preço anotado `{store, price, day?, url?}` (até 200) |
+| POST / DELETE | `/api/deliveries/{id}/steps[/{stepId}]` | Passo à mão `{status, at?, text?, location?}` (`POST`, `IN_TRANSIT`, `OUT_FOR_DELIVERY`, `PICKUP`, `DELIVERED`); só o dono |
+| PUT | `/api/deliveries/{id}/carrier` | `{carrier}` código do 17TRACK (`DeliveryCarrier`) ou nulo = automática; já consulta |
 | GET | `/api/groups/{groupId}/finance/cards` | Cartões que os membros mostram no grupo: `owner`, `mine`, fatura aberta e `groupSpent` |
 | PUT | `/api/finance/banks/assign` | `{transactionIds, recurringIds, bank}` — define o banco de até 500 itens de cada tipo, tudo ou nada; `bank` nulo tira; sincronizados acompanham · `404` se algum item não for do usuário |
 | GET | `/api/finance/summary/banks?month=&months=6` | Uma linha por banco (`key`, `code`, `name`, `income`, `expense`, `invested`, `fixed`, `occasional`, `account`, `card`, `categories`, `history`), sem banco por último. Mesma rota no grupo: `/api/groups/{id}/finance/summary/banks` |
@@ -656,6 +664,8 @@ src/main/java/com/lifepedia/api/
 ├── group/         grupos, membros, convites, link de convite, imagens (GroupImageStore), GroupAccess,
 │                  GroupMemberRemovedEvent, GroupDeletedEvent, atividade (GroupActivityInterceptor), atalhos/fixar
 ├── friend/        pedidos de amizade, amigos, perfil do amigo
+├── price/         preços: itens (PriceWatchService: lista, grupo, links, preços anotados), consulta (PriceCheckService:
+│                  Buscapé, lojas, histórico, avisos, valor do plano), BuscapeProduct e PriceBook puros, PriceJob (8h30)
 ├── search/        busca geral: SearchService/Controller, SearchKind, SearchSql (consulta, filtros, relevância), SearchText
 │                  (sem acento, trecho); cada módulo tem o seu SearchProvider (TransactionSearch, NoteSearch...)
 ├── architecture/  projetos com maquete 3D: acesso por papel (ArchitectureAccess), versões e espaço (ArchitectureService),

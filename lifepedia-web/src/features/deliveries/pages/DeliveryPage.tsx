@@ -3,12 +3,16 @@ import {
   ArchiveRestoreIcon,
   ArrowLeftIcon,
   BanknoteIcon,
+  CircleCheckBigIcon,
   ClockIcon,
   CopyIcon,
   ExternalLinkIcon,
+  ListPlusIcon,
   PencilIcon,
+  SearchXIcon,
   RefreshCwIcon,
   Trash2Icon,
+  XIcon,
 } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
@@ -17,19 +21,33 @@ import { ConfirmDelete } from '@/components/ConfirmDelete'
 import { PageHeader } from '@/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { ApiError } from '@/lib/api'
 import { formatInstantDate, formatRelative, formatTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { useArchiveDelivery, useDeleteDelivery, useDelivery, useRefreshDelivery } from '../api'
+import {
+  useAddDeliveryStep,
+  useArchiveDelivery,
+  useDeleteDelivery,
+  useDelivery,
+  useDeliveryCarrier,
+  useRefreshDelivery,
+  useRemoveDeliveryStep,
+} from '../api'
 import { DeliveryBadges, DeliveryThumb } from '../components/DeliveryCard'
 import { DeliveryDialog } from '../components/DeliveryDialog'
 import { StageBar } from '../components/StageBar'
-import { addressLine, forecast, STALL_DAYS, STATUS_LABEL } from '../labels'
+import { StepDialog } from '../components/StepDialog'
+import { addressLine, CARRIERS, forecast, STALL_DAYS, STATUS_LABEL } from '../labels'
 
 const when = (iso: string) => `${formatInstantDate(iso)} ${formatTime(iso)}`
+const AUTO = 'auto'
 
-/** Detalhe da entrega: etapas, prazo, alertas (taxa, parada), endereço e todos os eventos do rastreio. */
+/**
+ * Detalhe da entrega: etapas, prazo, alertas (taxa, parada, código não encontrado), endereço, transportadora e todos os
+ * eventos do rastreio e dos passos anotados à mão.
+ */
 export function DeliveryPage() {
   const { deliveryId = '' } = useParams()
   const navigate = useNavigate()
@@ -37,7 +55,11 @@ export function DeliveryPage() {
   const refresh = useRefreshDelivery()
   const archive = useArchiveDelivery()
   const remove = useDeleteDelivery()
+  const addStep = useAddDeliveryStep()
+  const removeStep = useRemoveDeliveryStep()
+  const carrier = useDeliveryCarrier()
   const [editing, setEditing] = useState(false)
+  const [stepping, setStepping] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   if (isError) {
@@ -53,6 +75,7 @@ export function DeliveryPage() {
   const d = data
   const eta = forecast(d)
   const stalled = d.stalledDays != null && d.stalledDays >= STALL_DAYS
+  const notFound = d.tracking && d.trackedStatus === 'PENDING' && !!d.subStatus?.startsWith('NotFound')
 
   async function run(action: () => Promise<unknown>, done: string) {
     try {
@@ -76,7 +99,10 @@ export function DeliveryPage() {
     ...(d.tracking ? [{ label: 'Atualizar agora', icon: RefreshCwIcon, primary: true,
       onSelect: () => void run(() => refresh.mutateAsync(d.id), 'Rastreio atualizado.') }] : []),
     ...(d.mine ? [
-      { label: 'Editar', icon: PencilIcon, onSelect: () => setEditing(true) },
+      ...(d.status !== 'DELIVERED' ? [{ label: 'Marcar como entregue', icon: CircleCheckBigIcon, primary: !d.tracking,
+        onSelect: () => void run(() => addStep.mutateAsync({ id: d.id, status: 'DELIVERED' }), 'Marcada como entregue.') }] : []),
+      { label: 'Adicionar passo', icon: ListPlusIcon, onSelect: () => setStepping(true) },
+      { label: 'Editar', icon: PencilIcon, secondary: true, onSelect: () => setEditing(true) },
       d.archivedAt
         ? { label: 'Voltar para em andamento', icon: ArchiveRestoreIcon, secondary: true,
           onSelect: () => void run(() => archive.mutateAsync({ id: d.id, archived: false }), 'Entrega de volta em andamento.') }
@@ -129,6 +155,12 @@ export function DeliveryPage() {
         </CardContent>
       </Card>
 
+      {notFound && (
+        <Alert icon={SearchXIcon} title="A transportadora ainda não encontrou o código">
+          Logo depois da compra é normal. Se já passou alguns dias, confira a transportadora
+          {d.mine ? ' no quadro Entrega (Shopee é "Shopee (SPX Express)")' : ''}. Você também pode anotar os passos à mão.
+        </Alert>
+      )}
       {d.taxPending && (
         <Alert icon={BanknoteIcon} title="Aguardando pagamento de imposto ou taxa" danger>
           A entrega só segue depois do pagamento. Pague no site da transportadora (nos Correios, em "Minhas Importações").
@@ -152,17 +184,27 @@ export function DeliveryPage() {
             {!d.events?.length ? (
               <p className="text-sm text-muted-foreground">
                 {d.tracking ? 'Ainda sem eventos. Pode levar algumas horas depois da postagem.' : 'Sem eventos.'}
+                {d.mine && ' Você pode anotar os passos à mão em "Adicionar passo".'}
               </p>
             ) : (
               <ol className="relative space-y-4 border-l pl-5">
                 {d.events.map((e, i) => (
-                  <li key={`${e.at}-${i}`} className="relative">
+                  <li key={e.id ?? `${e.at}-${i}`} className="relative flex items-start gap-2">
                     <span aria-hidden className={cn('absolute top-1 -left-[1.6rem] size-3 rounded-full border-2 border-card',
                       i === 0 ? (d.problem ? 'bg-destructive' : d.status === 'DELIVERED' ? 'bg-income' : 'bg-data') : 'bg-muted-foreground/40')} />
-                    <p className={cn('text-sm', i === 0 && 'font-medium')}>{e.text}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {e.at ? when(e.at) : ''}{e.location ? `${e.at ? ' · ' : ''}${e.location}` : ''}
-                    </p>
+                    <div className="min-w-0 flex-1">
+                      <p className={cn('text-sm', i === 0 && 'font-medium')}>{e.text}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {e.at ? when(e.at) : ''}{e.location ? `${e.at ? ' · ' : ''}${e.location}` : ''}
+                        {e.manual && <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-[10px]">anotado à mão</span>}
+                      </p>
+                    </div>
+                    {e.manual && e.id && d.mine && (
+                      <Button size="icon-xs" variant="ghost" aria-label={`Apagar o passo ${e.text}`} disabled={removeStep.isPending}
+                        onClick={() => void run(() => removeStep.mutateAsync({ id: d.id, stepId: e.id! }), 'Passo apagado.')}>
+                        <XIcon />
+                      </Button>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -181,6 +223,20 @@ export function DeliveryPage() {
             ) : d.addressShort ? (
               <p><span className="font-medium">{d.addressShort.label}</span> <span className="text-muted-foreground">({d.addressShort.city}/{d.addressShort.state})</span></p>
             ) : <p className="text-muted-foreground">Sem endereço.{d.mine && ' Escolha um em Editar.'}</p>}
+            {d.mine && (
+              <div className="space-y-1">
+                <label htmlFor="delivery-carrier" className="text-xs text-muted-foreground">Transportadora no rastreio</label>
+                <Select value={d.carrierChoice == null ? AUTO : String(d.carrierChoice)} disabled={carrier.isPending}
+                  onValueChange={(v) => void run(() => carrier.mutateAsync({ id: d.id, carrier: v === AUTO ? null : Number(v) }),
+                    'Transportadora salva.')}>
+                  <SelectTrigger id="delivery-carrier" size="sm" className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={AUTO}>Automática</SelectItem>
+                    {CARRIERS.map((c) => <SelectItem key={c.key} value={String(c.key)}>{c.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {d.group && <p className="text-muted-foreground">Compartilhada com {d.group.name}{!d.mine && d.owner ? ` por ${d.owner.name}` : ''}.</p>}
             <p className="text-xs text-muted-foreground">Cadastrada em {formatInstantDate(d.createdAt)}.</p>
           </CardContent>
@@ -190,6 +246,7 @@ export function DeliveryPage() {
       {d.mine && (
         <>
           <DeliveryDialog open={editing} onOpenChange={setEditing} delivery={d} />
+          <StepDialog deliveryId={d.id} open={stepping} onOpenChange={setStepping} />
           <ConfirmDelete open={deleting} onOpenChange={setDeleting} title={`Excluir ${d.name}?`}
             description="O rastreio e a foto saem do LifePedia. Use Arquivar para guardar no histórico."
             onConfirm={() => void run(async () => { await remove.mutateAsync(d.id); navigate('/entregas') }, 'Entrega excluída.')} />

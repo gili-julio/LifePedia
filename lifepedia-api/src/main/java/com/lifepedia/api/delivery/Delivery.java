@@ -96,6 +96,23 @@ public class Delivery extends BaseEntity {
     @Column(name = "archived_at")
     private OffsetDateTime archivedAt;
 
+    /** Situação só do rastreio; {@link #status} é a mostrada (com os passos manuais). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tracked_status", nullable = false, length = 20)
+    private DeliveryStatus trackedStatus = DeliveryStatus.PENDING;
+
+    /** Passos lançados à mão, em JSON ({@link DeliveryTimeline.Step}). */
+    @Column(name = "manual_events", length = 20000)
+    private String manualEvents;
+
+    /** Transportadora escolhida (código do 17TRACK); nula = automática. */
+    @Column(name = "carrier_choice")
+    private Integer carrierChoice;
+
+    /** Transportadora já informada ao 17TRACK (evita trocar de novo: o limite é 5 trocas por código). */
+    @Column(name = "carrier_requested")
+    private Integer carrierRequested;
+
     protected Delivery() {
     }
 
@@ -110,25 +127,30 @@ public class Delivery extends BaseEntity {
         this.groupId = groupId;
     }
 
-    /** Novo retrato do rastreio; {@code events} em JSON. */
-    public void apply(TrackSnapshot s, String events, OffsetDateTime now) {
-        if (s.latestAt() != null && !s.latestAt().equals(latestAt)) stallWarned = false;
-        this.status = s.status();
+    /** Novo retrato do rastreio; {@code events} em JSON. A situação mostrada vem depois, em {@link #settle}. */
+    public void track(TrackSnapshot s, String events, OffsetDateTime now) {
+        this.trackedStatus = s.status();
         this.subStatus = s.subStatus();
         this.taxPending = s.taxPending();
         this.carrierKey = s.carrierKey();
         this.carrierName = s.carrierName();
         this.carrierUrl = s.carrierUrl();
-        this.latestAt = s.latestAt();
-        this.latestText = s.latestText();
-        this.latestLocation = s.latestLocation();
         this.origin = s.origin();
         this.estimatedFrom = s.estimatedFrom();
         this.estimatedTo = s.estimatedTo();
-        this.deliveredAt = s.status() == DeliveryStatus.DELIVERED ? (s.latestAt() != null ? s.latestAt() : now) : null;
         this.events = events;
         this.lastSyncAt = now;
         this.syncError = null;
+    }
+
+    /** Situação mostrada e último evento (rastreio + passos manuais). */
+    public void settle(DeliveryTimeline.Settled s) {
+        if (s.latestAt() != null && !s.latestAt().equals(latestAt)) stallWarned = false;
+        this.status = s.status();
+        this.latestAt = s.latestAt();
+        this.latestText = s.latestText();
+        this.latestLocation = s.latestLocation();
+        this.deliveredAt = s.deliveredAt();
     }
 
     public void failSync(String error, OffsetDateTime now) {
@@ -259,6 +281,34 @@ public class Delivery extends BaseEntity {
 
     public void setStallWarned(boolean stallWarned) {
         this.stallWarned = stallWarned;
+    }
+
+    public DeliveryStatus getTrackedStatus() {
+        return trackedStatus;
+    }
+
+    public String getManualEvents() {
+        return manualEvents;
+    }
+
+    public void setManualEvents(String manualEvents) {
+        this.manualEvents = manualEvents;
+    }
+
+    public Integer getCarrierChoice() {
+        return carrierChoice;
+    }
+
+    public void setCarrierChoice(Integer carrierChoice) {
+        this.carrierChoice = carrierChoice;
+    }
+
+    public Integer getCarrierRequested() {
+        return carrierRequested;
+    }
+
+    public void setCarrierRequested(Integer carrierRequested) {
+        this.carrierRequested = carrierRequested;
     }
 
     public OffsetDateTime getArchivedAt() {

@@ -25,6 +25,7 @@ import {
   RepeatIcon,
   SparklesIcon,
   SunIcon,
+  TagIcon,
   TagsIcon,
   TrophyIcon,
   UserPlusIcon,
@@ -88,6 +89,7 @@ export const NAV_SECTIONS: NavSection[] = [
         ],
       },
       { to: '/financiamentos', label: 'Financiamentos', icon: LandmarkIcon, module: 'FINANCING' },
+      { to: '/precos', label: 'Preços', icon: TagIcon, module: 'PRICES' },
     ],
   },
   {

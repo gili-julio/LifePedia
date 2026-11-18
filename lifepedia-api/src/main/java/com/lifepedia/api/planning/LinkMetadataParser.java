@@ -23,7 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /** Extrai nome, preço, imagem e loja de uma página de produto: JSON-LD, Open Graph, microdados e Amazon. */
-final class LinkMetadataParser {
+public final class LinkMetadataParser {
 
     /** @param structured veio de dados do produto (não só do {@code <title>}) */
     record Metadata(String title, BigDecimal price, String currency, String imageUrl, String site, boolean structured) {
@@ -116,7 +116,7 @@ final class LinkMetadataParser {
     }
 
     /** "Mercado Livre", "Amazon"... ou o domínio sem {@code www.}. */
-    static String siteName(URI url) {
+    public static String siteName(URI url) {
         String host = url.getHost() == null ? "" : url.getHost().toLowerCase(Locale.ROOT);
         host = host.replaceFirst("^(www|m)\\.", "");
         for (String label : host.split("\\.")) {
@@ -127,7 +127,7 @@ final class LinkMetadataParser {
     }
 
     /** Aceita "4510.89", "4.510,89", "R$ 4.776,77" e "1,234.56". */
-    static BigDecimal parsePrice(String raw) {
+    public static BigDecimal parsePrice(String raw) {
         if (raw == null) return null;
         String value = raw.replaceAll("[^0-9.,]", "");
         if (value.isEmpty()) return null;

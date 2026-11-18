@@ -20,7 +20,20 @@ export type DeliveryAddress = {
 
 export type AddressRequest = Omit<DeliveryAddress, 'id' | 'defaultAddress'> & { defaultAddress?: boolean }
 
-export type TrackEvent = { at: string | null; text: string; location: string | null }
+/** Evento da linha do tempo; `id` e `status` só nos passos lançados à mão. */
+export type TimelineEvent = {
+  id: string | null
+  at: string | null
+  text: string
+  location: string | null
+  manual: boolean
+  status: DeliveryStatus | null
+}
+
+/** Etapas que dá para lançar à mão (`DeliveryTimeline.MANUAL`). */
+export type ManualStatus = 'POSTED' | 'IN_TRANSIT' | 'OUT_FOR_DELIVERY' | 'PICKUP' | 'DELIVERED'
+
+export type StepRequest = { status: ManualStatus; at?: string; text?: string; location?: string }
 
 /** Espelha `DeliveryDtos.DeliveryResponse`. */
 export type Delivery = {
@@ -55,7 +68,11 @@ export type Delivery = {
   syncError: string | null
   tracking: boolean
   createdAt: string
-  events: TrackEvent[] | null
+  /** Situação só do rastreio (`status` inclui os passos lançados à mão). */
+  trackedStatus: DeliveryStatus
+  /** Transportadora escolhida (código do 17TRACK); nula = automática. */
+  carrierChoice: number | null
+  events: TimelineEvent[] | null
 }
 
 export type DeliveryRequest = { trackingCode: string; name: string; addressId: string | null; groupId: string | null }

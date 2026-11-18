@@ -66,5 +66,10 @@ public enum NotificationType {
      * Fatura do cartão: fechando em até 3 dias (CLOSING), fechada vencendo em até 3 dias (DUE) ou meta da fatura em 80% e
      * 100% (BUDGET). data: cardId, cardName, kind, amount, date (fechamento ou vencimento), percent (só BUDGET)
      */
-    CARD_REMINDER
+    CARD_REMINDER,
+    /**
+     * Item acompanhado chegou ao preço-alvo (TARGET) ou caiu bastante (DROP); dono e, se marcado, membros do grupo.
+     * data: watchId, name, kind, amount (menor preço), previous (preço anterior), store, percent (queda)
+     */
+    PRICE_ALERT
 }

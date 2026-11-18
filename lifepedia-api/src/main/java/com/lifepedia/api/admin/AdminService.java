@@ -10,9 +10,11 @@ import com.lifepedia.api.admin.AdminDtos.ServiceLimit;
 import com.lifepedia.api.admin.AuditEntry.Action;
 import com.lifepedia.api.config.AiProperties;
 import com.lifepedia.api.config.GoogleProperties;
+import com.lifepedia.api.config.PriceProperties;
 import com.lifepedia.api.config.IntegrationProperties;
 import com.lifepedia.api.delivery.TrackingQuota;
 import com.lifepedia.api.shared.ai.AiUsageLog;
+import com.lifepedia.api.price.PriceCheckService;
 import com.lifepedia.api.notification.NotificationService;
 import com.lifepedia.api.notification.NotificationType;
 import com.lifepedia.api.shared.BusinessException;
@@ -48,10 +50,12 @@ public class AdminService {
     private final GoogleProperties google;
     private final IntegrationProperties integrations;
     private final FipeClient fipe;
+    private final PriceCheckService prices;
+    private final PriceProperties priceProperties;
 
     public AdminService(AdminStats stats, AiProperties ai, UserRepository users, NotificationService notifications,
                         AuditService audit, RateLimiter rateLimiter, TrackingQuota tracking, GoogleProperties google,
-                        IntegrationProperties integrations, FipeClient fipe) {
+                        IntegrationProperties integrations, FipeClient fipe, PriceCheckService prices, PriceProperties priceProperties) {
         this.stats = stats;
         this.ai = ai;
         this.users = users;
@@ -62,6 +66,8 @@ public class AdminService {
         this.google = google;
         this.integrations = integrations;
         this.fipe = fipe;
+        this.prices = prices;
+        this.priceProperties = priceProperties;
     }
 
     @Transactional(readOnly = true)
@@ -99,6 +105,7 @@ public class AdminService {
         FipeClient.Quota quota = fipe.quota();
         items.add(quota == null ? new ServiceLimit("FIPE", true, "DAY", null, null, "Ainda sem consulta desde que a API subiu.")
                 : new ServiceLimit("FIPE", true, "DAY", (long) (quota.limit() - quota.remaining()), (long) quota.limit(), null));
+        items.add(new ServiceLimit("PRICE_CHECKS", true, "DAY", prices.checkedToday(), (long) priceProperties.dailyChecks(), null));
         return items;
     }
 

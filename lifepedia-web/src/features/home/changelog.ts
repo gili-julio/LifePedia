@@ -33,6 +33,33 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'precos',
+    date: '2026-11-17',
+    title: 'Preços: acompanhe o que você quer comprar e saiba quando baixar',
+    modules: ['Finanças', 'Grupos', 'Notificações', 'Conta', 'Privacidade'],
+    details: [
+      'Nova área Preços: diga o produto e o LifePedia acha as lojas no Buscapé, com o preço à vista e parcelado de cada uma.',
+      'Gráfico do menor preço por dia (já com os últimos dias), mínimo, média e máximo, e quanto variou em 7 e 30 dias.',
+      'Cole links de lojas ou anote um preço que você viu; tudo entra na tabela e no histórico.',
+      'Aviso no celular quando chegar no seu preço-alvo ou cair bastante, só para você ou para todo o grupo.',
+      'Lista de desejos pessoal e itens do grupo; no planejamento, "Acompanhar preço" pode atualizar o valor do item com o menor preço.',
+      'Botão do navegador: na página da loja, um clique abre o LifePedia com o nome e o preço para salvar.',
+      'Os preços são conferidos todo dia, e dá para atualizar na hora.',
+    ],
+  },
+  {
+    id: 'entregas-manual',
+    date: '2026-11-17',
+    title: 'Entregas: rastreio da Shopee corrigido e passos anotados à mão',
+    modules: ['Entregas'],
+    details: [
+      'Códigos da Shopee agora vão para a transportadora certa (SPX Express) e as entregas que estavam sem informação voltam a atualizar.',
+      'Escolha a transportadora da entrega quando o rastreio não achar o código.',
+      'Anote os passos à mão (postado, em trânsito, saiu para entrega, para retirar, entregue) ou só marque como entregue.',
+      'Quando o rastreio trouxer algo mais à frente, ele assume sozinho.',
+    ],
+  },
+  {
     id: 'busca',
     date: '2026-11-17',
     title: 'Busca: encontre lançamentos, tarefas, notas e tudo o mais de qualquer tela',

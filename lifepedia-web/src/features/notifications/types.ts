@@ -28,6 +28,7 @@ export type NotificationType =
   | 'VEHICLE_SHARED'
   | 'VEHICLE_REMINDER'
   | 'CARD_REMINDER'
+  | 'PRICE_ALERT'
 
 export type AppNotification = {
   id: string

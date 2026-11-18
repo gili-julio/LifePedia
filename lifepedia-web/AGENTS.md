@@ -229,13 +229,19 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos e carteira do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@10`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira e preços do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@11`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.
 - **Ações do cabeçalho**: muitas ações? Marque as menos usadas como `secondary` (vão para o ⋮ no desktop). Excluir
   leva `destructive` (vermelho no menu).
 - **Fixos**: vigência e valor do mês sempre por `features/finance/fixed.ts` (`isActiveIn`, `valueIn`).
+- **Preços** (`features/prices`): chaves `['prices', ...]` (mutações também recarregam `['planning']`). Menor preço,
+  variação, estatísticas e avisos **sempre da API**; o front só formata (`formatChange`, `ChangeBadge`). O botão do navegador
+  (`bookmarkletCode`) só lê a página da loja e abre `/precos/capturar`, onde a pessoa confirma; o `href` com `javascript:`
+  é posto no elemento (o React bloqueia no JSX).
+- **Entregas, passos à mão**: `status` já vem com os passos (o front não junta); `events` traz `manual`/`id` para apagar.
+  Transportadora escolhida pela lista `CARRIERS` (espelho de `DeliveryCarrier`).
 - **Busca**: a geral é a paleta (`features/search`, aberta por `useSearch().openSearch()`, Ctrl K ou "/"); resultados,
   relevância e soma vêm da API, o front só monta seções, teclado e prévia. Lista nova com busca: `ListSearch` +
   `useListSearch()` (guarda em `?busca=`, para a paleta abrir a lista filtrada) e, se a lista vem toda, `matchesSearch` de

@@ -53,11 +53,25 @@ public class LinkPreviewService {
         this.references = references;
     }
 
+    /**
+     * Preço atual de uma página de loja, sem foto nem referência (acompanhamento de preço; sem checagem de acesso nem
+     * limite: quem chama controla).
+     *
+     * @param blocked a loja não liberou os dados
+     */
+    public record StorePrice(String site, String title, BigDecimal price, boolean blocked) {
+    }
+
+    public StorePrice storePrice(String rawUrl) {
+        LinkPreview page = read(parse(rawUrl), false);
+        return new StorePrice(page.site(), page.title(), page.price(), page.blocked() || page.price() == null);
+    }
+
     public LinkPreview preview(UUID userId, UUID groupId, String rawUrl) {
         access.requireMember(groupId, userId);
         URI url = parse(rawUrl);
         acquire(userId);
-        LinkPreview page = read(url);
+        LinkPreview page = read(url, true);
         boolean missing = page.blocked() || page.price() == null || page.imageData() == null;
         if (!missing || page.title() == null) return page;
         Reference reference = reference(page.title(), page.imageData() == null);
@@ -90,7 +104,7 @@ public class LinkPreviewService {
                 match.stores() > 0 ? match.stores() : null, match.store(), imageData);
     }
 
-    private LinkPreview read(URI url) {
+    private LinkPreview read(URI url, boolean withImage) {
         String site = LinkMetadataParser.siteName(url);
         String slugTitle = LinkMetadataParser.titleFromUrl(url);
 
@@ -117,7 +131,7 @@ public class LinkPreviewService {
         BigDecimal price = brl ? metadata.price() : null;
         String title = metadata.title() != null ? metadata.title() : slugTitle;
         return new LinkPreview(url.toString(), title, metadata.title() == null && slugTitle != null, price,
-                metadata.currency(), metadata.site() != null ? metadata.site() : site, image(metadata.imageUrl()), false,
+                metadata.currency(), metadata.site() != null ? metadata.site() : site, withImage ? image(metadata.imageUrl()) : null, false,
                 null);
     }
 

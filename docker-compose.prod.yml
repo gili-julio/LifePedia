@@ -55,6 +55,8 @@ services:
       APP_URL: ${APP_URL:-}
       TRACK17_API_KEY: ${TRACK17_API_KEY:-}
       FIPE_TOKEN: ${FIPE_TOKEN:-}
+      PRICE_DAILY_CHECKS: ${PRICE_DAILY_CHECKS:-300}
+      PRICE_MAX_WATCHES: ${PRICE_MAX_WATCHES:-30}
       # Heap proporcional ao limite do container (cabe numa VPS de 4 GB junto com o Coolify).
       JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=70
     volumes:

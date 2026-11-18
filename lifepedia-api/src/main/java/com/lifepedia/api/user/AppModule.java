@@ -13,5 +13,6 @@ public enum AppModule {
     ARCHITECTURE,
     DEV,
     DELIVERIES,
-    VEHICLES
+    VEHICLES,
+    PRICES
 }

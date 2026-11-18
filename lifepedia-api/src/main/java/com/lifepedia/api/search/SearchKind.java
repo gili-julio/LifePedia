@@ -33,7 +33,8 @@ public enum SearchKind {
     FRIEND(AppModule.FRIENDS, false, false, false, false),
     DEV_PROJECT(AppModule.DEV, false, false, false, false),
     DEV_ITEM(AppModule.DEV, false, false, false, false),
-    ARCH_PROJECT(AppModule.ARCHITECTURE, false, false, false, false);
+    ARCH_PROJECT(AppModule.ARCHITECTURE, false, false, false, false),
+    PRICE_WATCH(AppModule.PRICES, false, true, false, true);
 
     private final AppModule module;
     private final boolean dated;

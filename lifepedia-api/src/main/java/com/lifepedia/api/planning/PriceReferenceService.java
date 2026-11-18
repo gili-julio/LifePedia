@@ -46,16 +46,24 @@ public class PriceReferenceService {
     public Optional<Match> find(String name) {
         for (String query : ProductMatcher.queries(name)) {
             URI search = searchUrl(query);
-            List<Candidate> candidates;
-            try {
-                Response page = http.get(search, "text/html", MAX_PAGE_BYTES, type -> type.contains("html"));
-                candidates = parse(new String(page.body(), page.charset() == null ? StandardCharsets.UTF_8 : page.charset()));
-            } catch (FetchException e) {
-                log.debug("Busca de referência falhou: {}", e.getMessage());
-                return Optional.empty();
-            }
+            List<Candidate> candidates = candidates(search);
+            if (candidates == null) return Optional.empty();
             Candidate best = ProductMatcher.best(name, candidates);
             if (best != null) return Optional.of(toMatch(best, search));
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * Página de produto parecida com o nome (a que lista as lojas e o histórico), ignorando ofertas avulsas; vazio se nada
+     * parecido ou o site não respondeu.
+     */
+    public Optional<String> findProductUrl(String name) {
+        for (String query : ProductMatcher.queries(name)) {
+            List<Candidate> candidates = candidates(searchUrl(query));
+            if (candidates == null) return Optional.empty();
+            Candidate best = ProductMatcher.best(name, candidates.stream().filter(c -> !c.offer() && c.path() != null).toList());
+            if (best != null) return Optional.of(ORIGIN + best.path());
         }
         return Optional.empty();
     }
@@ -84,6 +92,17 @@ public class PriceReferenceService {
                     best == null ? null : text(best.get("merchantName"))));
         }
         return result;
+    }
+
+    /** Nulo se o site não respondeu. */
+    private List<Candidate> candidates(URI search) {
+        try {
+            Response page = http.get(search, "text/html", MAX_PAGE_BYTES, type -> type.contains("html"));
+            return parse(new String(page.body(), page.charset() == null ? StandardCharsets.UTF_8 : page.charset()));
+        } catch (FetchException e) {
+            log.debug("Busca de referência falhou: {}", e.getMessage());
+            return null;
+        }
     }
 
     private static Match toMatch(Candidate c, URI search) {

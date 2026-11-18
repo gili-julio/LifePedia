@@ -7,8 +7,10 @@ import {
   CheckCircle2Icon,
   EllipsisVerticalIcon,
   GripVerticalIcon,
+  TagIcon,
   type LucideIcon,
 } from 'lucide-react'
+import { Link } from 'react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -17,6 +19,8 @@ import { UserAvatar } from '@/components/UserAvatar'
 import { formatMonth } from '@/lib/format'
 import { useMoney } from '@/lib/hide-values'
 import { cn } from '@/lib/utils'
+import { ChangeBadge } from '@/features/prices/components/ChangeBadge'
+import type { WatchSummary } from '@/features/prices/types'
 import type { ItemResult } from '../types'
 import { ItemThumb } from './ItemThumb'
 import { LinkChip } from './LinkChip'
@@ -34,6 +38,8 @@ type Props = {
   /** Mobile: abre a folha de ações */
   onMore: () => void
   busy?: boolean
+  /** Preço acompanhado do item */
+  watch?: WatchSummary
 }
 
 /** Situação do item no prazo: cabe, falta quanto e quando daria. */
@@ -69,7 +75,7 @@ function Status({ result }: { result: ItemResult }) {
 }
 
 /** Item do planejamento: prioridade (arrastar pela alça ou setas), foto, valores, situação e ações. */
-export function PlanItemRow({ result, index, count, onToggle, onMove, actions, onMore, busy }: Props) {
+export function PlanItemRow({ result, index, count, onToggle, onMove, actions, onMore, busy, watch }: Props) {
   const { formatCurrency } = useMoney()
   const { item, considered, installmentAmount, overdue } = result
   const kind = item.kind === 'INVESTMENT' ? 'Investimento' : 'Compra'
@@ -111,6 +117,15 @@ export function PlanItemRow({ result, index, count, onToggle, onMove, actions, o
           {overdue && <Badge variant="outline" className="h-4 px-1.5 text-[10px]">Prazo passou</Badge>}
         </p>
         <Status result={result} />
+        {watch && (
+          <Link to={`/precos/${watch.id}`} className="flex flex-wrap items-center gap-1.5 text-xs hover:underline">
+            <TagIcon className="size-3.5 text-muted-foreground" aria-hidden />
+            {watch.bestPrice !== null
+              ? <span>Menor preço <span className="font-medium tabular-nums">{formatCurrency(watch.bestPrice)}</span>{watch.bestStore ? ` em ${watch.bestStore}` : ''}</span>
+              : <span className="text-muted-foreground">Preço acompanhado</span>}
+            <ChangeBadge value={watch.change30} period="em 30 dias" />
+          </Link>
+        )}
         {(item.url || item.referenceUrl) && (
           <div className="flex flex-wrap gap-x-3">
             {item.url && <LinkChip url={item.url} site={item.linkSite} />}

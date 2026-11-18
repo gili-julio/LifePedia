@@ -9,6 +9,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -19,7 +20,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-/** API do 17TRACK (v2.4): registrar códigos, ler o rastreio e a cota. Sempre fora de transação. */
+/** API do 17TRACK (v2.4): registrar códigos, trocar a transportadora, ler o rastreio e a cota. Sempre fora de transação. */
 @Component
 public class Track17Client {
 
@@ -61,19 +62,25 @@ public class Track17Client {
         return properties.enabled();
     }
 
-    /** Já registrado (por esta conta do 17TRACK) conta como aceito. */
-    public Registered register(List<String> codes) throws TrackException {
-        JsonNode data = call("register", numbers(codes));
-        Set<String> accepted = new HashSet<>();
-        Map<String, String> rejected = new HashMap<>();
-        for (JsonNode item : data.path("accepted").values()) accepted.add(item.path("number").asString());
-        for (JsonNode item : data.path("rejected").values()) {
-            String number = item.path("number").asString();
-            String message = item.path("error").path("message").asString("");
-            if (message.toLowerCase(Locale.ROOT).contains("registered")) accepted.add(number);
-            else rejected.put(number, message.length() > 200 ? message.substring(0, 200) : message);
-        }
-        return new Registered(accepted, rejected);
+    /**
+     * Já registrado (por esta conta do 17TRACK) conta como aceito.
+     *
+     * @param codes código → transportadora (código do 17TRACK; nula = o 17TRACK detecta)
+     */
+    public Registered register(Map<String, Integer> codes) throws TrackException {
+        ArrayNode body = JSON.createArrayNode();
+        codes.forEach((code, carrier) -> {
+            ObjectNode item = body.addObject().put("number", code);
+            if (carrier != null) item.put("carrier", carrier);
+        });
+        return result(call("register", body), "registered");
+    }
+
+    /** Troca a transportadora de códigos já registrados (o 17TRACK aceita até 5 trocas por código). */
+    public Registered changeCarrier(Map<String, Integer> codes) throws TrackException {
+        ArrayNode body = JSON.createArrayNode();
+        codes.forEach((code, carrier) -> body.addObject().put("number", code).put("carrier_new", carrier));
+        return result(call("changecarrier", body), "same");
     }
 
     /** Código → {@code track_info} dos aceitos. */
@@ -111,6 +118,20 @@ public class Track17Client {
         } catch (JacksonException e) {
             throw new TrackException("Resposta do 17TRACK ilegível.");
         }
+    }
+
+    /** @param alreadyDone trecho da mensagem de recusa que na verdade significa "já está assim" */
+    private static Registered result(JsonNode data, String alreadyDone) {
+        Set<String> accepted = new HashSet<>();
+        Map<String, String> rejected = new HashMap<>();
+        for (JsonNode item : data.path("accepted").values()) accepted.add(item.path("number").asString());
+        for (JsonNode item : data.path("rejected").values()) {
+            String number = item.path("number").asString();
+            String message = item.path("error").path("message").asString("");
+            if (message.toLowerCase(Locale.ROOT).contains(alreadyDone)) accepted.add(number);
+            else rejected.put(number, message.length() > 200 ? message.substring(0, 200) : message);
+        }
+        return new Registered(accepted, rejected);
     }
 
     private static ArrayNode numbers(List<String> codes) {

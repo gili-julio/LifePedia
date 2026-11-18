@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api'
-import type { AddressRequest, CepResult, Delivery, DeliveryAddress, DeliveryRequest, DeliverySummary } from './types'
+import type { AddressRequest, CepResult, Delivery, DeliveryAddress, DeliveryRequest, DeliverySummary, StepRequest } from './types'
 
 const BASE = '/api/deliveries'
 
@@ -55,6 +55,34 @@ export function useArchiveDelivery() {
 export function useRefreshDelivery() {
   const invalidate = useInvalidate()
   return useMutation({ mutationFn: (id: string) => api<Delivery>(`${BASE}/${id}/refresh`, { method: 'POST' }), onSuccess: invalidate })
+}
+
+/** Transportadora escolhida (`null` = automática); com o rastreio ligado, já consulta de novo. */
+export function useDeliveryCarrier() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ id, carrier }: { id: string; carrier: number | null }) =>
+      api<Delivery>(`${BASE}/${id}/carrier`, { method: 'PUT', body: { carrier } }),
+    onSuccess: invalidate,
+  })
+}
+
+/** Passo lançado à mão (marcar como entregue = `DELIVERED`). */
+export function useAddDeliveryStep() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ id, ...body }: StepRequest & { id: string }) => api<Delivery>(`${BASE}/${id}/steps`, { method: 'POST', body }),
+    onSuccess: invalidate,
+  })
+}
+
+export function useRemoveDeliveryStep() {
+  const invalidate = useInvalidate()
+  return useMutation({
+    mutationFn: ({ id, stepId }: { id: string; stepId: string }) =>
+      api<Delivery>(`${BASE}/${id}/steps/${stepId}`, { method: 'DELETE' }),
+    onSuccess: invalidate,
+  })
 }
 
 export function useDeleteDelivery() {

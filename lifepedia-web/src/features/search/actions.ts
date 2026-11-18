@@ -1,4 +1,4 @@
-import { EyeOffIcon, PackagePlusIcon, PlusIcon, SparklesIcon, ClipboardPasteIcon, CreditCardIcon, CarIcon, type LucideIcon } from 'lucide-react'
+import { EyeOffIcon, TagIcon, PackagePlusIcon, PlusIcon, SparklesIcon, ClipboardPasteIcon, CreditCardIcon, CarIcon, type LucideIcon } from 'lucide-react'
 import type { AppModule } from '@/features/auth/types'
 import { itemLinks, visibleSections, type DynamicLinks } from '@/components/layout/nav-items'
 import { matchesSearch } from '@/lib/search-text'
@@ -21,6 +21,7 @@ const QUICK: QuickAction[] = [
   { id: 'quick-purchase', label: 'Compra rápida no cartão', icon: CreditCardIcon, to: '/financeiro/carteira?rapido=1', module: 'FINANCE', keywords: 'fatura carteira' },
   { id: 'paste-purchase', label: 'Colar aviso de compra', icon: ClipboardPasteIcon, to: '/financeiro/carteira?rapido=colar', module: 'FINANCE', keywords: 'notificação banco cartão' },
   { id: 'import', label: 'Importar extrato ou fatura', icon: SparklesIcon, to: '/financeiro/importar', module: 'FINANCE', keywords: 'ia pdf' },
+  { id: 'new-price', label: 'Acompanhar preço de um item', icon: TagIcon, to: '/precos?novo=1', module: 'PRICES', keywords: 'lista de desejos promoção' },
   { id: 'new-delivery', label: 'Nova entrega', icon: PackagePlusIcon, to: '/entregas?nova=1', module: 'DELIVERIES', keywords: 'rastreio código' },
   { id: 'new-vehicle', label: 'Novo veículo', icon: CarIcon, to: '/veiculos?novo=1', module: 'VEHICLES', keywords: 'carro moto' },
   { id: 'toggle-values', label: 'Ocultar ou mostrar valores', icon: EyeOffIcon, run: 'toggle-values', keywords: 'esconder privacidade' },

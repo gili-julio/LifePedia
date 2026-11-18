@@ -3,10 +3,12 @@ package com.lifepedia.api.delivery;
 import com.lifepedia.api.delivery.DeliveryDtos.AddressRequest;
 import com.lifepedia.api.delivery.DeliveryDtos.AddressResponse;
 import com.lifepedia.api.delivery.DeliveryDtos.ArchiveRequest;
+import com.lifepedia.api.delivery.DeliveryDtos.CarrierRequest;
 import com.lifepedia.api.delivery.DeliveryDtos.CepResponse;
 import com.lifepedia.api.delivery.DeliveryDtos.DeliveryRequest;
 import com.lifepedia.api.delivery.DeliveryDtos.DeliveryResponse;
 import com.lifepedia.api.delivery.DeliveryDtos.DeliveryUpdate;
+import com.lifepedia.api.delivery.DeliveryDtos.StepRequest;
 import com.lifepedia.api.delivery.DeliveryDtos.Summary;
 import com.lifepedia.api.shared.CurrentUser;
 import com.lifepedia.api.shared.image.Images;
@@ -75,6 +77,23 @@ public class DeliveryController {
     @PostMapping("/{id}/refresh")
     public DeliveryResponse refresh(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         return service.refresh(CurrentUser.id(jwt), id);
+    }
+
+    /** Transportadora escolhida (nula = automática). */
+    @PutMapping("/{id}/carrier")
+    public DeliveryResponse carrier(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestBody CarrierRequest request) {
+        return service.setCarrier(CurrentUser.id(jwt), id, request.carrier());
+    }
+
+    /** Passo lançado à mão (marcar como entregue = {@code DELIVERED}). */
+    @PostMapping("/{id}/steps")
+    public DeliveryResponse addStep(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody StepRequest request) {
+        return service.addStep(CurrentUser.id(jwt), id, request);
+    }
+
+    @DeleteMapping("/{id}/steps/{stepId}")
+    public DeliveryResponse removeStep(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @PathVariable UUID stepId) {
+        return service.removeStep(CurrentUser.id(jwt), id, stepId);
     }
 
     @DeleteMapping("/{id}")

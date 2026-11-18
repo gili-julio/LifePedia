@@ -130,7 +130,7 @@ export type Audience = 'ALL' | 'ADMINS'
 export type BroadcastRequest = { title: string; body: string; audience: Audience }
 
 /** Espelha `AdminDtos.ServiceLimit`. */
-export type LimitKey = 'TRACK17' | 'TRACK17_DAILY' | 'GEMINI_IMPORT' | 'GEMINI_DAILY' | 'GOOGLE_CALENDAR' | 'FIPE'
+export type LimitKey = 'TRACK17' | 'TRACK17_DAILY' | 'GEMINI_IMPORT' | 'GEMINI_DAILY' | 'GOOGLE_CALENDAR' | 'FIPE' | 'PRICE_CHECKS'
 export type ServiceLimit = {
   key: LimitKey
   configured: boolean

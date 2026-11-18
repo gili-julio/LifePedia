@@ -1,6 +1,6 @@
 package com.lifepedia.api.delivery;
 
-import com.lifepedia.api.delivery.TrackSnapshot.TrackEvent;
+import com.lifepedia.api.delivery.DeliveryTimeline.Event;
 import com.lifepedia.api.user.UserDtos.UserSummary;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -32,6 +32,24 @@ public final class DeliveryDtos {
     }
 
     public record ArchiveRequest(@NotNull Boolean archived) {
+    }
+
+    /** @param carrier código do 17TRACK de uma {@link DeliveryCarrier}; nulo = automática */
+    public record CarrierRequest(Integer carrier) {
+    }
+
+    /**
+     * Passo lançado à mão.
+     *
+     * @param status POSTED, IN_TRANSIT, OUT_FOR_DELIVERY, PICKUP ou DELIVERED
+     * @param at     quando aconteceu (padrão: agora)
+     * @param text   padrão: o nome da etapa
+     */
+    public record StepRequest(
+            @NotNull(message = "Escolha a etapa.") DeliveryStatus status,
+            OffsetDateTime at,
+            @Size(max = 200, message = "Texto muito longo.") String text,
+            @Size(max = 120, message = "Local muito longo.") String location) {
     }
 
     public record AddressRequest(
@@ -78,6 +96,8 @@ public final class DeliveryDtos {
      * @param arrivesToday  saiu para entrega ou a previsão termina hoje
      * @param address       do dono: completo; de quem vê pelo grupo: {@code addressShort}
      * @param tracking      rastreio automático ligado no servidor
+     * @param trackedStatus situação só do rastreio ({@code status} inclui os passos lançados à mão)
+     * @param carrierChoice transportadora escolhida (código do 17TRACK); nula = automática
      */
     public record DeliveryResponse(UUID id, String name, String trackingCode, DeliveryStatus status, int stage, boolean problem,
                                    String subStatus, boolean taxPending, Carrier carrier, OffsetDateTime latestAt,
@@ -86,7 +106,7 @@ public final class DeliveryDtos {
                                    boolean arrivesToday, String imageUrl, AddressResponse address, AddressShort addressShort,
                                    GroupRef group, UserSummary owner, boolean mine, OffsetDateTime archivedAt,
                                    OffsetDateTime lastSyncAt, String syncError, boolean tracking, OffsetDateTime createdAt,
-                                   List<TrackEvent> events) {
+                                   DeliveryStatus trackedStatus, Integer carrierChoice, List<Event> events) {
     }
 
     /** Início: entregas ativas, as que chegam hoje e as com problema. */

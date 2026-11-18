@@ -15,6 +15,7 @@ import com.lifepedia.api.dev.DevService;
 import com.lifepedia.api.finance.simulation.SimulatorService;
 import com.lifepedia.api.delivery.DeliveryService;
 import com.lifepedia.api.finance.wallet.WalletService;
+import com.lifepedia.api.price.PriceWatchService;
 import com.lifepedia.api.vehicle.VehicleService;
 import com.lifepedia.api.integration.IntegrationService;
 import com.lifepedia.api.attendance.AttendanceService;
@@ -90,6 +91,7 @@ public class AccountExportService {
     private final DeliveryService deliveries;
     private final VehicleService vehicles;
     private final WalletService wallet;
+    private final PriceWatchService prices;
     private final RateLimiter rateLimiter;
 
     public AccountExportService(UserService users, CategoryRepository categories, RecurringEntryRepository recurring,
@@ -100,7 +102,7 @@ public class AccountExportService {
                                 AttendanceService attendance, NoteService notes, FinancingService financings,
                                 FinancingSimulationService simulations, ArchitectureService architecture, DevService dev,
                                 IntegrationService integrations, SimulatorService financeSimulator,
-                                DeliveryService deliveries, VehicleService vehicles, WalletService wallet,
+                                DeliveryService deliveries, VehicleService vehicles, WalletService wallet, PriceWatchService prices,
                                 RateLimiter rateLimiter) {
         this.users = users;
         this.categories = categories;
@@ -124,6 +126,7 @@ public class AccountExportService {
         this.deliveries = deliveries;
         this.vehicles = vehicles;
         this.wallet = wallet;
+        this.prices = prices;
         this.rateLimiter = rateLimiter;
     }
 
@@ -160,7 +163,7 @@ public class AccountExportService {
                 notes.export(userId), financings.export(userId), simulations.export(userId),
                 architecture.exportData(userId), dev.exportData(userId), integrations.exportData(userId),
                 financeSimulator.exportData(userId), deliveries.exportData(userId), vehicles.exportData(userId),
-                wallet.exportData(userId));
+                wallet.exportData(userId), prices.exportData(userId));
     }
 
     /** Planilha com as mesmas informações, para abrir no Excel/Google Planilhas. */

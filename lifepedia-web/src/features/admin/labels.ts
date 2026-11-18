@@ -75,6 +75,7 @@ export const LIMIT_LABEL: Record<LimitKey, { label: string; unit: string; off: s
   GEMINI_DAILY: { label: 'Gemini: resumo do daily (24 h)', unit: 'resumos', off: 'Sem AI_API_KEY' },
   GOOGLE_CALENDAR: { label: 'Google Agenda sem verificação', unit: 'pessoas', off: 'Sem GOOGLE_CLIENT_SECRET' },
   FIPE: { label: 'Tabela FIPE (hoje)', unit: 'consultas', off: '' },
+  PRICE_CHECKS: { label: 'Consultas de preço (hoje)', unit: 'consultas', off: '' },
 }
 
 export const JOB_LABEL: Record<JobStatus, string> = {

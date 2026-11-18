@@ -114,6 +114,13 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
 - **Banco** (`finance/bank`): `BankRef` é `@Embedded` em ocasionais, fixos e itens de grupo; valide com `BankRef.clean`
   antes de gravar e passe nos `sync` do `GroupFinanceSync`. Soma por banco só em `BankReport`, nunca em SQL solto.
   Banco novo no catálogo = valor em `Bank` + entrada e logo no web (`src/lib/banks.ts`).
+- **Preços** (`price/`): rede só em `PriceCheckService.fetch` (fora de transação) e gravação em `apply`; contas em
+  `PriceBook` (puro, `PriceBookTest`) e leitura do Buscapé em `BuscapeProduct` (puro, `__NEXT_DATA__`). Produto pelo
+  `PriceReferenceService.findProductUrl` (só página de produto). Item do planejamento só pela fachada `PlanItemPrices`.
+  Teste com `@MockitoBean SafeHttpClient`, `PriceReferenceService` e `LinkPreviewService` (`PriceIntegrationTest`).
+- **Entregas, passos à mão**: `status` é sempre `DeliveryTimeline.settle` (rastreio + passos) via `DeliverySteps.settle`;
+  nunca grave `status` direto. Transportadora pelo `DeliveryCarrier.wanted` (escolha ou formato do código);
+  `carrier_requested` evita trocar de novo no 17TRACK.
 - **Busca** (`search/`): fonte nova = um `@Component` que implementa `SearchProvider` **no pacote do módulo** (ex.:
   `note/NoteSearch`), com `SearchKind` novo (módulo e se aceita período, valor, entrada/saída e grupo). Consulta só por
   `SearchSql` (texto como parâmetro, `owned`/`inGroups` para o escopo, `dates`/`amounts`/`finance` para os filtros) e
@@ -229,7 +236,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@10`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@10`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos e carteira só como registro); mudou o arquivo ⇒ `@11` e importação dos
+  (`lifepedia/account@11`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@11`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira e preços só como registro); mudou o arquivo ⇒ `@12` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para

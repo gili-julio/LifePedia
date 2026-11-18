@@ -70,6 +70,9 @@ export function PrivacyPage() {
             vencimento, limite, meta da fatura e os grupos em que aparece), as faturas marcadas como pagas (dia, valor e
             conta) e contas com o saldo que você informou e o dia dele. Nunca pedimos o número completo do cartão nem
             senhas do banco. O texto do aviso de compra que você colar é lido só no seu aparelho e não é enviado.</li>
+          <li>Preços: itens que você acompanha (nome, foto do produto, preço-alvo e avisos), os links de lojas que você colar,
+            os preços que você anotar e o histórico de preços das lojas. Itens de um grupo são vistos pelos membros.</li>
+          <li>Entregas: os passos que você anotar à mão (etapa, dia, texto e local) e a transportadora que escolher.</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
         <List>
@@ -140,9 +143,11 @@ export function PrivacyPage() {
           <li><strong>Serviços de notificação</strong> do seu navegador (Google, Mozilla, Apple ou Microsoft), se você
             ativar o push. O conteúdo vai <strong>criptografado de ponta a ponta</strong>: esses serviços só entregam,
             não conseguem ler.</li>
-          <li><strong>Lojas e Buscapé</strong>: ao colar o link de um produto no planejamento, nosso servidor acessa a
-            página da loja e, se ela não informar preço ou foto, busca o nome do produto no Buscapé. Nenhum dado seu é
-            enviado além do link e do nome do produto.</li>
+          <li><strong>Lojas e Buscapé</strong>: ao colar o link de um produto no planejamento ou num item acompanhado, nosso
+            servidor acessa a página da loja; para acompanhar o preço (e quando a loja não informa preço ou foto), busca o
+            nome do produto no Buscapé, uma vez por dia. Nenhum dado seu é enviado além do link e do nome do produto. O
+            botão do navegador para salvar preços roda só quando você clica nele, na página da loja, e só abre o LifePedia
+            com o nome, o preço e o link para você confirmar.</li>
           <li><strong>Banco Central</strong>: nosso servidor baixa dos dados abertos do Banco Central as taxas médias dos
             bancos e os índices (TR, IPCA, INCC, CDI e Selic) usados nos financiamentos e no simulador. Nenhum dado seu é
             enviado.</li>

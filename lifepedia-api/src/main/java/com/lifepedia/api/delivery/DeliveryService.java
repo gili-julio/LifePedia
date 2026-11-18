@@ -13,7 +13,9 @@ import com.lifepedia.api.delivery.DeliveryDtos.DeliveryResponse;
 import com.lifepedia.api.delivery.DeliveryDtos.DeliveryUpdate;
 import com.lifepedia.api.delivery.DeliveryDtos.GroupRef;
 import com.lifepedia.api.delivery.DeliveryDtos.Summary;
-import com.lifepedia.api.delivery.TrackSnapshot.TrackEvent;
+import com.lifepedia.api.delivery.DeliveryDtos.StepRequest;
+import com.lifepedia.api.delivery.DeliveryTimeline.Event;
+import com.lifepedia.api.delivery.DeliveryTimeline.Step;
 import com.lifepedia.api.group.GroupAccess;
 import com.lifepedia.api.group.GroupMember;
 import com.lifepedia.api.group.GroupMemberRemovedEvent;
@@ -33,15 +35,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import tools.jackson.core.JacksonException;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
@@ -62,8 +62,8 @@ public class DeliveryService {
     static final int CREATES_PER_DAY = 15;
     private static final Pattern CODE = Pattern.compile("[A-Z0-9-]{6,40}");
     private static final Duration REFRESH = Duration.ofMinutes(5);
-    private static final TypeReference<List<TrackEvent>> EVENTS = new TypeReference<>() {
-    };
+    private static final int CARRIER_CHANGES_PER_HOUR = 10;
+    private static final Duration FUTURE = Duration.ofMinutes(10);
 
     private final DeliveryRepository deliveries;
     private final DeliveryAddressRepository addresses;
@@ -77,13 +77,13 @@ public class DeliveryService {
     private final CepClient cepClient;
     private final RateLimiter rateLimiter;
     private final TransactionTemplate transaction;
-    private final JsonMapper json;
+    private final DeliverySteps steps;
     private final Clock clock;
 
     public DeliveryService(DeliveryRepository deliveries, DeliveryAddressRepository addresses, GroupMemberRepository members,
                            UserGroupRepository groups, GroupAccess groupAccess, UserRepository users, DeliveryImageStore images,
                            DeliverySyncService sync, Track17Client track17, CepClient cepClient, RateLimiter rateLimiter,
-                           PlatformTransactionManager transactions, JsonMapper json, Clock clock) {
+                           PlatformTransactionManager transactions, DeliverySteps steps, Clock clock) {
         this.deliveries = deliveries;
         this.addresses = addresses;
         this.members = members;
@@ -96,7 +96,7 @@ public class DeliveryService {
         this.cepClient = cepClient;
         this.rateLimiter = rateLimiter;
         this.transaction = new TransactionTemplate(transactions);
-        this.json = json;
+        this.steps = steps;
         this.clock = clock;
     }
 
@@ -171,6 +171,50 @@ public class DeliveryService {
         }
         sync.sync(List.of(id));
         return transaction.execute(status -> get(userId, id));
+    }
+
+    /** Transportadora escolhida (nula = automática); com o rastreio ligado, já atualiza. */
+    public DeliveryResponse setCarrier(UUID userId, UUID id, Integer carrier) {
+        if (carrier != null && DeliveryCarrier.of(carrier).isEmpty()) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Transportadora inválida.");
+        }
+        if (!rateLimiter.tryAcquire("delivery-carrier:" + userId, CARRIER_CHANGES_PER_HOUR, Duration.ofHours(1))) {
+            throw new BusinessException(HttpStatus.TOO_MANY_REQUESTS, "Muitas trocas de transportadora. Tente mais tarde.");
+        }
+        transaction.executeWithoutResult(status -> own(userId, id).setCarrierChoice(carrier));
+        if (track17.enabled()) sync.sync(List.of(id));
+        return transaction.execute(status -> get(userId, id));
+    }
+
+    /**
+     * Passo lançado à mão (só quem cadastrou). Vale até o rastreio trazer algo à frente; marcar como entregue é um passo
+     * {@code DELIVERED}. Não gera aviso.
+     */
+    @Transactional
+    public DeliveryResponse addStep(UUID userId, UUID id, StepRequest request) {
+        Delivery delivery = own(userId, id);
+        if (!DeliveryTimeline.MANUAL.contains(request.status())) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Etapa inválida.");
+        }
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        OffsetDateTime at = request.at() == null ? now : request.at();
+        if (at.isAfter(now.plus(FUTURE))) throw new BusinessException(HttpStatus.BAD_REQUEST, "A data não pode ser no futuro.");
+        List<Step> current = new ArrayList<>(steps.steps(delivery));
+        if (current.size() >= DeliveryTimeline.MAX_STEPS) {
+            throw new BusinessException(HttpStatus.BAD_REQUEST, "Limite de " + DeliveryTimeline.MAX_STEPS + " passos manuais.");
+        }
+        String text = blank(request.text());
+        current.add(new Step(UUID.randomUUID(), request.status(), at,
+                text == null ? DeliveryTimeline.label(request.status()) : text, blank(request.location())));
+        return saveSteps(userId, delivery, current, now);
+    }
+
+    @Transactional
+    public DeliveryResponse removeStep(UUID userId, UUID id, UUID stepId) {
+        Delivery delivery = own(userId, id);
+        List<Step> current = new ArrayList<>(steps.steps(delivery));
+        if (!current.removeIf(s -> s.id().equals(stepId))) throw new NotFoundException("Passo não encontrado.");
+        return saveSteps(userId, delivery, current, OffsetDateTime.now(clock));
     }
 
     @Transactional
@@ -284,9 +328,9 @@ public class DeliveryService {
         return items.stream().map(d -> {
             boolean mine = d.getUserId().equals(userId);
             DeliveryAddress address = addressById.get(d.getAddressId());
-            List<TrackEvent> events = events(d);
+            List<Event> events = steps.events(d);
             boolean delivered = d.getStatus() == DeliveryStatus.DELIVERED;
-            OffsetDateTime first = events.stream().map(TrackEvent::at).filter(Objects::nonNull).min(OffsetDateTime::compareTo).orElse(null);
+            OffsetDateTime first = events.stream().map(Event::at).filter(Objects::nonNull).min(OffsetDateTime::compareTo).orElse(null);
             Integer inTransit = first == null ? null
                     : (int) ChronoUnit.DAYS.between(first, delivered && d.getDeliveredAt() != null ? d.getDeliveredAt() : now);
             Integer stalled = delivered || d.getLatestAt() == null ? null : (int) ChronoUnit.DAYS.between(d.getLatestAt(), now);
@@ -302,17 +346,16 @@ public class DeliveryService {
                     address == null ? null : new AddressShort(address.getLabel(), address.getCity(), address.getState()),
                     group == null ? null : new GroupRef(group.getId(), group.getName()),
                     owner == null ? null : UserSummary.from(owner), mine, d.getArchivedAt(), d.getLastSyncAt(),
-                    d.getSyncError(), track17.enabled(), d.getCreatedAt(), withEvents ? events : null);
+                    d.getSyncError(), track17.enabled(), d.getCreatedAt(), d.getTrackedStatus(), d.getCarrierChoice(),
+                    withEvents ? events : null);
         }).toList();
     }
 
-    private List<TrackEvent> events(Delivery d) {
-        if (d.getEvents() == null) return List.of();
-        try {
-            return json.readValue(d.getEvents(), EVENTS);
-        } catch (JacksonException e) {
-            return List.of();
-        }
+    private DeliveryResponse saveSteps(UUID userId, Delivery delivery, List<Step> current, OffsetDateTime now) {
+        steps.write(delivery, current);
+        steps.settle(delivery, now);
+        delivery.setNotifiedStatus(delivery.getStatus());
+        return get(userId, delivery.getId());
     }
 
     private Collection<UUID> groupIds(UUID userId) {
