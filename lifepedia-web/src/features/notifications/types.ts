@@ -30,6 +30,7 @@ export type NotificationType =
   | 'VEHICLE_REMINDER'
   | 'CARD_REMINDER'
   | 'PRICE_ALERT'
+  | 'SCHOOL_RISK'
 
 export type AppNotification = {
   id: string

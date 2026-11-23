@@ -18,6 +18,7 @@ export type ChangeModule =
   | 'Integrações'
   | 'Entregas'
   | 'Veículos'
+  | 'Escola'
 
 export type Change = {
   id: string
@@ -32,6 +33,23 @@ export type Change = {
 
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
+  {
+    id: 'escola',
+    date: '2026-11-23',
+    title: 'Escola: matérias, notas, faltas e provas do curso num lugar só',
+    modules: ['Escola', 'Frequência', 'Tarefas', 'Notas', 'Grupos', 'Notificações', 'Conta', 'Privacidade'],
+    details: [
+      'Nova área Escola: crie um vínculo para cada curso (graduação, segunda graduação, mestrado...), cada um com a sua regra de aprovação.',
+      'Importe o histórico do SIGAA em PDF (lido no seu aparelho) ou o de qualquer faculdade com a IA, conferindo tudo antes de salvar.',
+      'Cole as notas da turma direto do SIGAA e veja a média, a reposição e a situação calculadas na hora.',
+      'Índice (IRA) geral e por semestre em gráfico, carga horária cumprida e quantos semestres faltam para formar.',
+      'Provas e trabalhos com data viram tarefa com lembrete, e a nota entra na unidade certa.',
+      'As faltas da Frequência aparecem na matéria, que se liga sozinha ao compromisso com o mesmo código ou nome.',
+      'Links de acesso rápido (Discord, WhatsApp...), professor, sala e uma pasta da matéria nas Notas.',
+      'Compartilhe a matéria com um grupo: os colegas veem links, professor, sala e próximas provas, nunca as suas notas.',
+      'Aviso quando a média fica abaixo do necessário ou as faltas chegam perto do limite.',
+    ],
+  },
   {
     id: 'dev-raias-reports',
     date: '2026-11-23',

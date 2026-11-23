@@ -27,6 +27,7 @@ import {
   UserRoundCheckIcon,
   UsersIcon,
   TagIcon,
+  GraduationCapIcon,
 } from 'lucide-react'
 import { formatDate } from '@/lib/format'
 import { Amount } from './Amount'
@@ -238,11 +239,19 @@ export function notificationContent(n: AppNotification): Content {
       return { text: <>{strong(n.data.vehicleName)}: {vehicleText(n.data)}</>, link: `/veiculos/${n.data.vehicleId}`, icon: WrenchIcon }
     case 'PRICE_ALERT':
       return { text: <>{strong(n.data.name)}: {priceText(n.data)}</>, link: `/precos/${n.data.watchId}`, icon: TagIcon }
+    case 'SCHOOL_RISK':
+      return { text: <>{strong(n.data.name)}: {schoolText(n.data)}</>, link: `/escola/materias/${n.data.courseId}`, icon: GraduationCapIcon }
     case 'CARD_REMINDER':
       return { text: <>{strong(n.data.cardName)}: {cardText(n.data)}</>, link: `/financeiro/carteira/${n.data.cardId}`, icon: CreditCardIcon }
     default:
       return { text: 'Nova notificação', link: '/', icon: BellIcon }
   }
+}
+
+/** Espelha o texto de `SCHOOL_RISK` em `PushTexts`. */
+function schoolText(data: Record<string, string>): string {
+  return data.reason === 'ABSENCES' ? `faltas perto do limite: cabem mais ${data.value ?? ''}.`
+    : `média parcial ${(data.value ?? '').replace('.', ',')}, abaixo do necessário para aprovar.`
 }
 
 /** Espelha `PushTexts.priceText`. */

@@ -35,7 +35,8 @@ public enum SearchKind {
     DEV_ITEM(AppModule.DEV, false, false, false, false),
     DEV_REPORT(AppModule.DEV, true, false, false, false),
     ARCH_PROJECT(AppModule.ARCHITECTURE, false, false, false, false),
-    PRICE_WATCH(AppModule.PRICES, false, true, false, true);
+    PRICE_WATCH(AppModule.PRICES, false, true, false, true),
+    SCHOOL_COURSE(AppModule.SCHOOL, false, false, false, false);
 
     private final AppModule module;
     private final boolean dated;

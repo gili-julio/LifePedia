@@ -16,6 +16,7 @@ import com.lifepedia.api.finance.simulation.SimulatorService;
 import com.lifepedia.api.delivery.DeliveryService;
 import com.lifepedia.api.finance.wallet.WalletService;
 import com.lifepedia.api.price.PriceWatchService;
+import com.lifepedia.api.school.SchoolService;
 import com.lifepedia.api.vehicle.VehicleService;
 import com.lifepedia.api.integration.IntegrationService;
 import com.lifepedia.api.attendance.AttendanceService;
@@ -92,6 +93,7 @@ public class AccountExportService {
     private final VehicleService vehicles;
     private final WalletService wallet;
     private final PriceWatchService prices;
+    private final SchoolService school;
     private final RateLimiter rateLimiter;
 
     public AccountExportService(UserService users, CategoryRepository categories, RecurringEntryRepository recurring,
@@ -103,7 +105,7 @@ public class AccountExportService {
                                 FinancingSimulationService simulations, ArchitectureService architecture, DevService dev,
                                 IntegrationService integrations, SimulatorService financeSimulator,
                                 DeliveryService deliveries, VehicleService vehicles, WalletService wallet, PriceWatchService prices,
-                                RateLimiter rateLimiter) {
+                                SchoolService school, RateLimiter rateLimiter) {
         this.users = users;
         this.categories = categories;
         this.recurring = recurring;
@@ -127,6 +129,7 @@ public class AccountExportService {
         this.vehicles = vehicles;
         this.wallet = wallet;
         this.prices = prices;
+        this.school = school;
         this.rateLimiter = rateLimiter;
     }
 
@@ -163,7 +166,8 @@ public class AccountExportService {
                 notes.export(userId), financings.export(userId), simulations.export(userId),
                 architecture.exportData(userId), dev.exportData(userId), integrations.exportData(userId),
                 financeSimulator.exportData(userId), deliveries.exportData(userId), vehicles.exportData(userId),
-                wallet.exportData(userId), prices.exportData(userId));
+                wallet.exportData(userId), prices.exportData(userId),
+                school.exportData(userId));
     }
 
     /** Planilha com as mesmas informações, para abrir no Excel/Google Planilhas. */

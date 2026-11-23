@@ -17,6 +17,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -79,7 +81,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
     void tracksADeliveryWithAddressAndNotifiesChanges() {
         String bearer = registerAndGetBearer();
         String code = code();
-        remote.put(code, info("InTransit", "Objeto em transferência", "2026-11-10T10:00:00-03:00"));
+        remote.put(code, info("InTransit", "Objeto em transferência", at(3, 10)));
         when(cep.find("01001000")).thenReturn(Optional.of(new CepClient.Address("01001000", "Rua A", "Centro", "São Paulo", "SP")));
 
         assertThat(send("GET", bearer, "/api/deliveries/cep/01001-000", null)).bodyJson()
@@ -109,7 +111,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
         assertThat(send("POST", bearer, "/api/deliveries", """
                 {"trackingCode":"ab","name":"Curto"}""")).hasStatus(400);
 
-        remote.put(code, info("OutForDelivery", "Objeto saiu para entrega", "2026-11-12T08:00:00-03:00"));
+        remote.put(code, info("OutForDelivery", "Objeto saiu para entrega", at(1, 8)));
         sync.sync(List.of(UUID.fromString(id)));
         assertThat(send("GET", bearer, "/api/deliveries/summary", null)).bodyJson().satisfies(json -> {
             assertThat(json).extractingPath("$.active").asNumber().isEqualTo(1);
@@ -120,7 +122,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
             assertThat(json).extractingPath("$.items[0].data.status").isEqualTo("OUT_FOR_DELIVERY");
         });
 
-        remote.put(code, info("InTransit", "Aguardando pagamento do despacho postal", "2026-11-12T09:00:00-03:00"));
+        remote.put(code, info("InTransit", "Aguardando pagamento do despacho postal", at(1, 9)));
         sync.sync(List.of(UUID.fromString(id)));
         assertThat(send("GET", bearer, "/api/deliveries/" + id, null)).bodyJson().extractingPath("$.taxPending").isEqualTo(true);
 
@@ -150,7 +152,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
         String token = JsonPath.read(body(send("POST", alice, "/api/groups/" + groupId + "/invite-link", null)), "$.token");
         assertThat(send("POST", bob, "/api/groups/join/" + token, null)).hasStatus2xxSuccessful();
         String code = code();
-        remote.put(code, info("InTransit", "Em trânsito", "2026-11-10T10:00:00-03:00"));
+        remote.put(code, info("InTransit", "Em trânsito", at(3, 10)));
         String address = JsonPath.read(post(alice, "/api/deliveries/addresses", """
                 {"label":"Casa","cep":"01001000","street":"Rua A","number":"10","city":"São Paulo","state":"SP"}"""), "$.id");
         String id = JsonPath.read(post(alice, "/api/deliveries", """
@@ -174,7 +176,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
         assertThat(send("POST", carol, "/api/deliveries", """
                 {"trackingCode":"%s","name":"X","addressId":"%s"}""".formatted(code(), address))).hasStatus(400);
 
-        remote.put(code, info("Delivered", "Objeto entregue ao destinatário", "2026-11-12T11:00:00-03:00"));
+        remote.put(code, info("Delivered", "Objeto entregue ao destinatário", at(1, 11)));
         sync.sync(List.of(UUID.fromString(id)));
         assertThat(send("GET", bob, "/api/notifications?size=5", null)).bodyJson()
                 .extractingPath("$.items[0].data.status").isEqualTo("DELIVERED");
@@ -214,7 +216,7 @@ class DeliveryIntegrationTest extends ApiTestSupport {
         assertThat(JsonPath.<Object>read(delivered, "$.deliveredAt")).isNotNull();
         String deliveredStep = JsonPath.read(delivered, "$.events[0].id");
 
-        remote.put(code, info("InTransit", "Em rota", "2026-11-15T10:00:00-03:00", 101332));
+        remote.put(code, info("InTransit", "Em rota", at(1, 10), 101332));
         sync.sync(List.of(UUID.fromString(id)));
         assertThat(send("GET", bearer, "/api/deliveries/" + id, null)).bodyJson().satisfies(json -> {
             assertThat(json).extractingPath("$.status").isEqualTo("DELIVERED");
@@ -261,5 +263,10 @@ class DeliveryIntegrationTest extends ApiTestSupport {
                  "tracking":{"providers":[{"provider":{"key":%d,"name":"Correios","homepage":"https://www.correios.com.br"},
                    "events":[{"time_iso":"%s","description":"%s","location":"SAO PAULO - SP"}]}]}}
                 """.formatted(status, time, text, carrier, time, text));
+    }
+
+    /** Instante de {@code daysAgo} dias atrás na hora dada (eventos recentes: a entrega não conta como parada). */
+    private static String at(int daysAgo, int hour) {
+        return LocalDate.now(ZoneOffset.ofHours(-3)).minusDays(daysAgo).atTime(hour, 0).atOffset(ZoneOffset.ofHours(-3)).toString();
     }
 }

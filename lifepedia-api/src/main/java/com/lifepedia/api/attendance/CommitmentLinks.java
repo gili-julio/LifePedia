@@ -15,12 +15,18 @@ import java.util.stream.Collectors;
 public class CommitmentLinks {
 
     private final CommitmentRepository commitments;
+    private final AttendanceService attendance;
 
-    public CommitmentLinks(CommitmentRepository commitments) {
+    public CommitmentLinks(CommitmentRepository commitments, AttendanceService attendance) {
         this.commitments = commitments;
+        this.attendance = attendance;
     }
 
     public record LinkedCommitment(UUID id, String name) {
+    }
+
+    /** Contagem do compromisso; {@code remaining} = faltas que ainda cabem (negativo = passou). */
+    public record CommitmentCount(UUID id, String name, int presences, int absences, int remaining) {
     }
 
     @Transactional(readOnly = true)
@@ -38,6 +44,13 @@ public class CommitmentLinks {
     @Transactional(readOnly = true)
     public List<LinkedCommitment> all(UUID userId) {
         return commitments.findByUserIdOrderByNameAsc(userId).stream().map(CommitmentLinks::linked).toList();
+    }
+
+    /** Contagem de cada compromisso da pessoa, como na tela da Frequência. */
+    @Transactional(readOnly = true)
+    public Map<UUID, CommitmentCount> counts(UUID userId) {
+        return attendance.list(userId).stream().collect(Collectors.toMap(c -> c.id(),
+                c -> new CommitmentCount(c.id(), c.name(), c.stats().presences(), c.stats().absences(), c.stats().remaining())));
     }
 
     private static LinkedCommitment linked(Commitment commitment) {

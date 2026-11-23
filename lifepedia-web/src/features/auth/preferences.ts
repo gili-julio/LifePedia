@@ -11,6 +11,7 @@ export const MODULES: { id: AppModule; label: string; hint: string }[] = [
   { id: 'AGENDA', label: 'Agenda', hint: 'Semana com os horários' },
   { id: 'ATTENDANCE', label: 'Frequência', hint: 'Presença e faltas' },
   { id: 'NOTES', label: 'Notas', hint: 'Notas e pastas' },
+  { id: 'SCHOOL', label: 'Escola', hint: 'Matérias, notas, provas e histórico do curso' },
   { id: 'GROUPS', label: 'Grupos', hint: 'Grupos e atalhos no menu' },
   { id: 'FRIENDS', label: 'Amigos', hint: 'Amigos e conquistas' },
   { id: 'DEV', label: 'Dev', hint: 'Projetos de trabalho, MRs e daily' },

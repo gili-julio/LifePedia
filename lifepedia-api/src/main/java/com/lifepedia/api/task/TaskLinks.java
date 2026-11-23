@@ -111,6 +111,30 @@ public class TaskLinks {
         return Optional.of(tasks.save(task).getId());
     }
 
+    /** Tarefa pessoal com horário e lembrete (minutos antes; só com horário). Vazio no limite de tarefas abertas. */
+    @Transactional
+    public Optional<UUID> createPersonal(UUID userId, String title, String notes, LocalDate dueDate, LocalTime dueTime,
+                                         Integer reminderMinutes, String tagName, String tagColor) {
+        Optional<UUID> id = createPersonal(userId, title, notes, dueDate, tagName, tagColor);
+        id.flatMap(tasks::findById).ifPresent(task -> {
+            task.setSchedule(dueDate, dueTime, null);
+            task.setReminder(reminderMinutes);
+        });
+        return id;
+    }
+
+    /** Muda título, dia, horário e lembrete da tarefa pessoal aberta e sem repetição (outra pessoa ou concluída: nada muda). */
+    @Transactional
+    public void reschedulePersonal(UUID userId, UUID taskId, String title, LocalDate dueDate, LocalTime dueTime, Integer reminderMinutes) {
+        tasks.findById(taskId)
+                .filter(t -> userId.equals(t.getUserId()) && t.getRepeatUnit() == null && t.getCompletedAt() == null)
+                .ifPresent(t -> {
+                    t.setDetails(cut(title, 200), t.getNotes(), t.getPriority(), t.getListId(), false);
+                    t.setSchedule(dueDate, dueTime, t.getDurationMinutes());
+                    t.setReminder(reminderMinutes);
+                });
+    }
+
     /** Conclui a tarefa pessoal sem repetição (já concluída ou de outra pessoa: nada muda). */
     @Transactional
     public void completePersonal(UUID userId, UUID taskId) {

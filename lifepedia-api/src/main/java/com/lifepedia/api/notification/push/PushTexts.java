@@ -76,6 +76,11 @@ public final class PushTexts {
             case DEV_ISSUE_STUCK -> new PushMessage(devTitle(data), "#" + data.getOrDefault("number", "") + " "
                     + data.getOrDefault("title", "") + " está em " + data.getOrDefault("lane", "") + " há " + data.getOrDefault("days", "")
                     + " dias (" + data.getOrDefault("repoName", "") + ")", devLink(data), devTag(type, data), false);
+            case SCHOOL_RISK -> new PushMessage(data.getOrDefault("name", APP), "ABSENCES".equals(data.get("reason"))
+                    ? "Faltas perto do limite: cabem mais " + data.getOrDefault("value", "") + "."
+                    : "Média parcial " + data.getOrDefault("value", "").replace('.', ',') + ", abaixo do necessário para aprovar.",
+                    "/escola/materias/" + URLEncoder.encode(data.getOrDefault("courseId", ""), StandardCharsets.UTF_8),
+                    type.name() + ":" + data.get("courseId") + ":" + data.getOrDefault("reason", ""), false);
             case DELIVERY_UPDATE -> new PushMessage(data.getOrDefault("name", APP), deliveryText(data),
                     "/entregas/" + URLEncoder.encode(data.getOrDefault("deliveryId", ""), StandardCharsets.UTF_8),
                     type.name() + ":" + data.getOrDefault("deliveryId", ""), "OUT_FOR_DELIVERY".equals(data.get("status")));

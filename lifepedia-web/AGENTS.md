@@ -8,7 +8,7 @@ atualizada**). Aqui ficam só as regras do front. Mudou tela, rota, estrutura ou
 
 React 19 · TypeScript 6 · Vite 8 · Tailwind CSS v4 (sem `tailwind.config`, tema em `src/index.css`) ·
 shadcn/ui (estilo `radix-maia`: cantos bem arredondados, botões em pílula) · fonte Manrope (`@fontsource-variable/manrope`) · React Router 8 (data router) · TanStack Query 5 · React Hook Form + Zod 4 ·
-Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · Tiptap 3 + lowlight (editor das notas) · three.js + three-mesh-bvh + gltf-transform + meshoptimizer + fflate (maquetes 3D) · next-themes · sonner · lucide-react. Lint com oxlint.
+Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · Tiptap 3 + lowlight (editor das notas) · three.js + three-mesh-bvh + gltf-transform + meshoptimizer + fflate (maquetes 3D) · pdfjs-dist (histórico da Escola, lido no navegador) · next-themes · sonner · lucide-react. Lint com oxlint.
 
 ## Convenções
 
@@ -138,7 +138,7 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   (`effective`; antes virava Markdown e a nota parecia sem formatação). Modo (visual/markdown/lado a lado) no `localStorage` (só
   preferência de tela). Foto: `shrinkImage` (1600 px, JPEG até 1 MB) e `uploadNoteImage`. Estilo do conteúdo em
   `.note-content` (`index.css`). Modelos prontos em `templates.ts` (item de lista com texto: markdown não guarda item
-  vazio). Outras telas só levam para a lista por URL (`/notas?tarefa=` / `?compromisso=`), sem importar o módulo.
+  vazio). Outras telas só levam para a lista por URL (`/notas?tarefa=` / `?compromisso=` / `?pasta=`), sem importar o módulo.
 - **Financiamentos** (`features/financing`): banco por `BankSelect` (`bankCode` + `bank` só em outro banco); chaves
   `['financing', 'me' | groupId, ...]` e `['financing', 'overview']`; mutações invalidam o módulo e `['finance']` (o fixo ligado muda os fixos). Rotas por `financingBase(groupId)`, telas
   por `financingUrl`/`simulatorUrl`. **Nenhum cálculo no front**: parcelas, cenários, CET, renda, saldo, quitação e
@@ -230,10 +230,23 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
   `components/stage/`) e serve também à prévia (sem `scene`) e ao link público (cena só para ver: `actions` só com
   `EDIT`); comandos de fora por `controlRef` (`pickTool`). Comentários, vistas e pins usam pontos em metros no espaço do GLB. Página pública
   `/maquete/:token` fica fora do `RequireAuth`.
+- **Escola** (`features/school`): chaves `['school', ...]`; mutações invalidam o módulo, `['tasks']` (avaliação vira
+  tarefa) e `['notes']` (pasta da matéria). Média, parcial, situação, risco, índice, média por semestre, progresso e faltas
+  **sempre da API**; o front só formata (`formatGrade`, `StatusBadge` com texto e tom por `statusTone`). **Importação**: o
+  PDF do SIGAA é lido no navegador (`import/pdf-text.ts`, carregado com `import()` só ao escolher o arquivo; pdf.js
+  `pdfjs-dist` em versão exata, worker por `?url` do próprio site, sem WebAssembly nem fontes) e remontado em linhas
+  (itens agrupados por altura, colunas afastadas viram TAB) para o `parseSigaaHistory` (puro). A IA só recebe arquivos
+  (`useReadWithAi`); os dois caminhos caem na mesma prévia (`usePreviewImport`, `dryRun` como query) antes de gravar.
+  Colar notas: `parseSigaaGrades` (puro) acha a linha pela matrícula do vínculo e a matéria pelo código + semestre; sempre
+  mostra o que leu antes de salvar. Texto colado e PDF nunca vão para a API. Página do SIGAA mudou? Ajuste o parser e
+  confira com um histórico real (sem copiar dados pessoais para o repositório). Link da matéria só `http(s)`, nova aba,
+  `noopener noreferrer` (`LinkButtons`). Pasta de notas: `useNoteFolder` e depois `/notas?pasta=<id>` (o `NotesBoard`
+  abre na pasta por `initialFolderId`). Compromisso e grupo escolhidos nos formulários vêm de `useCommitments` e
+  `useGroups` (o formulário só abre com eles carregados).
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira e preços do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@12`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira, preços e escola do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@13`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.

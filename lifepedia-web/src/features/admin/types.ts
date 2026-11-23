@@ -20,7 +20,7 @@ export type Overview = {
 /** Espelha as chaves de `AdminStats.MODULES`. */
 export type ModuleKey =
   | 'FINANCE' | 'TASKS' | 'NOTES' | 'ATTENDANCE' | 'FINANCING' | 'GROUPS' | 'CHAT' | 'FRIENDS' | 'AI_IMPORT' | 'PUSH'
-  | 'ARCHITECTURE' | 'DEV' | 'INTEGRATIONS' | 'AI_DAILY' | 'DELIVERIES' | 'SIMULATOR' | 'VEHICLES'
+  | 'ARCHITECTURE' | 'DEV' | 'INTEGRATIONS' | 'AI_DAILY' | 'DELIVERIES' | 'SIMULATOR' | 'VEHICLES' | 'SCHOOL'
 
 export type Modules = { totalUsers: number; modules: { key: ModuleKey; users: number; items: number }[] }
 

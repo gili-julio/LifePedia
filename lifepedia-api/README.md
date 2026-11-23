@@ -126,9 +126,9 @@ acesso: `users.last_seen_at`, gravado pelo `LastSeenTracker` (interceptor em `/a
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@12` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios, `reports` = anotações do dia), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), `wallet` e `prices` (itens acompanhados), só registro · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@13` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios, `reports` = anotações do dia), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), `wallet`, `prices` (itens acompanhados) e `school` (vínculos com matérias, notas, links e nomes das avaliações), só registro · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
-| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@11`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
+| POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@13`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
 | DELETE | `/` | `{password, confirmation: "EXCLUIR"}` → `204` + cookie apagado · `400` senha errada · `429` após 5 erros |
 
@@ -502,6 +502,28 @@ excluir o projeto só o dono. A maquete é um **GLB** gerado e comprimido no nav
 `interest` (bruto), `tax` (IR se resgatar tudo) e `invested` (líquido), acumulados no fim do mês; com `real=true`, em
 reais de hoje (IPCA projetado). Conta em `FinanceSimulator` (pura, `FinanceSimulatorTest`).
 
+### Escola (`/api/school`)
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/school` | `{enrollments, shared, aiEnabled}`: vínculos (com `index`, `currentPeriod`, `courses`, `atRisk`) e as matérias que colegas compartilharam nos grupos da pessoa (só links, professor, sala e até 5 próximas avaliações) |
+| POST / PUT | `/enrollments` · `/enrollments/{id}` | `{kind, course, institution?, registration?, startPeriod? "2026.1", active, color, rules {scale NUMERIC\|CONCEPT, passAverage, lowAverage, minUnit, minAttendance}, required? {mandatory, optional, complementary}, complementaryDone?}` · média mínima acima da média para aprovar → 400 · até 10 |
+| GET | `/enrollments/{id}` | `{enrollment, courses, periods, progress}`: matérias do semestre mais novo, média ponderada por semestre, horas cumpridas por tipo, em andamento, exigidas e semestres que faltam |
+| DELETE | `/enrollments/{id}` | Apaga com matérias e avaliações (tarefas, pastas e compromissos ficam) → `204` |
+| POST | `/enrollments/{id}/import` | `{courses: [ImportCourse], required?, dryRun?}` (até 200) → `{created, updated}`. Mesma matéria (semestre + código, ou nome) atualiza; nada é apagado; em andamento sem compromisso liga ao da Frequência com o código ou o nome; `required` vai para o vínculo |
+| POST | `/enrollments/{id}/courses` | `CourseRequest` `{period?, code?, name, hours?, classCode?, category, status, teacher?, teacherEmail?, room?, schedule?, links? (até 12, http(s)), commitmentId?, groupId?}` → `CourseDetail` · em andamento com nota ganha 3 unidades · até 300 por vínculo |
+| GET / PUT / DELETE | `/courses/{id}` | `CourseDetail` `{course, assessments, enrollmentName, scale}`; `course.result` = `{partial, average, outcome, gradeRisk, absenceRisk}` e `attendance` pelo compromisso ligado · compromisso de outra pessoa → 400 · grupo sem ser membro → 404 |
+| PUT | `/courses/{id}/grades` | `{units: [{label, grade}] (até 8), recovery?, absences?, average?, attendance?, concept?, status?}` → `CourseDetail`; confere o risco na hora |
+| POST | `/courses/{id}/notes-folder` | Cria (ou reaproveita) a pasta pessoal da matéria nas Notas → `CourseDetail` com `noteFolderId` |
+| POST / PUT / DELETE | `/courses/{id}/assessments` · `/{assessmentId}` | `{title, kind, dueDate?, dueTime? "HH:mm", unit? 1–8, weight? 0,1–100, grade?, createTask?, reminderMinutes? 0–10080}` → `CourseDetail` · com data e `createTask` cria a tarefa pessoal (etiqueta = código da matéria); editar reagenda; excluir mantém a tarefa · até 40 |
+| POST | `/import/ai` | multipart `files` (até 3, 15 MB somados, PDF/PNG/JPG/WebP pelo conteúdo) → `{course, institution, required, courses}` lido pelo Gemini; nada é gravado · `503` sem IA · `429` (5 por pessoa por dia ou `AI_DAILY_LIMIT`) · `502` leitura falhou |
+
+Contas em `SchoolMath`: unidade = média das avaliações com nota dela pelo peso (senão a digitada); parcial = média das
+unidades com nota; com todas, a reposição troca a menor e a situação sai da regra (`APR` na média para aprovar, `APRN`
+entre a mínima e ela com toda unidade na nota mínima, `REC` sem reposição, senão `REPN`/`REP`); conceito: A, B e C
+aprovam. Índice = média final ponderada pela carga horária das matérias com média. `SchoolRiskJob` às 19h (e ao salvar
+notas) manda `SCHOOL_RISK` uma vez por motivo: média parcial abaixo da média para aprovar ou faltas a 2 do limite.
+
 ### Entregas (`/api/deliveries`)
 
 | Método | Rota | Descrição |
@@ -693,7 +715,10 @@ src/main/java/com/lifepedia/api/
 │                 (responsável, rodízio, comentários, avisos, aviso diário de atrasadas), hábitos (HabitStats),
 │                 lembretes (TaskReminderJob), export/import (TaskTransferService), TaskLinks (leitura para frequência e notas)
 ├── attendance/    frequência: compromissos (Commitment), marcações por dia (CommitmentMark), contagem e agenda,
-│                  CommitmentLinks (leitura para as notas)
+│                  CommitmentLinks (leitura para as notas e a escola)
+├── school/        escola: vínculos (SchoolEnrollment), matérias (SchoolCourse), avaliações (SchoolAssessment →
+│                  tarefa), contas (SchoolMath, puro), importação (SchoolService.importCourses, IA em SchoolAiService +
+│                  SchoolImportPrompt), aviso de risco (SchoolRiskJob), busca (SchoolSearch)
 ├── financing/     financiamentos: cálculo (FinancingMath, puro), gastos padrão (FinancingCosts), simulador
 │                  (FinancingSimulator), taxas e índices do Banco Central (BcbClient, FinancingRateService/Job),
 │                  contratos com partes, extras e gastos (FinancingService), avisos (FinancingReminderJob), simulações salvas

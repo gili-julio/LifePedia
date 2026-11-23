@@ -54,6 +54,7 @@ class AdminStats {
             union all select 'DELIVERIES', count(distinct user_id), count(*) from deliveries
             union all select 'SIMULATOR', count(distinct user_id), count(*) from finance_simulations
             union all select 'VEHICLES', count(distinct user_id), count(*) from vehicles
+            union all select 'SCHOOL', count(distinct user_id), count(*) from school_enrollments
             ) m order by users desc, k
             """;
 

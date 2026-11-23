@@ -75,6 +75,13 @@ export function PrivacyPage() {
           <li>Preços: itens que você acompanha (nome, foto do produto, preço-alvo e avisos), os links de lojas que você colar,
             os preços que você anotar e o histórico de preços das lojas. Itens de um grupo são vistos pelos membros.</li>
           <li>Entregas: os passos que você anotar à mão (etapa, dia, texto e local) e a transportadora que escolher.</li>
+          <li>Escola: vínculos (tipo, curso, instituição, matrícula se você informar, semestre de entrada, cor, regra de
+            aprovação e carga horária exigida) e matérias (código, nome, semestre, turma, carga horária, situação, notas das
+            unidades, reposição, média, frequência, faltas, professor, e-mail do professor, sala, horário, links, o
+            compromisso da Frequência e o grupo com quem você compartilha), além das provas e trabalhos (nome, data, unidade,
+            peso e nota). O PDF do histórico do SIGAA e o texto das notas que você colar são lidos só no seu aparelho; só as
+            matérias que você confirmar são enviadas. No grupo, os membros veem links, professor, sala e as próximas
+            avaliações, nunca as suas notas.</li>
         </List>
         <p><strong>Dados técnicos</strong></p>
         <List>
@@ -82,8 +89,8 @@ export function PrivacyPage() {
             aparelho.</li>
           <li>Data e hora do seu último acesso (atualizada no máximo a cada 10 minutos), para saber quantas contas estão
             em uso e cuidar da segurança.</li>
-          <li>Resultado de cada leitura pela importação do site (deu certo ou o motivo da falha, quantos arquivos e
-            lançamentos e quanto tempo levou), sem o conteúdo dos arquivos.</li>
+          <li>Resultado de cada leitura pela importação do site e do histórico escolar pela IA (deu certo ou o motivo da
+            falha, quantos arquivos e itens e quanto tempo levou), sem o conteúdo dos arquivos.</li>
           <li>Endereço IP, usado na hora para limitar tentativas de login (proteção contra invasão) e registrado nos
             logs de acesso do servidor (IP, data e hora, página pedida e navegador).</li>
           <li>Se você ativar as notificações no aparelho: o endereço de entrega e as chaves fornecidas pelo navegador.</li>
@@ -132,7 +139,9 @@ export function PrivacyPage() {
           <li><strong>Google (Gemini)</strong>: se você usar a importação pelo site, os arquivos enviados vão inteiros,
             com tudo o que estiver neles, junto das suas categorias, fixos e nomes de lançamentos, para o Gemini ler e
             devolver os lançamentos. Usamos o plano pago da API, em que o Google não usa esse conteúdo para melhorar seus
-            produtos, mas pode registrá-lo por tempo limitado para detectar abusos, conforme os termos dele.</li>
+            produtos, mas pode registrá-lo por tempo limitado para detectar abusos, conforme os termos dele. O mesmo vale
+            para a leitura do histórico escolar pela IA na Escola: o PDF ou a foto vai inteiro para o Gemini devolver as
+            matérias, e nada dele fica guardado no LifePedia (só o que você importar).</li>
           <li><strong>Serviços que você liga</strong> (Google Agenda, GitLab, GitHub, Duolingo): o LifePedia acessa a sua
             conta neles só com a permissão que você deu e lê o que aparece no Dev, na Agenda e no Início. No Google, só a
             leitura das agendas; no GitLab e no GitHub, se o token permitir, o LifePedia também muda as etiquetas das
@@ -227,6 +236,8 @@ export function PrivacyPage() {
             lançamentos dele.</li>
           <li>Entregas ficam até você excluí-las; entregues vão para o histórico uma semana depois. Endereços ficam até
             você apagá-los (entregas que usavam o endereço ficam sem ele).</li>
+          <li>Vínculos, matérias e avaliações da Escola ficam até você excluí-los. Tarefas, pastas de notas e compromissos
+            ligados a uma matéria continuam nos módulos deles até você apagar.</li>
           <li>Sessões vencidas são apagadas todos os dias. Ao sair da conta, o aparelho para de receber notificações.</li>
           <li>Logs de acesso do servidor são mantidos só pelo tempo necessário à segurança ou exigido por lei.</li>
           <li>O registro das ações dos administradores guarda o seu nome na época, se a ação foi sobre a sua conta.</li>

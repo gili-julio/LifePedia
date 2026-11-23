@@ -19,6 +19,7 @@ export const MODULE_LABEL: Record<ModuleKey, { label: string; items: string }> =
   DELIVERIES: { label: 'Entregas', items: 'entregas' },
   SIMULATOR: { label: 'Simulador do financeiro', items: 'simulações salvas' },
   VEHICLES: { label: 'Veículos', items: 'veículos' },
+  SCHOOL: { label: 'Escola', items: 'vínculos' },
 }
 
 export const COUNT_LABEL: Record<UserCountKey, string> = {

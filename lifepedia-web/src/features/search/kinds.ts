@@ -6,6 +6,7 @@ import {
   CodeXmlIcon,
   CreditCardIcon,
   FuelIcon,
+  GraduationCapIcon,
   GitPullRequestIcon,
   HeartHandshakeIcon,
   LandmarkIcon,
@@ -53,6 +54,7 @@ export const KINDS: Record<SearchKind, { label: string; icon: LucideIcon }> = {
   DEV_REPORT: { label: 'Anotações do Dev', icon: NotebookTextIcon },
   ARCH_PROJECT: { label: 'Arquitetura', icon: Building2Icon },
   PRICE_WATCH: { label: 'Preços acompanhados', icon: TagIcon },
+  SCHOOL_COURSE: { label: 'Matérias', icon: GraduationCapIcon },
 }
 
 /** Módulos do filtro, na ordem do menu. */
@@ -64,6 +66,7 @@ export const MODULES: { id: AppModule; label: string }[] = [
   { id: 'AGENDA', label: 'Agenda' },
   { id: 'ATTENDANCE', label: 'Frequência' },
   { id: 'NOTES', label: 'Notas' },
+  { id: 'SCHOOL', label: 'Escola' },
   { id: 'DELIVERIES', label: 'Entregas' },
   { id: 'VEHICLES', label: 'Veículos' },
   { id: 'GROUPS', label: 'Grupos' },

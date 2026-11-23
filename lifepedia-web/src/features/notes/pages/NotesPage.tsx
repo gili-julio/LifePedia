@@ -3,14 +3,14 @@ import { useSearchParams } from 'react-router'
 import { PageHeader } from '@/components/PageHeader'
 import { NotesBoard } from '../components/NotesBoard'
 
-/** Notas pessoais; `?tarefa=` ou `?compromisso=` filtram as ligadas (links de outras telas). */
+/** Notas pessoais; `?tarefa=` ou `?compromisso=` filtram as ligadas e `?pasta=` abre numa pasta (links de outras telas). */
 export function NotesPage() {
   const [params, setParams] = useSearchParams()
   const taskId = params.get('tarefa')
   const commitmentId = params.get('compromisso')
 
   return (
-    <NotesBoard groupId={null}
+    <NotesBoard groupId={null} initialFolderId={params.get('pasta')}
       link={{ taskId, commitmentId, onClear: () => setParams({}, { replace: true }) }}
       header={({ newNote, labels }) => (
         <PageHeader title="Notas" description="Anotações em markdown, com pastas, etiquetas e modelos."

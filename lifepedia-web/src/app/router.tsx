@@ -128,6 +128,14 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('@/features/attendance/pages/AttendancePage')).AttendancePage }),
           },
           {
+            path: '/escola',
+            lazy: async () => ({ Component: (await import('@/features/school/pages/SchoolPage')).SchoolPage }),
+          },
+          {
+            path: '/escola/materias/:courseId',
+            lazy: async () => ({ Component: (await import('@/features/school/pages/CoursePage')).CoursePage }),
+          },
+          {
             path: '/notas',
             lazy: async () => ({ Component: (await import('@/features/notes/pages/NotesPage')).NotesPage }),
           },

@@ -57,14 +57,16 @@ type Props = {
   header: (actions: BoardActions) => ReactNode
   /** Filtro vindo de outra tela (ex.: "Notas" de uma tarefa ou compromisso). */
   link?: { taskId: string | null; commitmentId: string | null; onClear: () => void }
+  /** Pasta escolhida ao abrir (ex.: pasta de uma matéria da Escola). */
+  initialFolderId?: string | null
 }
 
 /** Lista de notas de um dono: abas, busca, pasta, etiqueta, ordem e paginação (tudo pela API). */
-export function NotesBoard({ groupId, header, link }: Props) {
+export function NotesBoard({ groupId, header, link, initialFolderId = null }: Props) {
   const [status, setStatus] = useState<NoteStatus>('ACTIVE')
   const [search, setSearch] = useState('')
   const q = useDebouncedValue(search.trim(), 300)
-  const [folderId, setFolderId] = useState<string | null>(null)
+  const [folderId, setFolderId] = useState<string | null>(initialFolderId)
   const [tagId, setTagId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'new' | 'labels' | null>(null)
   const [menu, setMenu] = useState<{ open: boolean; item?: NoteSummary }>({ open: false })

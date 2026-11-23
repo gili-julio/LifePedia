@@ -14,5 +14,6 @@ public enum AppModule {
     DEV,
     DELIVERIES,
     VEHICLES,
-    PRICES
+    PRICES,
+    SCHOOL
 }

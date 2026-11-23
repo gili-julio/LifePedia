@@ -64,7 +64,10 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 
 - **Senha**: só `PasswordEncoder` (BCrypt 12). Nunca logar, devolver ou persistir senha/token em texto puro.
 - **IA**: chave só no ambiente, só na API (`shared/ai/GeminiClient`, cabeçalho, nunca na URL). Prompt montado na API, nunca
-  vindo do cliente. Documento e resposta nunca vão para log nem disco; só a lista lida fica no rascunho do dono.
+  vindo do cliente. Documento e resposta nunca vão para log nem disco; só a lista lida fica no rascunho do dono (na Escola,
+  nem isso: o lido volta para a prévia e só grava o que a pessoa importar).
+- **Escola** (`school/`): tudo só do dono (404); compromisso validado como dele (`CommitmentLinks.personal`) e grupo como
+  membro (`GroupAccess.requireMember`). No grupo nunca vão notas. PDF do SIGAA e texto das notas só no navegador.
 - **Token**: nunca guardar em `localStorage`/`sessionStorage` nem expor ao JavaScript. No navegador a sessão é o
   cookie HttpOnly `lifepedia_session`. O JWT só leva o id do usuário (`sub`) — nada de dados pessoais.
 - **CSRF**: toda requisição que altera dados sem `Authorization` precisa de `X-Requested-With` (o `lib/api.ts` já envia).
@@ -173,6 +176,10 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
     ícones em `kinds.ts`); `search_norm` (V41) ↔ `SearchText.normalize` ↔ `lib/search-text.ts` (`normalizeText`)
   - Entregas (passos à mão): `DeliveryCarrier` (código do 17TRACK) ↔ `CARRIERS` em `features/deliveries/labels.ts`;
     `DeliveryTimeline.MANUAL` ↔ `MANUAL_STEPS`; `DeliveryTimeline.Event` ↔ `TimelineEvent`
+  - Escola: `SchoolEnrollment.Kind/Scale`, `SchoolCourse.Category/Status` (e `passed`/`graded`/`ongoing`), `SchoolAssessment.Kind`,
+    `SchoolDtos.LinkKind` e DTOs de `SchoolDtos` ↔ `features/school/types.ts` (+ textos em `labels.ts`, `isOngoing`/`isPassed`);
+    `reason`/`value` da notificação `SCHOOL_RISK` ↔ `schoolText` em `notification-content.tsx`; formato do prompt da IA
+    (`SchoolImportPrompt`) ↔ `SchoolAiService` (a resposta já volta como `HistoryRead`)
   - Preços: `PriceDtos` e `PricePoint.Source` ↔ `features/prices/types.ts` (+ `SOURCE_LABEL`); `kind` da notificação
     `PRICE_ALERT` ↔ `priceText` em `notification-content.tsx`; `AppModule.PRICES` ↔ `AppModule` do front
   - DTOs da API ↔ `types.ts` de cada feature no front
@@ -246,7 +253,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@12`, anexo; importa `@1` a `@12`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@13`, anexo; importa `@1` a `@13`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
@@ -257,8 +264,9 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   situação, transportadora, apelido do endereço), desde o `@8`, e `vehicles` (veículos da pessoa com leituras, gastos, itens,
   revisões e documentos; `mine` diz se o gasto foi dela), desde o `@9`, e `wallet` (cartões com ciclo, limite, meta e
   pagamentos; contas com o saldo informado), desde o `@10`, e `prices` (itens acompanhados com alvo, links e preços
-  anotados), desde o `@11`, e as anotações do dia do Dev (`devProjects[].reports`), desde o `@12`, são só registro. Mudou
-  o formato? Crie `@13` e mantenha
+  anotados), desde o `@11`, as anotações do dia do Dev (`devProjects[].reports`), desde o `@12`, e `school` (vínculos com matérias, notas, links e
+  nomes das avaliações), desde o `@13`, são só registro. Mudou
+  o formato? Crie `@14` e mantenha
   a importação dos anteriores (usuários guardam arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -476,6 +484,24 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   (fachada `finance/transaction/ExpenseLinks`, nome "Tipo - Veículo"); `PUT` sem `finance` tira do financeiro. Aviso
   `VEHICLE_REMINDER` (job das 9h, dono e quem lança, uma vez por etapa) e `VEHICLE_SHARED`; valor da FIPE de novo a cada 20
   dias (5h).
+- **Escola** (`/api/school`): `GET` (`{enrollments, shared, aiEnabled}`: vínculos com índice, semestre atual e quantas em
+  risco, e as matérias que colegas compartilharam nos grupos), `POST /enrollments`, `GET/PUT/DELETE /enrollments/{id}`
+  (detalhe com `courses` do semestre mais novo, `periods` = média ponderada por semestre e `progress`), `POST
+  /enrollments/{id}/import {courses, required, dryRun}` (mesma matéria = semestre + código, ou nome: atualiza; senão cria;
+  nunca apaga; matéria em andamento sem compromisso liga ao compromisso da Frequência com o código ou o nome), `POST
+  /enrollments/{id}/courses`, `GET/PUT/DELETE /courses/{id}` (`CourseDetail` com `assessments`), `PUT /courses/{id}/grades
+  {units, recovery, absences, average?, attendance?, concept?, status?}` (confere o risco na hora), `POST
+  /courses/{id}/notes-folder` (pasta pessoal nas Notas pela fachada `note/NoteLinks`), `POST|PUT|DELETE
+  /courses/{id}/assessments[/{id}]` (com data e `createTask`: tarefa pessoal pela `TaskLinks.createPersonal`, com
+  lembrete; editar reagenda pela `reschedulePersonal`; excluir mantém a tarefa) e `POST /import/ai` (multipart `files`, até
+  3, 15 MB somados, PDF/PNG/JPG/WebP pelo conteúdo; devolve o lido, nada é gravado; 5 por pessoa por dia + `AI_DAILY_LIMIT`;
+  uso em `ai_usage` como `SCHOOL`). **Toda conta é da API** (`SchoolMath`, puro): nota da unidade pelas avaliações com nota
+  (peso), parcial, média com reposição, situação pela regra do vínculo, índice ponderado pela carga horária e progresso.
+  Frequência só pela fachada `attendance/CommitmentLinks` (contagem igual à da tela da Frequência). Grupo: matéria com
+  `groupId` aparece para os membros só com links, professor, sala e próximas avaliações (nunca notas); quem sai do grupo
+  descompartilha (`GroupMemberRemovedEvent`). Aviso `SCHOOL_RISK` (`reason` `GRADE`|`ABSENCES`, `value`) uma vez por motivo
+  (`risk_warned`), ao salvar notas e no `SchoolRiskJob` (19h, vínculos ativos). O PDF do SIGAA e o texto das notas são
+  lidos só no front (`features/school/import`).
 - **Limites dos serviços** (`GET /api/admin/limits`, só admin): `[{key, configured, period, used, limit, error}]` para
   17TRACK (plano e dia, pela `getquota`, guardada 5 min), FIPE (dia, pelos cabeçalhos da última consulta), Gemini (importação e daily nas últimas 24 h contra
   `AI_DAILY_LIMIT`) e Google Agenda (pessoas com conta ligada contra 100, o teto sem verificação).

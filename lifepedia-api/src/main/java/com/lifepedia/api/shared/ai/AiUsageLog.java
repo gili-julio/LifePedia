@@ -14,6 +14,7 @@ public class AiUsageLog {
 
     public static final String IMPORT = "IMPORT";
     public static final String DEV_DAILY = "DEV_DAILY";
+    public static final String SCHOOL_IMPORT = "SCHOOL";
     private static final Logger log = LoggerFactory.getLogger(AiUsageLog.class);
 
     private final AiUsageRepository repository;

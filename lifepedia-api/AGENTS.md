@@ -240,7 +240,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@12`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@12`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira e preços só como registro); mudou o arquivo ⇒ `@13` e importação dos
+  (`lifepedia/account@13`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@13`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira, preços e escola só como registro); mudou o arquivo ⇒ `@14` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para
@@ -270,6 +270,14 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   fachada `finance/recurring/ScheduledFixed` (cria/atualiza/apaga com os ajustes mensais) e refeito em `syncFixed` a
   cada mudança (contrato, partes, extras); fixo apagado pela pessoa desliga a ligação. Teste em
   `FinancingIntegrationTest` (simulação, contrato, extras, fixo, gastos, aviso, grupo e isolamento).
+- **Escola** (`school/`): dono por `findByIdAndUserId` (avaliação pela matéria: `findByIdAndCourseId`). Contas só em
+  `SchoolMath` (puro, `SchoolMathTest`); as respostas montadas num `Context` por requisição (matérias, avaliações e a
+  contagem da Frequência só se alguma matéria tem compromisso). Frequência só por `attendance/CommitmentLinks`, tarefa só
+  por `TaskLinks.createPersonal/reschedulePersonal`, pasta só por `note/NoteLinks.personalFolder`. Unidades e links em JSON
+  na matéria. Risco por `checkRisk` (uma vez por motivo em `risk_warned`), chamado ao salvar notas e no `SchoolRiskJob`.
+  IA só em `SchoolAiService` (prompt em `SchoolImportPrompt`, `RateLimiter` 5/dia por pessoa + global `AI_DAILY_LIMIT`,
+  `AiUsageLog.SCHOOL_IMPORT`). Saiu do grupo → `onMemberRemoved` descompartilha. Teste em `SchoolIntegrationTest`
+  (`@MockitoBean GeminiClient`).
 
 ## Testes
 
