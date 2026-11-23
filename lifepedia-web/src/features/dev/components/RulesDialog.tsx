@@ -1,3 +1,4 @@
+import { ArrowDownIcon, ArrowUpIcon, PlusIcon, XIcon } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { DialogBody, DialogScrollContent } from '@/components/DialogLayout'
@@ -10,7 +11,11 @@ import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { ApiError } from '@/lib/api'
 import { useRepoLabels, useSaveRules } from '../api'
-import type { DevRepo } from '../types'
+import type { DevRepo, Lane } from '../types'
+
+const MAX_LANES = 8
+
+type LaneDraft = { label: string; days: string }
 
 type Props = { repo: DevRepo | null; onOpenChange: (open: boolean) => void }
 
@@ -33,13 +38,33 @@ function RulesForm({ repo, onDone }: { repo: DevRepo; onDone: () => void }) {
   const [opened, setOpened] = useState(repo.labelMrOpened ?? '')
   const [merged, setMerged] = useState(repo.labelMrMerged ?? '')
   const [clear, setClear] = useState(repo.labelsClear.join(', '))
+  const [lanes, setLanes] = useState<LaneDraft[]>(repo.lanes.map((l) => ({ label: l.label, days: l.days ? String(l.days) : '' })))
+  const [newLane, setNewLane] = useState('')
+  const free = (labels.data ?? []).filter((l) => !lanes.some((x) => x.label.toLowerCase() === l.toLowerCase()))
+
+  function addLane(value: string) {
+    const label = value.trim()
+    if (!label || lanes.length >= MAX_LANES || lanes.some((l) => l.label.toLowerCase() === label.toLowerCase())) return
+    setLanes((list) => [...list, { label, days: '' }])
+    setNewLane('')
+  }
+
+  function moveLane(index: number, delta: number) {
+    setLanes((list) => {
+      const next = [...list]
+      const [item] = next.splice(index, 1)
+      next.splice(index + delta, 0, item)
+      return next
+    })
+  }
   const mr = repo.provider === 'GITHUB' ? 'PR' : 'MR'
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     try {
+      const watched: Lane[] = lanes.map((l) => ({ label: l.label, days: l.days ? Number(l.days) : null }))
       await save.mutateAsync({ repoId: repo.id, importIssues, closeIssues, labelMrOpened: opened.trim() || null,
-        labelMrMerged: merged.trim() || null, labelsClear: clear.split(',').map((s) => s.trim()).filter(Boolean) })
+        labelMrMerged: merged.trim() || null, labelsClear: clear.split(',').map((s) => s.trim()).filter(Boolean), lanes: watched })
       toast.success('Regras salvas.')
       onDone()
     } catch (err) {
@@ -64,7 +89,7 @@ function RulesForm({ repo, onDone }: { repo: DevRepo; onDone: () => void }) {
           <div className="flex items-start justify-between gap-3">
             <div className="space-y-0.5">
               <Label htmlFor="rules-import">Issues viram tarefas</Label>
-              <p className="text-xs text-muted-foreground">Cada issue atribuída a você vira uma tarefa com a etiqueta do projeto.</p>
+              <p className="text-xs text-muted-foreground">Cada issue atribuída a você (que aparece aqui) vira uma tarefa com a etiqueta do projeto.</p>
             </div>
             <Switch id="rules-import" checked={importIssues} onCheckedChange={setImportIssues} />
           </div>
@@ -79,6 +104,62 @@ function RulesForm({ repo, onDone }: { repo: DevRepo; onDone: () => void }) {
           <datalist id={`labels-${repo.id}`}>
             {(labels.data ?? []).map((l) => <option key={l} value={l} />)}
           </datalist>
+
+          <fieldset className="space-y-3 rounded-2xl border p-3">
+            <legend className="px-1 text-sm font-medium">Raias que você acompanha</legend>
+            <p className="text-xs text-muted-foreground">
+              Aparecem só as issues nessas etiquetas em que você participa (atribuída, criada por você, citado ou comentou), com os
+              dias em cada raia. Sem nenhuma raia, aparecem as atribuídas a você. A ordem é a do quadro.
+            </p>
+            {lanes.length > 0 && (
+              <ol className="space-y-2">
+                {lanes.map((lane, index) => (
+                  <li key={lane.label} className="flex flex-wrap items-center gap-2 rounded-xl bg-muted/50 px-2 py-1.5">
+                    <span className="min-w-0 flex-1 truncate text-sm font-medium">{lane.label}</span>
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      Aviso com
+                      <Input type="number" inputMode="numeric" min={1} max={365} value={lane.days} placeholder="-"
+                        aria-label={`Dias para avisar em ${lane.label}`} className="h-8 w-16 text-base md:text-sm"
+                        onChange={(e) => setLanes((list) => list.map((l, i) => (i === index ? { ...l, days: e.target.value.replace(/\D/g, '').slice(0, 3) } : l)))} />
+                      dias
+                    </label>
+                    <div className="flex">
+                      <Button type="button" size="icon" variant="ghost" className="size-8" disabled={index === 0}
+                        aria-label={`Subir ${lane.label}`} onClick={() => moveLane(index, -1)}><ArrowUpIcon /></Button>
+                      <Button type="button" size="icon" variant="ghost" className="size-8" disabled={index === lanes.length - 1}
+                        aria-label={`Descer ${lane.label}`} onClick={() => moveLane(index, 1)}><ArrowDownIcon /></Button>
+                      <Button type="button" size="icon" variant="ghost" className="size-8" aria-label={`Tirar ${lane.label}`}
+                        onClick={() => setLanes((list) => list.filter((_, i) => i !== index))}><XIcon /></Button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+            {lanes.length < MAX_LANES && (
+              <div className="flex gap-2">
+                <Input list={`labels-${repo.id}`} value={newLane} maxLength={100} placeholder="Ex.: Doing" aria-label="Nova raia"
+                  className="text-base md:text-sm" onChange={(e) => setNewLane(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      addLane(newLane)
+                    }
+                  }} />
+                <Button type="button" variant="outline" onClick={() => addLane(newLane)} disabled={!newLane.trim()}><PlusIcon /> Adicionar</Button>
+              </div>
+            )}
+            {free.length > 0 && lanes.length < MAX_LANES && (
+              <div className="flex flex-wrap gap-1">
+                {free.slice(0, 30).map((l) => (
+                  <button key={l} type="button" onClick={() => addLane(l)} aria-label={`Acompanhar ${l}`}
+                    className="rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+                    <Badge variant="outline" className="font-normal"><PlusIcon className="size-3" aria-hidden />{l}</Badge>
+                  </button>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Passou dos dias, o selo fica amarelo (vermelho no dobro) e chega um aviso.</p>
+          </fieldset>
           <Field>
             <FieldLabel htmlFor="rules-opened">Etiqueta quando o {mr} abre</FieldLabel>
             <Input id="rules-opened" list={`labels-${repo.id}`} value={opened} maxLength={100} placeholder="Ex.: Waiting for merge request"

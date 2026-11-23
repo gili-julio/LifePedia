@@ -1,6 +1,7 @@
 package com.lifepedia.api.dev;
 
 import com.lifepedia.api.dev.DevAutomation.Event;
+import com.lifepedia.api.dev.DevDtos.Lane;
 import com.lifepedia.api.dev.DevItem.Kind;
 import com.lifepedia.api.integration.AccountSyncer;
 import com.lifepedia.api.integration.Connection;
@@ -51,6 +52,8 @@ public class DevSyncService implements AccountSyncer {
     /** Na primeira sincronização de um repositório busca mais dias, para o gráfico já nascer com histórico. */
     static final int FIRST_ACTIVITY_DAYS = 84;
     static final int MERGED_DAYS = 3;
+    /** Issues que mudaram de raia: até tantas consultas de "desde quando" por sincronização (o resto fica para a próxima). */
+    static final int MAX_LANE_LOOKUPS = 40;
     private static final Logger log = LoggerFactory.getLogger(DevSyncService.class);
 
     private final DevRepoRepository repos;
@@ -58,6 +61,7 @@ public class DevSyncService implements AccountSyncer {
     private final DevItemRepository items;
     private final DevAutomationRepository automations;
     private final DevActivityRepository activity;
+    private final DevLanes devLanes;
     private final List<CodeHost> codeHosts;
     private final TaskLinks tasks;
     private final NotificationService notifications;
@@ -65,13 +69,15 @@ public class DevSyncService implements AccountSyncer {
     private final TransactionTemplate transaction;
 
     public DevSyncService(DevRepoRepository repos, DevProjectRepository projects, DevItemRepository items,
-                          DevAutomationRepository automations, DevActivityRepository activity, List<CodeHost> codeHosts,
-                          TaskLinks tasks, NotificationService notifications, Clock clock, PlatformTransactionManager transactions) {
+                          DevAutomationRepository automations, DevActivityRepository activity, DevLanes devLanes,
+                          List<CodeHost> codeHosts, TaskLinks tasks, NotificationService notifications, Clock clock,
+                          PlatformTransactionManager transactions) {
         this.repos = repos;
         this.projects = projects;
         this.items = items;
         this.automations = automations;
         this.activity = activity;
+        this.devLanes = devLanes;
         this.codeHosts = codeHosts;
         this.tasks = tasks;
         this.notifications = notifications;
@@ -112,7 +118,14 @@ public class DevSyncService implements AccountSyncer {
         LocalDate today = now.atZoneSameInstant(clock.getZone()).toLocalDate();
         List<RemoteRepo> remotes = linked.stream()
                 .map(r -> new RemoteRepo(r.getExternalId(), r.getFullName(), r.getWebUrl(), r.getDefaultBranch())).toList();
-        Snapshot snapshot = host.snapshot(connection, remotes, now.minusDays(MERGED_DAYS));
+        Map<UUID, List<Lane>> laneConfig = new HashMap<>();
+        Map<String, List<String>> watched = new HashMap<>();
+        for (DevRepo repo : linked) {
+            List<Lane> list = devLanes.read(repo);
+            laneConfig.put(repo.getId(), list);
+            if (!list.isEmpty()) watched.put(repo.getExternalId(), list.stream().map(Lane::label).toList());
+        }
+        Snapshot snapshot = host.snapshot(connection, remotes, now.minusDays(MERGED_DAYS), watched);
         int window = linked.stream().anyMatch(r -> r.getSyncedAt() == null) ? FIRST_ACTIVITY_DAYS : ACTIVITY_DAYS;
         LocalDate from = today.minusDays(window - 1L);
         List<RemoteActivity> days = List.of();
@@ -125,9 +138,10 @@ public class DevSyncService implements AccountSyncer {
         linked.forEach(r -> byExternal.put(r.getExternalId(), r));
         Map<UUID, Map<String, String>> lanes = connection.canWrite() ? moveLanes(connection, host, linked, snapshot) : Map.of();
         Set<String> closed = closedIssues(connection, host, linked, snapshot);
+        Map<String, OffsetDateTime> laneTimes = laneTimes(connection, host, byExternal, snapshot, laneConfig, now);
         List<RemoteActivity> activityDays = days;
-        transaction.executeWithoutResult(status ->
-                save(connection, linked, byExternal, snapshot, closed, lanes, activityDays, from, today, now));
+        transaction.executeWithoutResult(status -> save(connection, linked, byExternal, snapshot, closed, lanes,
+                new LaneState(laneConfig, laneTimes), activityDays, from, today, now));
         return snapshot.mergeRequests().size() + snapshot.issues().size() + snapshot.pipelines().size();
     }
 
@@ -179,9 +193,44 @@ public class DevSyncService implements AccountSyncer {
         return closed;
     }
 
+    /**
+     * Desde quando cada issue está na raia atual ("repo#número"): o que já estava gravado se a raia não mudou, senão quando a
+     * etiqueta entrou lá (achou nada = agora; erro ou acima do limite de consultas = fica para a próxima).
+     */
+    private Map<String, OffsetDateTime> laneTimes(Connection connection, CodeHost host, Map<String, DevRepo> byExternal,
+                                                  Snapshot snapshot, Map<UUID, List<Lane>> laneConfig, OffsetDateTime now) {
+        List<DevItem> stored = transaction.execute(status -> items.findByRepoIdIn(laneConfig.keySet()));
+        Map<String, DevItem> byKey = new HashMap<>();
+        for (DevItem item : stored == null ? List.<DevItem>of() : stored) {
+            if (item.getKind() == Kind.ISSUE) byKey.put(item.getRepoId() + "#" + item.getNumber(), item);
+        }
+        Map<String, OffsetDateTime> times = new HashMap<>();
+        int lookups = 0;
+        for (RemoteIssue issue : snapshot.issues()) {
+            DevRepo repo = byExternal.get(issue.repoId());
+            if (repo == null) continue;
+            Lane lane = DevLanes.current(issue.labels(), laneConfig.getOrDefault(repo.getId(), List.of()));
+            if (lane == null) continue;
+            String key = repo.getId() + "#" + issue.number();
+            DevItem before = byKey.get(key);
+            if (before != null && lane.label().equals(before.getLane()) && before.getLaneSince() != null) {
+                times.put(key, before.getLaneSince());
+                continue;
+            }
+            if (lookups++ >= MAX_LANE_LOOKUPS) continue;
+            try {
+                OffsetDateTime added = host.labelAddedAt(connection, new IssueRef(issue.repoId(), issue.number()), lane.label());
+                times.put(key, added == null || added.isAfter(now) ? now : added);
+            } catch (IntegrationException e) {
+                log.info("Raia da issue {} sem data: {}", key, e.kind());
+            }
+        }
+        return times;
+    }
+
     private void save(Connection connection, List<DevRepo> linked, Map<String, DevRepo> byExternal, Snapshot snapshot, Set<String> closed,
-                      Map<UUID, Map<String, String>> lanes, List<RemoteActivity> days, LocalDate from, LocalDate today,
-                      OffsetDateTime now) {
+                      Map<UUID, Map<String, String>> lanes, LaneState laneState, List<RemoteActivity> days, LocalDate from,
+                      LocalDate today, OffsetDateTime now) {
         Map<UUID, DevProject> projectById = new HashMap<>();
         for (DevRepo repo : linked) projects.findById(repo.getProjectId()).ifPresent(p -> projectById.put(p.getId(), p));
         Map<String, DevItem> stored = new HashMap<>();
@@ -201,7 +250,7 @@ public class DevSyncService implements AccountSyncer {
             item.setBasics(mr.number(), mr.title(), mr.state(), mr.webUrl(), mr.author(), mr.updatedAt());
             String issues = mr.issues().stream().map(IssueRef::toString).collect(Collectors.joining(","));
             item.setMergeRequest(mr.mine(), mr.review(), mr.draft(), mr.branch(), mr.pipeline(), mr.approved(), mr.comments(),
-                    issues.length() <= 500 ? issues : issues.substring(0, 500), mr.mergedAt());
+                    issues.length() <= 500 ? issues : issues.substring(0, 500), mr.createdAt(), mr.mergedAt());
             items.save(item);
             DevProject project = projectById.get(repo.getProjectId());
             if (repo.getSyncedAt() != null && project != null) {
@@ -216,9 +265,20 @@ public class DevSyncService implements AccountSyncer {
             seen.add(key);
             DevItem item = stored.getOrDefault(key, new DevItem(repo.getId(), connection.userId(), Kind.ISSUE, issue.number()));
             item.setBasics(issue.number(), issue.title(), "opened", issue.webUrl(), issue.author(), issue.updatedAt());
-            item.setIssue(issue.labels(), issue.dueDate());
+            item.setIssue(issue.labels(), issue.dueDate(), issue.assigned());
+            Lane lane = DevLanes.current(issue.labels(), laneState.config().getOrDefault(repo.getId(), List.of()));
+            item.setLane(lane == null ? null : lane.label(), laneState.times().get(repo.getId() + "#" + issue.number()));
             DevProject project = projectById.get(repo.getProjectId());
-            if (repo.isImportIssues() && !item.isTaskLinked() && project != null) {
+            if (lane != null && lane.days() != null && item.getLaneSince() != null && !item.isLaneWarned() && project != null
+                    && repo.getSyncedAt() != null) {
+                int stuck = DevLanes.days(item.getLaneSince(), today, clock.getZone());
+                if (stuck >= lane.days()) {
+                    item.markLaneWarned();
+                    notify(connection.userId(), NotificationType.DEV_ISSUE_STUCK, project, repo, Map.of("title", issue.title(),
+                            "number", issue.number(), "lane", lane.label(), "days", String.valueOf(stuck)));
+                }
+            }
+            if (repo.isImportIssues() && issue.assigned() && !item.isTaskLinked() && project != null) {
                 tasks.createPersonal(connection.userId(), "#" + issue.number() + " " + issue.title(), issue.webUrl(), issue.dueDate(),
                         project.getName(), project.getColor()).ifPresent(item::linkTask);
             }
@@ -344,5 +404,9 @@ public class DevSyncService implements AccountSyncer {
     }
 
     private record Previous(String state, String pipeline, boolean approved, int comments) {
+    }
+
+    /** Raias de cada repositório e desde quando cada issue está na dela. */
+    private record LaneState(Map<UUID, List<Lane>> config, Map<String, OffsetDateTime> times) {
     }
 }

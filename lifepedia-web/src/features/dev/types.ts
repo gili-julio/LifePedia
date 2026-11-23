@@ -11,6 +11,9 @@ export type ItemKind = 'MR' | 'ISSUE' | 'PIPELINE'
 /** Status normalizado das pipelines (`integration/code/Pipelines`). */
 export type PipelineStatus = 'SUCCESS' | 'FAILED' | 'RUNNING' | 'PENDING' | 'CANCELED' | 'SKIPPED' | 'MANUAL'
 
+/** Raia acompanhada: etiqueta da issue e o limite de dias nela (nulo = sem aviso). */
+export type Lane = { label: string; days: number | null }
+
 export type DevRepo = {
   id: string
   accountId: string
@@ -27,6 +30,7 @@ export type DevRepo = {
   labelMrOpened: string | null
   labelMrMerged: string | null
   labelsClear: string[]
+  lanes: Lane[]
   syncedAt: string | null
 }
 
@@ -57,6 +61,7 @@ export type DevItem = {
   state: string
   webUrl: string
   author: string | null
+  /** MR da pessoa; na issue, atribuída a ela (senão ela só participa) */
   mine: boolean
   review: boolean
   draft: boolean
@@ -70,6 +75,13 @@ export type DevItem = {
   taskId: string | null
   updatedAt: string | null
   mergedAt: string | null
+  /** Raia acompanhada em que a issue está */
+  lane: string | null
+  laneSince: string | null
+  /** Dias na raia (calculado pela API) */
+  laneDays: number | null
+  /** Limite de dias da raia */
+  laneLimit: number | null
 }
 
 export type DayActivity = { day: string; commits: number; mergeRequests: number; merged: number; reviews: number }
@@ -86,7 +98,12 @@ export type ProjectActivity = {
 
 export type ActivityResponse = { days: DayActivity[]; projects: ProjectActivity[] }
 
-export type ProjectDetail = { project: DevProject; items: DevItem[]; events: CalendarEvent[]; activity: DayActivity[] }
+/** `lanes` = colunas do quadro, em ordem. */
+export type ProjectDetail = { project: DevProject; items: DevItem[]; events: CalendarEvent[]; activity: DayActivity[]; lanes: Lane[] }
+
+export type ReportStatus = { projectId: string; projectName: string; projectColor: string; written: boolean }
+
+export type DevReport = { day: string; text: string; updatedAt: string }
 
 export type AccountProblem = { id: string; provider: IntegrationProvider; nickname: string }
 
@@ -100,6 +117,8 @@ export type Today = {
   problems: AccountProblem[]
   aiEnabled: boolean
   projects: number
+  /** Anotação de hoje em cada projeto */
+  reports: ReportStatus[]
 }
 
 export type RepoOption = { externalId: string; fullName: string; webUrl: string; linked: boolean }
@@ -120,4 +139,5 @@ export type RulesInput = {
   labelMrOpened: string | null
   labelMrMerged: string | null
   labelsClear: string[]
+  lanes: Lane[]
 }

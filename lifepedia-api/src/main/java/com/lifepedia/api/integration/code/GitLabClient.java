@@ -16,9 +16,11 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -30,6 +32,9 @@ public class GitLabClient implements CodeHost {
     /** MRs da pessoa com detalhes (pipeline, aprovação, issues) por sincronização. */
     private static final int MAX_DETAILED = 30;
     private static final int EVENT_PAGES = 5;
+    /** Issues nas raias de que a pessoa não é dona nem responsável: até tantas consultas de participantes por sincronização. */
+    private static final int MAX_PARTICIPANT_CHECKS = 50;
+    private static final int LABEL_EVENT_PAGES = 3;
 
     private final ApiCalls api;
 
@@ -85,8 +90,8 @@ public class GitLabClient implements CodeHost {
     }
 
     @Override
-    public Snapshot snapshot(Connection connection, Collection<RemoteRepo> repos, OffsetDateTime mergedSince)
-            throws IntegrationException {
+    public Snapshot snapshot(Connection connection, Collection<RemoteRepo> repos, OffsetDateTime mergedSince,
+                             Map<String, List<String>> lanes) throws IntegrationException {
         Set<String> ids = repos.stream().map(RemoteRepo::externalId).collect(Collectors.toSet());
         Map<String, RemoteMr> byId = new LinkedHashMap<>();
         int detailed = 0;
@@ -105,29 +110,44 @@ public class GitLabClient implements CodeHost {
         for (JsonNode mr : get(connection, "/merge_requests?scope=all&state=opened&per_page=100&reviewer_username="
                 + Json.encode(connection.login())).body()) {
             String id = Json.text(mr, "id");
-            if (ids.contains(Json.text(mr, "project_id")) && !byId.containsKey(id)) {
+            if (ids.contains(Json.text(mr, "project_id")) && !byId.containsKey(id) && reviewer(mr, connection.login())) {
                 byId.put(id, mergeRequest(connection, mr, false, true, MAX_DETAILED));
             }
         }
         List<RemoteIssue> issues = new ArrayList<>();
         for (JsonNode issue : get(connection, "/issues?scope=assigned_to_me&state=opened&per_page=100").body()) {
             String repoId = Json.text(issue, "project_id");
-            if (!ids.contains(repoId)) continue;
-            issues.add(new RemoteIssue(repoId, Json.text(issue, "iid"), Json.text(issue, "title", 300), Json.text(issue, "web_url"),
-                    Json.text(issue.path("author"), "username"), Json.strings(issue.path("labels")),
-                    Json.date(Json.text(issue, "due_date")), Json.time(issue, "updated_at")));
+            if (ids.contains(repoId) && lanes.getOrDefault(repoId, List.of()).isEmpty()) issues.add(issue(issue, true));
         }
+        issues.addAll(laneIssues(connection, ids, lanes));
         List<RemotePipeline> pipelines = new ArrayList<>();
         for (RemoteRepo repo : repos) {
             if (repo.defaultBranch() == null) continue;
             for (JsonNode pipeline : get(connection, "/projects/" + projectId(repo.externalId()) + "/pipelines?per_page=1&ref="
-                    + Json.encode(repo.defaultBranch())).body()) {
+                    + Json.encode(repo.defaultBranch()) + "&username=" + Json.encode(connection.login())).body()) {
                 pipelines.add(new RemotePipeline(repo.externalId(), Json.text(pipeline, "id"),
                         Pipelines.normalize(Json.text(pipeline, "status"), null), Json.text(pipeline, "ref"),
                         Json.text(pipeline, "web_url"), Json.time(pipeline, "updated_at")));
             }
         }
         return new Snapshot(List.copyOf(byId.values()), issues, pipelines);
+    }
+
+    @Override
+    public OffsetDateTime labelAddedAt(Connection connection, IssueRef issue, String label) throws IntegrationException {
+        OffsetDateTime latest = null;
+        for (int page = 1; page <= LABEL_EVENT_PAGES; page++) {
+            JsonNode events = get(connection, issuePath(issue) + "/resource_label_events?per_page=100&page=" + page).body();
+            for (JsonNode event : events) {
+                OffsetDateTime at = Json.time(event, "created_at");
+                if ("add".equals(Json.text(event, "action")) && label.equalsIgnoreCase(Json.text(event.path("label"), "name"))
+                        && at != null && (latest == null || at.isAfter(latest))) {
+                    latest = at;
+                }
+            }
+            if (events.size() < 100) break;
+        }
+        return latest;
     }
 
     @Override
@@ -184,6 +204,42 @@ public class GitLabClient implements CodeHost {
         return activity;
     }
 
+    /** Issues abertas nas raias de cada repositório de que a pessoa participa (responsável, autora ou participante). */
+    private List<RemoteIssue> laneIssues(Connection connection, Set<String> ids, Map<String, List<String>> lanes)
+            throws IntegrationException {
+        List<RemoteIssue> issues = new ArrayList<>();
+        int checks = 0;
+        for (Map.Entry<String, List<String>> entry : lanes.entrySet()) {
+            if (!ids.contains(entry.getKey()) || entry.getValue().isEmpty()) continue;
+            String base = "/projects/" + projectId(entry.getKey()) + "/issues";
+            Map<String, JsonNode> found = new LinkedHashMap<>();
+            for (String label : entry.getValue()) {
+                for (JsonNode issue : get(connection, base + "?state=opened&per_page=100&labels=" + Json.encode(label)).body()) {
+                    found.putIfAbsent(Json.text(issue, "iid"), issue);
+                }
+            }
+            for (JsonNode issue : found.values()) {
+                boolean assigned = hasUser(issue.path("assignees"), connection.login())
+                        || connection.login().equalsIgnoreCase(Json.text(issue.path("assignee"), "username"));
+                boolean involved = assigned || connection.login().equalsIgnoreCase(Json.text(issue.path("author"), "username"));
+                if (!involved && checks < MAX_PARTICIPANT_CHECKS) {
+                    checks++;
+                    involved = participant(connection, base + "/" + Json.text(issue, "iid") + "/participants");
+                }
+                if (involved) issues.add(issue(issue, assigned));
+            }
+        }
+        return issues;
+    }
+
+    private boolean participant(Connection connection, String path) {
+        try {
+            return hasUser(get(connection, path).body(), connection.login());
+        } catch (IntegrationException e) {
+            return false;
+        }
+    }
+
     private RemoteMr mergeRequest(Connection connection, JsonNode mr, boolean mine, boolean review, int index)
             throws IntegrationException {
         String repoId = Json.text(mr, "project_id");
@@ -213,6 +269,28 @@ public class GitLabClient implements CodeHost {
                 Json.text(mr, "web_url"), Json.text(mr.path("author"), "username"), mine, review, draft, branch, pipeline,
                 approved, mr.path("user_notes_count").asInt(0), issues, Json.time(mr, "created_at"), Json.time(mr, "updated_at"),
                 Json.time(mr, "merged_at"));
+    }
+
+    private static RemoteIssue issue(JsonNode issue, boolean assigned) {
+        return new RemoteIssue(Json.text(issue, "project_id"), Json.text(issue, "iid"), Json.text(issue, "title", 300),
+                Json.text(issue, "web_url"), Json.text(issue.path("author"), "username"), Json.strings(issue.path("labels")),
+                Json.date(Json.text(issue, "due_date")), Json.time(issue, "updated_at"), assigned);
+    }
+
+    /** Revisor pelo campo {@code reviewers}; GitLab antigo (sem o campo, e que ignora o filtro) usa o responsável. */
+    private static boolean reviewer(JsonNode mr, String login) {
+        JsonNode reviewers = mr.path("reviewers");
+        if (reviewers.isArray()) return hasUser(reviewers, login);
+        return hasUser(mr.path("assignees"), login) || login.equalsIgnoreCase(Json.text(mr.path("assignee"), "username"));
+    }
+
+    private static boolean hasUser(JsonNode users, String login) {
+        Set<String> names = new HashSet<>();
+        for (JsonNode user : users) {
+            String name = Json.text(user, "username");
+            if (name != null) names.add(name.toLowerCase(Locale.ROOT));
+        }
+        return names.contains(login.toLowerCase(Locale.ROOT));
     }
 
     private static RemoteRepo repo(JsonNode project) throws IntegrationException {

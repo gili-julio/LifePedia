@@ -73,6 +73,9 @@ public final class PushTexts {
                     + devItem(data), devLink(data), devTag(type, data), false);
             case DEV_REVIEW_REQUESTED -> new PushMessage(devTitle(data), data.getOrDefault("author", "") + " pediu sua revisão: "
                     + devItem(data), devLink(data), devTag(type, data), false);
+            case DEV_ISSUE_STUCK -> new PushMessage(devTitle(data), "#" + data.getOrDefault("number", "") + " "
+                    + data.getOrDefault("title", "") + " está em " + data.getOrDefault("lane", "") + " há " + data.getOrDefault("days", "")
+                    + " dias (" + data.getOrDefault("repoName", "") + ")", devLink(data), devTag(type, data), false);
             case DELIVERY_UPDATE -> new PushMessage(data.getOrDefault("name", APP), deliveryText(data),
                     "/entregas/" + URLEncoder.encode(data.getOrDefault("deliveryId", ""), StandardCharsets.UTF_8),
                     type.name() + ":" + data.getOrDefault("deliveryId", ""), "OUT_FOR_DELIVERY".equals(data.get("status")));

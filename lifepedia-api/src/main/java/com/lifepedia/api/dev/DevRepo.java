@@ -56,6 +56,10 @@ public class DevRepo extends BaseEntity {
     @Column(name = "rules_since", nullable = false)
     private OffsetDateTime rulesSince;
 
+    /** Raias acompanhadas em JSON ({@link DevLanes}). */
+    @Column(length = 2000)
+    private String lanes;
+
     /** Última sincronização; nula = a primeira ainda não rodou (nela não sai aviso). */
     @Column(name = "synced_at")
     private OffsetDateTime syncedAt;
@@ -145,6 +149,14 @@ public class DevRepo extends BaseEntity {
 
     public OffsetDateTime getRulesSince() {
         return rulesSince;
+    }
+
+    public String getLanes() {
+        return lanes;
+    }
+
+    public void setLanes(String lanes) {
+        this.lanes = lanes;
     }
 
     public OffsetDateTime getSyncedAt() {

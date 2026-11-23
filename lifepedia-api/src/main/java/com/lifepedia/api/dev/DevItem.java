@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /** MR, issue ou pipeline como veio na última sincronização (retrato, refeito a cada vez). */
@@ -91,6 +92,20 @@ public class DevItem extends BaseEntity {
     @Column(name = "merged_at")
     private OffsetDateTime mergedAt;
 
+    @Column(name = "opened_at")
+    private OffsetDateTime openedAt;
+
+    /** Raia acompanhada em que a issue está (etiqueta como configurada no repositório). */
+    @Column(length = 100)
+    private String lane;
+
+    @Column(name = "lane_since")
+    private OffsetDateTime laneSince;
+
+    /** Já avisou que passou do limite de dias nesta raia. */
+    @Column(name = "lane_warned", nullable = false)
+    private boolean laneWarned;
+
     protected DevItem() {
     }
 
@@ -111,7 +126,7 @@ public class DevItem extends BaseEntity {
     }
 
     public void setMergeRequest(boolean mine, boolean review, boolean draft, String branch, String pipeline, boolean approved,
-                                int comments, String linkedIssues, OffsetDateTime mergedAt) {
+                                int comments, String linkedIssues, OffsetDateTime openedAt, OffsetDateTime mergedAt) {
         this.mine = mine;
         this.review = review;
         this.draft = draft;
@@ -120,13 +135,27 @@ public class DevItem extends BaseEntity {
         this.approved = approved;
         this.comments = comments;
         this.linkedIssues = linkedIssues;
+        this.openedAt = openedAt;
         this.mergedAt = mergedAt;
     }
 
-    public void setIssue(List<String> labels, LocalDate dueDate) {
+    /** {@code assigned} vai em {@code mine}: atribuída à pessoa (senão ela só participa). */
+    public void setIssue(List<String> labels, LocalDate dueDate, boolean assigned) {
         String joined = String.join(",", labels);
         this.labels = joined.length() <= 1000 ? joined : joined.substring(0, 1000);
         this.dueDate = dueDate;
+        this.mine = assigned;
+    }
+
+    /** Raia e desde quando; trocar de raia volta a permitir o aviso de parada. */
+    public void setLane(String lane, OffsetDateTime since) {
+        if (!Objects.equals(this.lane, lane)) this.laneWarned = false;
+        this.lane = lane;
+        this.laneSince = lane == null ? null : since;
+    }
+
+    public void markLaneWarned() {
+        this.laneWarned = true;
     }
 
     public void setPipeline(String pipeline, String branch) {
@@ -225,5 +254,21 @@ public class DevItem extends BaseEntity {
 
     public OffsetDateTime getMergedAt() {
         return mergedAt;
+    }
+
+    public OffsetDateTime getOpenedAt() {
+        return openedAt;
+    }
+
+    public String getLane() {
+        return lane;
+    }
+
+    public OffsetDateTime getLaneSince() {
+        return laneSince;
+    }
+
+    public boolean isLaneWarned() {
+        return laneWarned;
     }
 }

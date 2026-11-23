@@ -7,6 +7,9 @@ import com.lifepedia.api.dev.DevDtos.ProjectDetail;
 import com.lifepedia.api.dev.DevDtos.ProjectRequest;
 import com.lifepedia.api.dev.DevDtos.ProjectSummary;
 import com.lifepedia.api.dev.DevDtos.RepoOption;
+import com.lifepedia.api.dev.DevDtos.ReportRequest;
+import com.lifepedia.api.dev.DevDtos.ReportResponse;
+import com.lifepedia.api.dev.DevDtos.ReportSuggestion;
 import com.lifepedia.api.dev.DevDtos.RepoRequest;
 import com.lifepedia.api.dev.DevDtos.RepoResponse;
 import com.lifepedia.api.dev.DevDtos.RulesRequest;
@@ -27,6 +30,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,10 +41,12 @@ public class DevController {
 
     private final DevService service;
     private final DevDailyService daily;
+    private final DevReportService reports;
 
-    public DevController(DevService service, DevDailyService daily) {
+    public DevController(DevService service, DevDailyService daily, DevReportService reports) {
         this.service = service;
         this.daily = daily;
+        this.reports = reports;
     }
 
     @GetMapping("/projects")
@@ -73,6 +80,28 @@ public class DevController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         service.delete(CurrentUser.id(jwt), id);
+    }
+
+    @GetMapping("/projects/{id}/reports")
+    public List<ReportResponse> reports(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestParam YearMonth month) {
+        return reports.list(CurrentUser.id(jwt), id, month);
+    }
+
+    @PutMapping("/projects/{id}/reports/{day}")
+    public ReportResponse saveReport(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @PathVariable LocalDate day,
+                                     @Valid @RequestBody ReportRequest request) {
+        return reports.save(CurrentUser.id(jwt), id, day, request.text());
+    }
+
+    @DeleteMapping("/projects/{id}/reports/{day}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteReport(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @PathVariable LocalDate day) {
+        reports.delete(CurrentUser.id(jwt), id, day);
+    }
+
+    @GetMapping("/projects/{id}/reports/{day}/suggestion")
+    public ReportSuggestion reportSuggestion(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @PathVariable LocalDate day) {
+        return reports.suggestion(CurrentUser.id(jwt), id, day);
     }
 
     @PostMapping("/projects/{id}/repos")

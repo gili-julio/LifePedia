@@ -54,9 +54,11 @@ export function PrivacyPage() {
             usuário ou e-mail da conta, o endereço do GitLab da empresa, a validade do token e o histórico das
             sincronizações. Os tokens de acesso ficam <strong>cifrados</strong> e nunca são mostrados de novo.</li>
           <li>Dev: projetos de trabalho (nome, cor, descrição e atalhos), os repositórios ligados com as regras das raias
-            e, copiados das suas contas, os títulos, números, etiquetas, autores e status dos MRs, issues e pipelines,
-            sua atividade por dia (quantos commits, MRs e revisões) e os eventos do Google Agenda (título, horário, local
-            e link da chamada) de 7 dias atrás a 60 dias à frente.</li>
+            e as raias que você acompanha, as anotações do que você fez em cada dia e, copiados das suas contas, os
+            títulos, números, etiquetas, autores e status dos MRs, issues e pipelines (só os seus e as issues de que você
+            participa), desde quando cada issue está na raia, sua atividade por dia (quantos commits, MRs e revisões) e os
+            eventos do Google Agenda (título, horário, local e link da chamada) de 7 dias atrás a 60 dias à frente. Para
+            saber se você participa de uma issue, consultamos a lista de participantes dela, que não é guardada.</li>
           <li>Duolingo: ofensiva, maior ofensiva, XP e o dia da última lição, lidos do seu perfil público.</li>
           <li>Entregas: o nome e a foto que você deu ao item, o código de rastreio, os eventos do rastreio (data, local e
             descrição), a transportadora, a previsão e, se você escolher, o grupo com quem compartilha. Endereços de

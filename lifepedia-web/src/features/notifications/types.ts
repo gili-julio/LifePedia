@@ -24,6 +24,7 @@ export type NotificationType =
   | 'DEV_MR_MERGED'
   | 'DEV_MR_COMMENTED'
   | 'DEV_REVIEW_REQUESTED'
+  | 'DEV_ISSUE_STUCK'
   | 'DELIVERY_UPDATE'
   | 'VEHICLE_SHARED'
   | 'VEHICLE_REMINDER'

@@ -126,7 +126,7 @@ acesso: `users.last_seen_at`, gravado pelo `LastSeenTracker` (interceptor em `/a
 
 | Método | Rota | Descrição |
 |---|---|---|
-| GET | `/export` | Arquivo JSON `lifepedia/account@11` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), `wallet` e `prices` (itens acompanhados), só registro · 20/h |
+| GET | `/export` | Arquivo JSON `lifepedia/account@12` (anexo): `profile`, `categories` (`ref`, nome, tipo, cor), `recurring` (`ref`, com `adjustments`), `transactions` (`category` = `ref`), `taskLists`/`taskTags` (`ref`, nome, cor), `tasks` (pessoais: regra, subtarefas, `list`/`tags`/`fixed` = `ref`, `occurrences` com o que mudou em cada dia) `groups` (itens da pessoa em cada grupo, só registro) `commitments` (frequência com `marks`, só registro) `notes` (notas pessoais com pasta e etiquetas pelo nome, só registro), `financings` (contratos pessoais com extras e gastos), `financingSimulations` (pedidos salvos) `architecture` (projetos com versões, vistas e nomes dos anexos + comentários da pessoa, sem os arquivos 3D), `devProjects` (nome, descrição, atalhos, repositórios, `reports` = anotações do dia), `integrations` (serviço, apelido, login, endereço; nunca token), `financeSimulations` (simulações salvas do financeiro) e `deliveries` (`addresses` e `deliveries`: nome, código, situação, transportadora, apelido do endereço, datas) `vehicles` (veículos da pessoa com leituras, gastos, itens, revisões e documentos), `wallet` e `prices` (itens acompanhados), só registro · 20/h |
 | GET | `/export/spreadsheet` | Os mesmos dados em `.xlsx` (abas Lançamentos, Fixos, Ajustes dos fixos, Categorias, Tarefas, Tarefas concluídas, Grupos), gerado sem biblioteca (`XlsxWriter`) |
 | POST | `/import` | `{mode: MERGE\|REPLACE, dryRun, data}` (`data.format` `@1` a `@11`) → `{applied, created, skipped, removed, categoriesReused, syncedDetached}` (contagens com `tasks` e `taskLabels`). Tudo ou nada; `dryRun` só conta · `400` se versão/ref/tipo/mês inválidos · 10/h (prévia 60/h) |
 | GET | `/deletion-preview` | Contagens pessoais + por grupo: `deletesGroup`, `newAdmin`, itens que saem |
@@ -171,7 +171,7 @@ grupo) e `ARCHITECTURE_COMMENT` (`actorName`, `actorUsername`, `projectId`, `pro
 quem pode editar). Integrações (sem ator): `INTEGRATION_FAILED` (`provider`, `nickname`, `accountId`) e
 `INTEGRATION_EXPIRING` (+ `date`). Dev (sem ator; `projectId`, `projectName`, `repoName`, `title`, `number`):
 `DEV_PIPELINE_FAILED` (MR ou `branch`), `DEV_MR_APPROVED`, `DEV_MR_MERGED` (+ `lane`), `DEV_MR_COMMENTED` (+ `count`) e
-`DEV_REVIEW_REQUESTED` (+ `author`). Entregas (sem ator, para o dono e os membros do grupo da entrega):
+`DEV_REVIEW_REQUESTED` (+ `author`) e `DEV_ISSUE_STUCK` (issue parada na raia além do limite: + `lane`, `days`). Entregas (sem ator, para o dono e os membros do grupo da entrega):
 `DELIVERY_UPDATE` (`deliveryId`, `name`, `status` = `OUT_FOR_DELIVERY`, `PICKUP`, `DELIVERED`, `FAILED`, `EXCEPTION`,
 `EXPIRED`, `TAX` ou `STALLED`, `text` = último evento, `days` na parada; push urgente quando sai para entrega).
 Veículos: `VEHICLE_SHARED` (`vehicleId`, `vehicleName`, `role`, `groupName` se pelo grupo) e `VEHICLE_REMINDER` (sem ator,
@@ -476,13 +476,16 @@ excluir o projeto só o dono. A maquete é um **GLB** gerado e comprimido no nav
 |---|---|---|
 | GET / POST | `/projects` | Projetos (ordem da pessoa) com `links`, `repos` (com as regras) e `counts`; criar `{name, color, description?, links? (até 12: label, url http(s), kind), calendarAccountId? (conta Google)}` · até 30 |
 | PUT | `/projects/order` | `{ids}` |
-| GET / PUT / DELETE | `/projects/{id}` | Detalhe: `project`, `items` (MRs, issues, pipelines), `events` (7 dias da conta Google do projeto), `activity` (12 semanas) |
+| GET / PUT / DELETE | `/projects/{id}` | Detalhe: `project`, `items` (MRs, issues, pipelines; issue com `lane`, `laneSince`, `laneDays`, `laneLimit` e `mine` = atribuída, a mais parada primeiro), `events` (7 dias da conta Google do projeto), `activity` (12 semanas), `lanes` (colunas do quadro) |
+| GET | `/projects/{id}/reports?month=yyyy-MM` | Anotações do mês (`day`, `text`, `updatedAt`), da mais nova |
+| PUT / DELETE | `/projects/{id}/reports/{day}` | `{text}` (até 4000) grava a anotação do dia (dia futuro → 400) · apaga (204) |
+| GET | `/projects/{id}/reports/{day}/suggestion` | `{text}`: tópicos com MRs abertos, aceitos e mexidos no dia, issues que mudaram de raia, commits e revisões (vazio = nada) |
 | POST | `/projects/{id}/repos` | `{accountId, externalId}` (id do projeto no GitLab ou `dono/nome` no GitHub) → 201 e sincroniza · até 15 por projeto; repetido → 409 |
 | GET | `/repo-options?accountId&q` | Repositórios da conta no serviço (`linked` = já ligado) · 30/min |
-| PUT | `/repos/{id}` | `{importIssues, closeIssues, labelMrOpened?, labelMrMerged?, labelsClear?}`; etiquetas iguais → 400 |
+| PUT | `/repos/{id}` | `{importIssues, closeIssues, labelMrOpened?, labelMrMerged?, labelsClear?, lanes?: [{label, days? 1..365}] (até 8, em ordem)}`; etiquetas iguais ou raia repetida → 400 |
 | GET | `/repos/{id}/labels` | Etiquetas do repositório no serviço |
 | DELETE | `/repos/{id}` | Desliga o repositório (as tarefas ficam) |
-| GET | `/today` | `events` de hoje, `myMergeRequests`, `reviews`, `failing`, `issues`, `problems` (contas em erro), `aiEnabled`, `projects` |
+| GET | `/today` | `events` de hoje, `myMergeRequests`, `reviews`, `failing`, `issues`, `problems` (contas em erro), `aiEnabled`, `projects`, `reports` (`projectId`, nome, cor, `written` = já anotou hoje) |
 | GET | `/activity?weeks=12` | `days` (commits, MRs abertos, aceitos, revisões por dia) e `projects` (somas) · até 26 semanas |
 | POST | `/daily` | Resumo do daily pelo Gemini: `{yesterday, today, blockers, text}` · 10/dia por pessoa; sem IA → 503 |
 

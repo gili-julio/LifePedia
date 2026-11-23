@@ -11,18 +11,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsTrigger } from '@/components/ui/tabs'
 import { ApiError } from '@/lib/api'
-import { formatRelative } from '@/lib/format'
+import { formatRelative, todayIso } from '@/lib/format'
 import { useDeleteDevProject, useDeleteRepo, useDevProject } from '../api'
 import { ActivityHeatmap } from '../components/ActivityHeatmap'
 import { DevProjectDialog } from '../components/DevProjectDialog'
 import { EventList } from '../components/EventList'
 import { ItemRow } from '../components/ItemRow'
+import { LaneBoard } from '../components/LaneBoard'
 import { RepoDialog } from '../components/RepoDialog'
+import { ReportsTab } from '../components/ReportsTab'
 import { RulesDialog } from '../components/RulesDialog'
 import { LINK_KIND } from '../labels'
 import type { DevItem, DevRepo } from '../types'
 
-const TABS = ['geral', 'repositorios', 'reunioes'] as const
+const TABS = ['geral', 'quadro', 'reports', 'repositorios', 'reunioes'] as const
 type Tab = (typeof TABS)[number]
 
 /** Página do projeto: atalhos, MRs, revisões, issues e pipelines, repositórios com as raias e as reuniões da semana. */
@@ -34,6 +36,8 @@ export function DevProjectPage() {
   const removeRepo = useDeleteRepo()
   const [params, setParams] = useSearchParams()
   const tab: Tab = TABS.includes(params.get('aba') as Tab) ? (params.get('aba') as Tab) : 'geral'
+  const wanted = params.get('dia') ?? ''
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(wanted) && wanted <= todayIso() ? wanted : todayIso()
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -50,7 +54,7 @@ export function DevProjectPage() {
   }
   if (!data) return <Skeleton className="h-96" />
 
-  const { project, items, events, activity } = data
+  const { project, items, events, activity, lanes } = data
   const providerOf = (item: DevItem) => project.repos.find((r) => r.id === item.repoId)?.provider ?? null
   const mine = items.filter((i) => i.kind === 'MR' && i.mine)
   const reviews = items.filter((i) => i.kind === 'MR' && i.review && i.state === 'opened')
@@ -74,6 +78,11 @@ export function DevProjectPage() {
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Não foi possível desligar.')
     }
+  }
+
+  function configureLanes() {
+    if (project.repos.length === 1) setRules(project.repos[0])
+    else setParams((p) => { p.set('aba', 'repositorios'); return p }, { replace: true })
   }
 
   const list = (rows: DevItem[]) => <ul className="divide-y">{rows.map((i) => <ItemRow key={i.id} item={i} provider={providerOf(i)} />)}</ul>
@@ -107,6 +116,8 @@ export function DevProjectPage() {
       <Tabs value={tab} onValueChange={(v) => setParams((p) => { p.set('aba', v); return p }, { replace: true })}>
         <ScrollTabsList value={tab}>
           <TabsTrigger value="geral">Visão geral</TabsTrigger>
+          <TabsTrigger value="quadro">Quadro</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
           <TabsTrigger value="repositorios">Repositórios ({project.repos.length})</TabsTrigger>
           <TabsTrigger value="reunioes">Reuniões</TabsTrigger>
         </ScrollTabsList>
@@ -123,7 +134,7 @@ export function DevProjectPage() {
             <div className="grid gap-4 lg:grid-cols-2">
               <Section title="Seus MRs" count={mine.length} empty="Nenhum MR seu aberto ou aceito há pouco.">{list(mine)}</Section>
               <Section title="Para revisar" count={reviews.length} empty="Ninguém pediu sua revisão.">{list(reviews)}</Section>
-              <Section title="Issues atribuídas" count={issues.length} empty="Nenhuma issue aberta com você.">{list(issues)}</Section>
+              <Section title="Suas issues" count={issues.length} empty="Nenhuma issue sua nas raias escolhidas.">{list(issues)}</Section>
               <Section title="Branch principal" count={pipelines.length} empty="Sem pipelines no branch principal.">{list(pipelines)}</Section>
             </div>
           )}
@@ -131,6 +142,17 @@ export function DevProjectPage() {
             <CardHeader><CardTitle className="text-base">Atividade (12 semanas)</CardTitle></CardHeader>
             <CardContent><ActivityHeatmap days={activity} /></CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="quadro" className="pt-2">
+          {project.repos.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Ligue um repositório para ver o quadro.</p>
+          ) : <LaneBoard lanes={lanes} issues={issues} onConfigure={configureLanes} />}
+        </TabsContent>
+
+        <TabsContent value="reports" className="pt-2">
+          <ReportsTab projectId={project.id} day={day}
+            onDayChange={(d) => setParams((p) => { p.set('dia', d); return p }, { replace: true })} />
         </TabsContent>
 
         <TabsContent value="repositorios" className="space-y-3 pt-2">
@@ -169,6 +191,7 @@ export function DevProjectPage() {
                         {repo.labelMrOpened && <Badge variant="outline">MR aberto: {repo.labelMrOpened}</Badge>}
                         {repo.labelMrMerged && <Badge variant="outline">MR aceito: {repo.labelMrMerged}</Badge>}
                         {!repo.labelMrOpened && !repo.labelMrMerged && <Badge variant="outline">Sem raias automáticas</Badge>}
+                        {repo.lanes.length > 0 && <Badge variant="outline">Acompanha: {repo.lanes.map((l) => l.label).join(', ')}</Badge>}
                       </div>
                     </CardContent>
                   </Card>

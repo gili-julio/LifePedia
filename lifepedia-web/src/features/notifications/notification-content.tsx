@@ -1,5 +1,6 @@
 import {
   AlarmClockIcon,
+  HourglassIcon,
   BellIcon,
   BellRingIcon,
   PackageIcon,
@@ -218,6 +219,12 @@ export function notificationContent(n: AppNotification): Content {
       return { text: <>{n.data.count} comentário(s) novo(s) em {devItem(n)}</>, link: devLink(n), icon: MessageCircleIcon }
     case 'DEV_REVIEW_REQUESTED':
       return { text: <>{strong(n.data.author)} pediu sua revisão: {devItem(n)}</>, link: devLink(n), icon: GitPullRequestIcon }
+    case 'DEV_ISSUE_STUCK':
+      return {
+        text: <>#{n.data.number} {strong(n.data.title)} está em {strong(n.data.lane)} há {n.data.days} dias ({n.data.repoName}) no {n.data.projectName}</>,
+        link: devLink(n),
+        icon: HourglassIcon,
+      }
     case 'DELIVERY_UPDATE':
       return { text: <>{strong(n.data.name)}: {deliveryText(n.data)}</>, link: `/entregas/${n.data.deliveryId}`, icon: PackageIcon }
     case 'VEHICLE_SHARED':

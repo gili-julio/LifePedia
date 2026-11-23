@@ -71,7 +71,7 @@ class IntegrationIntegrationTest extends ApiTestSupport {
         when(gitlab.provider()).thenReturn(IntegrationProvider.GITLAB);
         when(github.provider()).thenReturn(IntegrationProvider.GITHUB);
         when(google.enabled()).thenReturn(true);
-        when(gitlab.snapshot(any(), any(), any())).thenReturn(new Snapshot(List.of(), List.of(), List.of()));
+        when(gitlab.snapshot(any(), any(), any(), any())).thenReturn(new Snapshot(List.of(), List.of(), List.of()));
     }
 
     @Test
@@ -147,7 +147,7 @@ class IntegrationIntegrationTest extends ApiTestSupport {
                         + "close_issues, rules_since, created_at, updated_at) values (gen_random_uuid(), :p, :u, :a, 'org/app', "
                         + "'org/app', 'https://github.com/org/app', true, false, now(), now(), now())")
                 .param("p", project).param("u", UUID.fromString(userId(me))).param("a", UUID.fromString(id)).update();
-        when(github.snapshot(any(), any(), any())).thenThrow(IntegrationException.of(Kind.AUTH));
+        when(github.snapshot(any(), any(), any(), any())).thenThrow(IntegrationException.of(Kind.AUTH));
 
         assertThat(sync.sync(UUID.fromString(id), false)).isFalse();
         assertThat(sync.sync(UUID.fromString(id), false)).isFalse();

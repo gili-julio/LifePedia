@@ -40,11 +40,11 @@ import java.util.UUID;
 public final class AccountDtos {
 
     /** Versão do arquivo exportado; mudou o formato? Crie {@code @4} e mantenha a importação das anteriores. */
-    public static final String FORMAT = "lifepedia/account@11";
+    public static final String FORMAT = "lifepedia/account@12";
     /** Versões aceitas na importação ({@code @1}: sem tarefas; {@code @2}: sem frequência; {@code @3}: sem notas). */
     public static final Set<String> IMPORTABLE = Set.of("lifepedia/account@1", "lifepedia/account@2",
             "lifepedia/account@3", "lifepedia/account@4", "lifepedia/account@5", "lifepedia/account@6", "lifepedia/account@7",
-            "lifepedia/account@8", "lifepedia/account@9", "lifepedia/account@10", FORMAT);
+            "lifepedia/account@8", "lifepedia/account@9", "lifepedia/account@10", "lifepedia/account@11", FORMAT);
 
     private AccountDtos() {
     }
@@ -75,7 +75,8 @@ public final class AccountDtos {
      * {@code financingSimulations} (desde o {@code @5}), {@code architecture} (desde o {@code @6}), {@code devProjects} e
      * {@code integrations} (desde o {@code @7}; contas sem token), {@code financeSimulations} e {@code deliveries} (endereços e
      * entregas, desde o {@code @8}), {@code vehicles} (veículos com km, gastos, manutenção e documentos, desde o {@code @9}) e
-     * {@code wallet} (cartões com ciclo e pagamentos e contas com saldo, desde o {@code @10}) são
+     * {@code wallet} (cartões com ciclo e pagamentos e contas com saldo, desde o {@code @10}), {@code prices} (desde o {@code @11})
+     * e as anotações do dia nos {@code devProjects} (desde o {@code @12}) são
      * só registro (não importam).
      *
      * @param profile ignorado na importação

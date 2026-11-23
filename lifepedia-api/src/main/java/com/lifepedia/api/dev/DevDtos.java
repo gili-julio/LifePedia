@@ -4,6 +4,8 @@ import com.lifepedia.api.dev.DevItem.Kind;
 import com.lifepedia.api.integration.IntegrationDtos.EventResponse;
 import com.lifepedia.api.integration.IntegrationProvider;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -46,20 +48,30 @@ public final class DevDtos {
             @NotBlank(message = "Escolha o repositório.") @Size(max = 200) String externalId) {
     }
 
-    /** Raias: etiqueta posta na issue quando o MR dela abre e quando é aceito; {@code labelsClear} saem nessas horas. */
+    /** Raia acompanhada: etiqueta da issue e, se quiser, quantos dias nela já contam como parada. */
+    public record Lane(
+            @NotBlank(message = "Informe a etiqueta.") @Size(max = 100, message = "Etiqueta com até 100 caracteres.") String label,
+            @Min(value = 1, message = "Limite de 1 a 365 dias.") @Max(value = 365, message = "Limite de 1 a 365 dias.") Integer days) {
+    }
+
+    /**
+     * Raias: etiqueta posta na issue quando o MR dela abre e quando é aceito; {@code labelsClear} saem nessas horas.
+     * {@code lanes} = etiquetas que a pessoa acompanha, em ordem (vazio = issues atribuídas, em qualquer etiqueta).
+     */
     public record RulesRequest(
             @NotNull(message = "Informe se as issues viram tarefas.") Boolean importIssues,
             @NotNull(message = "Informe se concluir fecha a issue.") Boolean closeIssues,
             @Size(max = 100, message = "Etiqueta com até 100 caracteres.") String labelMrOpened,
             @Size(max = 100, message = "Etiqueta com até 100 caracteres.") String labelMrMerged,
             @Size(max = 10, message = "Até 10 etiquetas para tirar.")
-            List<@NotBlank @Size(max = 100, message = "Etiqueta com até 100 caracteres.") String> labelsClear) {
+            List<@NotBlank @Size(max = 100, message = "Etiqueta com até 100 caracteres.") String> labelsClear,
+            @Size(max = DevLanes.MAX_LANES, message = "Até 8 raias.") List<@NotNull @Valid Lane> lanes) {
     }
 
     public record RepoResponse(UUID id, UUID accountId, String accountName, String accountColor, IntegrationProvider provider,
                                boolean accountActive, boolean canWrite, String fullName, String webUrl, String defaultBranch,
                                boolean importIssues, boolean closeIssues, String labelMrOpened, String labelMrMerged,
-                               List<String> labelsClear, OffsetDateTime syncedAt) {
+                               List<String> labelsClear, List<Lane> lanes, OffsetDateTime syncedAt) {
     }
 
     public record Counts(int myMergeRequests, int reviews, int issues, int failing) {
@@ -69,12 +81,16 @@ public final class DevDtos {
                                  List<RepoResponse> repos, Counts counts) {
     }
 
-    /** MR, issue ou pipeline; {@code linkedIssues} = issues que o MR fecha ("repo#número"). */
+    /**
+     * MR, issue ou pipeline; {@code linkedIssues} = issues que o MR fecha ("repo#número"). Issue: {@code mine} = atribuída,
+     * {@code lane} = raia acompanhada, {@code laneDays} = dias nela e {@code laneLimit} = limite da raia.
+     */
     public record ItemResponse(UUID id, UUID projectId, String projectName, String projectColor, UUID repoId, String repoName,
                                Kind kind, String number, String title, String state, String webUrl, String author, boolean mine,
                                boolean review, boolean draft, String pipeline, String branch, List<String> labels, int comments,
                                boolean approved, List<String> linkedIssues, LocalDate dueDate, UUID taskId,
-                               OffsetDateTime updatedAt, OffsetDateTime mergedAt) {
+                               OffsetDateTime updatedAt, OffsetDateTime mergedAt, String lane, OffsetDateTime laneSince,
+                               Integer laneDays, Integer laneLimit) {
     }
 
     public record DayActivity(LocalDate day, int commits, int mergeRequests, int merged, int reviews) {
@@ -86,18 +102,33 @@ public final class DevDtos {
     public record ActivityResponse(List<DayActivity> days, List<ProjectActivity> projects) {
     }
 
-    /** {@code events} = de hoje aos próximos 7 dias, da conta Google do projeto. */
+    /** {@code events} = de hoje aos próximos 7 dias, da conta Google do projeto; {@code lanes} = colunas do quadro, em ordem. */
     public record ProjectDetail(ProjectSummary project, List<ItemResponse> items, List<EventResponse> events,
-                                List<DayActivity> activity) {
+                                List<DayActivity> activity, List<Lane> lanes) {
+    }
+
+    /** Anotação de hoje no projeto: já tem ou não. */
+    public record ReportStatus(UUID projectId, String projectName, String projectColor, boolean written) {
+    }
+
+    public record ReportRequest(
+            @NotBlank(message = "Escreva o que fez no dia.") @Size(max = 4000, message = "Anotação com até 4000 caracteres.") String text) {
+    }
+
+    public record ReportResponse(LocalDate day, String text, OffsetDateTime updatedAt) {
+    }
+
+    /** Rascunho com o que o GitLab/GitHub registrou no dia (vazio = nada registrado). */
+    public record ReportSuggestion(String text) {
     }
 
     public record AccountProblem(UUID id, IntegrationProvider provider, String nickname) {
     }
 
-    /** Painel "Hoje no dev". */
+    /** Painel "Hoje no dev"; {@code reports} = anotação de hoje de cada projeto. */
     public record Today(LocalDate date, List<EventResponse> events, List<ItemResponse> myMergeRequests, List<ItemResponse> reviews,
                         List<ItemResponse> failing, List<ItemResponse> issues, List<AccountProblem> problems, boolean aiEnabled,
-                        int projects) {
+                        int projects, List<ReportStatus> reports) {
     }
 
     public record RepoOption(String externalId, String fullName, String webUrl, boolean linked) {
@@ -107,7 +138,10 @@ public final class DevDtos {
     public record Daily(List<String> yesterday, List<String> today, List<String> blockers, String text) {
     }
 
-    /** Registro no arquivo da conta. */
-    public record ProjectExport(String name, String description, List<Link> links, List<String> repos) {
+    /** Registro no arquivo da conta (anotações do dia desde o {@code @12}). */
+    public record ProjectExport(String name, String description, List<Link> links, List<String> repos, List<ReportExport> reports) {
+    }
+
+    public record ReportExport(LocalDate day, String text) {
     }
 }

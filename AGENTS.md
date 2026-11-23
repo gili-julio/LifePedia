@@ -156,8 +156,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   - Conquistas: `achievement.Achievement` (códigos) ↔ `features/friends/types.ts` + texto/ícone em `features/friends/achievements.ts`
   - Integrações: `IntegrationProvider`, `IntegrationAccount.Status`, `IntegrationSync.Outcome` e DTOs de `IntegrationDtos` ↔
     `features/integrations/types.ts` (+ textos em `providers.ts`)
-  - Dev: `DevDtos.LinkKind`, `DevItem.Kind`, status de `integration/code/Pipelines` e DTOs de `DevDtos` ↔ `features/dev/types.ts`
-    (+ textos em `labels.ts`)
+  - Dev: `DevDtos.LinkKind`, `DevItem.Kind`, status de `integration/code/Pipelines` e DTOs de `DevDtos` (`Lane`, `ReportStatus`,
+    `ReportResponse`) ↔ `features/dev/types.ts` (+ textos em `labels.ts`; tom do selo da raia em `laneTone`)
   - Simulador do financeiro: `SimulatorDtos` (`Yield`, `Input`, `Result`...) ↔ `features/finance/simulator/types.ts` (+ textos em `form.ts`)
   - Entregas: `DeliveryStatus` (e o `stage` de cada um), DTOs de `DeliveryDtos` ↔ `features/deliveries/types.ts` (+ textos e
     etapas em `labels.ts`); `status` da notificação `DELIVERY_UPDATE` ↔ `deliveryText` em `notification-content.tsx`
@@ -246,7 +246,7 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   query (`extraIncome`/`extraExpense`), nunca é salvo. Prioridade = `position`. Busca de link externo **só** pela API
   (`SafeHttpClient`); a foto volta como data URL JPEG e é reenviada no `imageData` ao salvar o item. Loja bloqueou
   ou faltou preço/foto → `reference` (produto parecido no Buscapé); o front avisa a origem e grava `reference*` no item.
-- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@11`, anexo; importa `@1` a `@11`), `GET /export/spreadsheet` (.xlsx),
+- **Conta** (`/api/account`): `GET /export` (JSON `lifepedia/account@12`, anexo; importa `@1` a `@12`), `GET /export/spreadsheet` (.xlsx),
   `POST /import` (`{mode: MERGE|REPLACE, dryRun, data}`; `dryRun` = prévia com as contagens), `GET /deletion-preview`,
   `DELETE` (`{password, confirmation: "EXCLUIR"}` → 204 + cookie apagado). No arquivo, categorias ligam por `ref` (e fixos também, para a tarefa ligada a um fixo);
   tarefas pessoais vão em `taskLists`/`taskTags`/`tasks` (ausentes = a importação não mexe nas tarefas);
@@ -257,7 +257,8 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
   situação, transportadora, apelido do endereço), desde o `@8`, e `vehicles` (veículos da pessoa com leituras, gastos, itens,
   revisões e documentos; `mine` diz se o gasto foi dela), desde o `@9`, e `wallet` (cartões com ciclo, limite, meta e
   pagamentos; contas com o saldo informado), desde o `@10`, e `prices` (itens acompanhados com alvo, links e preços
-  anotados), desde o `@11`, são só registro. Mudou o formato? Crie `@12` e mantenha
+  anotados), desde o `@11`, e as anotações do dia do Dev (`devProjects[].reports`), desde o `@12`, são só registro. Mudou
+  o formato? Crie `@13` e mantenha
   a importação dos anteriores (usuários guardam arquivos antigos). Excluir conta = `GroupService.leave` em cada grupo + apagar o usuário (cascata).
 - **Tarefas** (`/api/tasks` e `/api/groups/{id}/tasks`, mesmas rotas): dono é o usuário (`user_id`) ou um grupo
   (`group_id`). A regra de repetição fica
@@ -423,17 +424,25 @@ Se nada precisou mudar na documentação, confirme isso explicitamente ao final 
 - **Dev** (`/api/dev`): `GET/POST /projects`, `PUT /projects/order {ids}`, `GET/PUT/DELETE /projects/{id}` (detalhe com
   `items`, `events` dos próximos 7 dias da `calendarAccountId` e `activity` de 12 semanas), `POST /projects/{id}/repos
   {accountId, externalId}` (confere no serviço e sincroniza), `GET /repo-options?accountId&q`, `PUT /repos/{id}`
-  (`{importIssues, closeIssues, labelMrOpened, labelMrMerged, labelsClear}`; mudar etiqueta = `rules_since` agora, nada do
-  passado muda), `GET /repos/{id}/labels`, `DELETE /repos/{id}`, `GET /today`, `GET /activity?weeks` (até 26), `POST
-  /daily` (Gemini; 10 por pessoa por dia). Sincronização (`DevSyncService`, um `AccountSyncer`) guarda o retrato em
-  `dev_items` (MRs da pessoa abertos e aceitos nos últimos 3 dias, MRs com revisão pedida, issues atribuídas, última
-  pipeline do branch principal). **Raia**: MR da pessoa (fora de rascunho, criado/aceito depois de `rules_since`) põe a
+  (`{importIssues, closeIssues, labelMrOpened, labelMrMerged, labelsClear, lanes}`; mudar etiqueta = `rules_since` agora,
+  nada do passado muda; `lanes` = `[{label, days?}]` em ordem, até 8, sem repetir), `GET /repos/{id}/labels`, `DELETE
+  /repos/{id}`, `GET /today` (+ `reports`: anotação de hoje de cada projeto), `GET /activity?weeks` (até 26), `POST
+  /daily` (Gemini; 10 por pessoa por dia), `GET /projects/{id}/reports?month=`, `PUT|DELETE /projects/{id}/reports/{day}`
+  (`{text}` até 4000; dia futuro → 400) e `GET /projects/{id}/reports/{day}/suggestion` (`{text}` em tópicos). Sincronização
+  (`DevSyncService`, um `AccountSyncer`) guarda o retrato em `dev_items` (MRs da pessoa abertos e aceitos nos últimos 3
+  dias, MRs com revisão pedida a ela (GitLab confere `reviewers`), issues e última pipeline do branch principal disparada por
+  ela). **Só o que é da pessoa.** Issues: repositório sem `lanes` = atribuídas; com `lanes` = abertas nessas etiquetas em que
+  ela participa (responsável, autora ou participante; `mine` = atribuída). Raia da issue = a última da ordem entre as
+  etiquetas dela; `lane_since` vem do serviço (quando a etiqueta entrou, `labelAddedAt`) só quando a raia muda (até 40 por
+  sincronização); dias na raia (`laneDays`), `laneLimit` e a ordem (mais parada primeiro) vêm da API. Passou do limite:
+  `DEV_ISSUE_STUCK` uma vez por raia (`lane_warned`). Só issue atribuída vira tarefa. **Raia**: MR da pessoa (fora de rascunho, criado/aceito depois de `rules_since`) põe a
   etiqueta nas issues que ele fecha ("Closes #12" ou branch "12-...") e tira `labelsClear` + a da outra raia; cada MR e
   evento uma vez só (`dev_automations`); só com token que escreve. Issue nova vira tarefa pessoal (fachada
   `TaskLinks.createPersonal`, etiqueta = nome do projeto; apagada não volta); issue que fechou lá conclui a tarefa;
   concluir a tarefa (`TaskDoneEvent`) fecha a issue se `closeIssues`. Avisos (nunca na 1ª sincronização do
   repositório): `DEV_PIPELINE_FAILED`, `DEV_MR_APPROVED`, `DEV_MR_MERGED` (com a raia), `DEV_MR_COMMENTED`,
-  `DEV_REVIEW_REQUESTED`.
+  `DEV_REVIEW_REQUESTED`, `DEV_ISSUE_STUCK`. Anotações do dia em `dev_reports` (uma por projeto e dia), na busca geral
+  (`DEV_REPORT`) e no arquivo da conta (`devProjects[].reports`, desde o `@12`).
 - **Simulador do financeiro** (`/api/finance/simulator`): `POST /run?real=` (corpo = `Input`: `months` 1 a 600,
   `startBalance`, `useFixed`, `averageMonths` 0/3/6/12, `changes` até 30, `investment` opcional) → `Result` (`base`,
   `rates` em % ao ano, `summary`, `points` mês a mês); `POST /compare?real= {ids}` (2 ou 3 salvas); `GET/POST /saved`,

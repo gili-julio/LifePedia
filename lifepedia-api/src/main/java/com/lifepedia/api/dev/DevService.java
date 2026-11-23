@@ -5,6 +5,7 @@ import com.lifepedia.api.dev.DevDtos.ActivityResponse;
 import com.lifepedia.api.dev.DevDtos.Counts;
 import com.lifepedia.api.dev.DevDtos.DayActivity;
 import com.lifepedia.api.dev.DevDtos.ItemResponse;
+import com.lifepedia.api.dev.DevDtos.Lane;
 import com.lifepedia.api.dev.DevDtos.Link;
 import com.lifepedia.api.dev.DevDtos.ProjectActivity;
 import com.lifepedia.api.dev.DevDtos.ProjectDetail;
@@ -13,6 +14,8 @@ import com.lifepedia.api.dev.DevDtos.ProjectRequest;
 import com.lifepedia.api.dev.DevDtos.ProjectSummary;
 import com.lifepedia.api.dev.DevDtos.RepoOption;
 import com.lifepedia.api.dev.DevDtos.RepoRequest;
+import com.lifepedia.api.dev.DevDtos.ReportExport;
+import com.lifepedia.api.dev.DevDtos.ReportStatus;
 import com.lifepedia.api.dev.DevDtos.RepoResponse;
 import com.lifepedia.api.dev.DevDtos.RulesRequest;
 import com.lifepedia.api.dev.DevDtos.Today;
@@ -46,6 +49,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -66,6 +70,7 @@ public class DevService {
     };
     private static final Comparator<ItemResponse> ITEM_ORDER = Comparator
             .comparing((ItemResponse i) -> i.kind().ordinal())
+            .thenComparing(ItemResponse::laneSince, Comparator.nullsLast(Comparator.naturalOrder()))
             .thenComparing(ItemResponse::updatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
             .thenComparing(ItemResponse::id);
 
@@ -73,6 +78,8 @@ public class DevService {
     private final DevRepoRepository repos;
     private final DevItemRepository items;
     private final DevActivityRepository activity;
+    private final DevReportRepository reports;
+    private final DevLanes lanes;
     private final IntegrationLinks integrations;
     private final GeminiClient gemini;
     private final RateLimiter rateLimiter;
@@ -81,12 +88,14 @@ public class DevService {
     private final TransactionTemplate transaction;
 
     public DevService(DevProjectRepository projects, DevRepoRepository repos, DevItemRepository items, DevActivityRepository activity,
-                      IntegrationLinks integrations, GeminiClient gemini, RateLimiter rateLimiter, JsonMapper json, Clock clock,
-                      PlatformTransactionManager transactions) {
+                      DevReportRepository reports, DevLanes lanes, IntegrationLinks integrations, GeminiClient gemini,
+                      RateLimiter rateLimiter, JsonMapper json, Clock clock, PlatformTransactionManager transactions) {
         this.projects = projects;
         this.repos = repos;
         this.items = items;
         this.activity = activity;
+        this.reports = reports;
+        this.lanes = lanes;
         this.integrations = integrations;
         this.gemini = gemini;
         this.rateLimiter = rateLimiter;
@@ -152,7 +161,14 @@ public class DevService {
         }
         LocalDate from = today().minusWeeks(12).plusDays(1);
         List<DayActivity> days = days(activity.findByRepoIdInAndDayGreaterThanEqual(repoIds, from), from);
-        return new ProjectDetail(summary(project, context), list, events, days);
+        List<Lane> columns = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (DevRepo repo : context.reposOf(project.getId())) {
+            for (Lane lane : context.lanesOf(repo.getId())) {
+                if (seen.add(lane.label().toLowerCase(Locale.ROOT))) columns.add(lane);
+            }
+        }
+        return new ProjectDetail(summary(project, context), list, events, days, columns);
     }
 
     /** Repositórios da conta para escolher (busca no serviço, no máximo 30 por minuto). */
@@ -213,6 +229,16 @@ public class DevService {
                 .filter(s -> !s.isEmpty() && !s.contains(",")).distinct().collect(Collectors.joining(","));
         if (clear != null && (clear.isEmpty() || clear.length() > 400)) clear = clear.isEmpty() ? null : clear.substring(0, 400);
         repo.setRules(request.importIssues(), request.closeIssues(), opened, merged, clear, OffsetDateTime.now(clock));
+        List<Lane> watched = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (Lane lane : request.lanes() == null ? List.<Lane>of() : request.lanes()) {
+            String name = lane.label().trim();
+            if (name.contains(",") || !seen.add(name.toLowerCase(Locale.ROOT))) {
+                throw new BusinessException(HttpStatus.BAD_REQUEST, "Raia repetida ou com vírgula: " + name + ".");
+            }
+            watched.add(new Lane(name, lane.days()));
+        }
+        repo.setLanes(lanes.write(watched));
         return repo(repo, context(userId));
     }
 
@@ -250,7 +276,10 @@ public class DevService {
         List<AccountProblem> problems = integrations.accounts(userId).stream()
                 .filter(a -> !a.active() && (a.provider().isCodeHost() || a.provider() == IntegrationProvider.GOOGLE))
                 .map(a -> new AccountProblem(a.id(), a.provider(), a.nickname())).toList();
-        return new Today(today, events, mine, reviews, failing, issues, problems, gemini.enabled(), context.projects.size());
+        Set<UUID> written = reports.findByUserIdAndDay(userId, today).stream().map(DevReport::getProjectId).collect(Collectors.toSet());
+        List<ReportStatus> status = context.projects.stream()
+                .map(p -> new ReportStatus(p.getId(), p.getName(), p.getColor(), written.contains(p.getId()))).toList();
+        return new Today(today, events, mine, reviews, failing, issues, problems, gemini.enabled(), context.projects.size(), status);
     }
 
     /** Atividade de {@code weeks} semanas (até 26), por dia e por projeto. */
@@ -327,8 +356,11 @@ public class DevService {
     @Transactional(readOnly = true)
     public List<ProjectExport> exportData(UUID userId) {
         Context context = context(userId);
+        Map<UUID, List<ReportExport>> notes = reports.findByUserIdOrderByDayAsc(userId).stream().collect(Collectors.groupingBy(
+                DevReport::getProjectId, Collectors.mapping(r -> new ReportExport(r.getDay(), r.getText()), Collectors.toList())));
         return context.projects.stream().map(p -> new ProjectExport(p.getName(), p.getDescription(), links(p),
-                context.reposOf(p.getId()).stream().map(DevRepo::getFullName).toList())).toList();
+                context.reposOf(p.getId()).stream().map(DevRepo::getFullName).toList(), notes.getOrDefault(p.getId(), List.of())))
+                .toList();
     }
 
     private void apply(UUID userId, DevProject project, ProjectRequest request) {
@@ -351,7 +383,8 @@ public class DevService {
         List<DevRepo> repoList = repos.findByUserIdOrderByCreatedAtAsc(userId);
         Map<UUID, LinkedAccount> accounts = integrations.accounts(userId).stream()
                 .collect(Collectors.toMap(LinkedAccount::id, Function.identity()));
-        return new Context(mine, repoList, items.findByUserId(userId), accounts);
+        Map<UUID, List<Lane>> lanesByRepo = repoList.stream().collect(Collectors.toMap(DevRepo::getId, lanes::read));
+        return new Context(mine, repoList, items.findByUserId(userId), accounts, lanesByRepo);
     }
 
     private ProjectSummary summary(DevProject project, Context context) {
@@ -380,7 +413,7 @@ public class DevService {
                 account == null ? "#888888" : account.color(), account == null ? null : account.provider(),
                 account != null && account.active(), account != null && account.canWrite(), repo.getFullName(), repo.getWebUrl(),
                 repo.getDefaultBranch(), repo.isImportIssues(), repo.isCloseIssues(), repo.getLabelMrOpened(), repo.getLabelMrMerged(),
-                repo.clearList(), repo.getSyncedAt());
+                repo.clearList(), context.lanesOf(repo.getId()), repo.getSyncedAt());
     }
 
     private ItemResponse item(DevItem item, Context context) {
@@ -388,11 +421,15 @@ public class DevService {
         DevProject project = repo == null ? null : context.projectById.get(repo.getProjectId());
         List<String> linked = item.getLinkedIssues() == null || item.getLinkedIssues().isBlank() ? List.of()
                 : Arrays.asList(item.getLinkedIssues().split(","));
+        Lane lane = item.getLane() == null ? null : context.lanesOf(item.getRepoId()).stream()
+                .filter(l -> l.label().equalsIgnoreCase(item.getLane())).findFirst().orElse(null);
+        Integer laneDays = item.getLaneSince() == null ? null : DevLanes.days(item.getLaneSince(), today(), clock.getZone());
         return new ItemResponse(item.getId(), project == null ? null : project.getId(), project == null ? "" : project.getName(),
                 project == null ? "#888888" : project.getColor(), item.getRepoId(), repo == null ? "" : repo.getFullName(),
                 item.getKind(), item.getNumber(), item.getTitle(), item.getState(), item.getWebUrl(), item.getAuthor(), item.isMine(),
                 item.isReview(), item.isDraft(), item.getPipeline(), item.getBranch(), item.labelList(), item.getComments(),
-                item.isApproved(), linked, item.getDueDate(), item.getTaskId(), item.getRemoteUpdatedAt(), item.getMergedAt());
+                item.isApproved(), linked, item.getDueDate(), item.getTaskId(), item.getRemoteUpdatedAt(), item.getMergedAt(),
+                item.getLane(), item.getLaneSince(), laneDays, lane == null ? null : lane.days());
     }
 
     private List<Link> links(DevProject project) {
@@ -465,9 +502,12 @@ public class DevService {
         private final Map<UUID, DevProject> projectById;
         private final Map<UUID, DevRepo> repoById;
         private final Map<UUID, List<DevRepo>> reposByProject;
+        private final Map<UUID, List<Lane>> lanesByRepo;
 
-        Context(List<DevProject> projects, List<DevRepo> repos, List<DevItem> items, Map<UUID, LinkedAccount> accounts) {
+        Context(List<DevProject> projects, List<DevRepo> repos, List<DevItem> items, Map<UUID, LinkedAccount> accounts,
+                Map<UUID, List<Lane>> lanesByRepo) {
             this.projects = projects;
+            this.lanesByRepo = lanesByRepo;
             this.items = items;
             this.accounts = accounts;
             this.projectById = projects.stream().collect(Collectors.toMap(DevProject::getId, Function.identity()));
@@ -477,6 +517,10 @@ public class DevService {
 
         List<DevRepo> reposOf(UUID projectId) {
             return reposByProject.getOrDefault(projectId, List.of());
+        }
+
+        List<Lane> lanesOf(UUID repoId) {
+            return lanesByRepo.getOrDefault(repoId, List.of());
         }
     }
 }

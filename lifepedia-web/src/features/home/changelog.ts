@@ -33,6 +33,22 @@ export type Change = {
 /** Mudanças do sistema, da mais nova para a mais antiga. Toda entrega visível para o usuário ganha uma entrada aqui. */
 export const CHANGES: Change[] = [
   {
+    id: 'dev-raias-reports',
+    date: '2026-11-23',
+    title: 'Dev: só o que é seu, quadro por raia com os dias parados e anotações do dia',
+    modules: ['Dev', 'Notificações', 'Conta', 'Privacidade'],
+    details: [
+      'O Dev mostra só o que é seu: seus MRs, revisões pedidas a você e pipelines que você disparou.',
+      'Escolha nas regras do repositório as raias que quer acompanhar (ex.: To Do, Doing, Waiting for merge request): aparecem as issues dessas raias em que você participa, mesmo sem estar atribuído.',
+      'Cada issue mostra há quantos dias está na raia, da mais parada para a menos, e o selo fica amarelo ao passar do limite que você definir (vermelho no dobro), com um aviso.',
+      'Nova aba Quadro em cada projeto, com uma coluna por raia.',
+      'Nova aba Reports: escolha o dia no calendário e anote o que fez; o botão Sugerir do dia monta um rascunho com o que o GitLab ou GitHub registrou.',
+      'O início do Dev avisa quando ainda não há anotação hoje, e o card do projeto mostra quando o dia já foi anotado.',
+      'Os cards dos projetos abrem com um toque em qualquer lugar.',
+      'As anotações entram na busca geral e no arquivo exportado da conta.',
+    ],
+  },
+  {
     id: 'precos',
     date: '2026-11-17',
     title: 'Preços: acompanhe o que você quer comprar e saiba quando baixar',

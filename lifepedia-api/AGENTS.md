@@ -81,7 +81,11 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   de `rules_since`) e checa issues sumidas fora de transação; grava tudo numa transação só. Tarefa da issue só por
   `TaskLinks.createPersonal`/`completePersonal`; concluir publica `task/TaskDoneEvent` e `DevTaskListener` fecha a issue
   depois do commit (thread virtual). Aviso só se o repositório já sincronizou antes (`synced_at`). Prompt do daily só em
-  `DevDailyPrompt`; uso por `AiUsageLog.DEV_DAILY`.
+  `DevDailyPrompt`; uso por `AiUsageLog.DEV_DAILY`. Raias acompanhadas por `DevLanes` (JSON em `dev_repos.lanes`; `current`
+  = a última da ordem entre as etiquetas; `days` = dias corridos no fuso). `CodeHost.snapshot` recebe as raias e já devolve
+  só o que é da pessoa (revisor, pipeline disparada por ela, issue de que participa); `labelAddedAt` só quando a raia muda
+  (`laneTimes`, fora de transação, até `MAX_LANE_LOOKUPS`). Anotações e rascunho em `DevReportService`. Teste em
+  `DevIntegrationTest.lanesParticipationStuckIssuesAndReports`.
 - **Simulador** (`finance/simulation`): conta só em `FinanceSimulator` (puro, em `double`, saída em `BigDecimal`;
   `FinanceSimulatorTest`): base mês a mês, ganhos e gastos livres, investimento por aporte (cada aporte é um lote com a
   própria idade para o IR regressivo), inflação. `SimulatorService.run`/`compare` ficam **fora de transação** (as taxas
@@ -236,7 +240,7 @@ arquivo, o `README.md` desta pasta e o `.env.example` da raiz na mesma tarefa.
   `TaskNotifier.reminder`. Fixo ligado: validar com `requireRecurring` (pessoal + do usuário). Teste em
   `TaskExtrasIntegrationTest`.
 - **Conta** (`account/`): orquestra outros módulos. Exportar/importar usa `AccountDtos.FORMAT`
-  (`lifepedia/account@11`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@11`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira e preços só como registro); mudou o arquivo ⇒ `@12` e importação dos
+  (`lifepedia/account@12`; aceita `AccountDtos.IMPORTABLE` = `@1` a `@12`; frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira e preços só como registro); mudou o arquivo ⇒ `@13` e importação dos
   anteriores mantida. Tarefas no arquivo: `task/TaskTransferService` (campo ausente = não mexe). Importação valida tudo antes de
   gravar e roda numa transação só (`dryRun` percorre o mesmo caminho sem salvar). Exclusão reaproveita
   `GroupService.leave` (eventos de saída limpam itens e fotos) e depende das FKs `ON DELETE CASCADE/SET NULL` para

@@ -4,6 +4,7 @@ import type {
   ActivityResponse,
   Daily,
   DevProject,
+  DevReport,
   DevRepo,
   ProjectDetail,
   ProjectInput,
@@ -23,6 +24,7 @@ const keys = {
   activity: (weeks: number) => ['dev', 'activity', weeks] as const,
   options: (accountId: string, q: string) => ['dev', 'repo-options', accountId, q] as const,
   labels: (repoId: string) => ['dev', 'labels', repoId] as const,
+  reports: (projectId: string, month: string) => ['dev', 'reports', projectId, month] as const,
 }
 
 function useDevMutation<TVars, TResult = void>(fn: (vars: TVars) => Promise<TResult>) {
@@ -98,6 +100,32 @@ export function useRepoLabels(repoId: string | null) {
     enabled: !!repoId,
     staleTime: 5 * 60_000,
     retry: false,
+  })
+}
+
+/** Anotações do projeto no mês (`yyyy-MM`). */
+export function useDevReports(projectId: string, month: string) {
+  return useQuery({
+    queryKey: keys.reports(projectId, month),
+    queryFn: () => api<DevReport[]>(`${BASE}/projects/${projectId}/reports?month=${month}`),
+  })
+}
+
+export function useSaveReport() {
+  return useDevMutation(({ projectId, day, text }: { projectId: string; day: string; text: string }) =>
+    api<DevReport>(`${BASE}/projects/${projectId}/reports/${day}`, { method: 'PUT', body: { text } }))
+}
+
+export function useDeleteReport() {
+  return useDevMutation(({ projectId, day }: { projectId: string; day: string }) =>
+    api<void>(`${BASE}/projects/${projectId}/reports/${day}`, { method: 'DELETE' }))
+}
+
+/** Rascunho com o que o GitLab/GitHub registrou no dia. */
+export function useReportSuggestion() {
+  return useMutation({
+    mutationFn: ({ projectId, day }: { projectId: string; day: string }) =>
+      api<{ text: string }>(`${BASE}/projects/${projectId}/reports/${day}/suggestion`),
   })
 }
 

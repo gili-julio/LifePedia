@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /** GitLab ou GitHub: o que o módulo Dev e a central de integrações pedem a cada um. */
 public interface CodeHost {
@@ -26,8 +27,16 @@ public interface CodeHost {
     /** Etiquetas do repositório (para escolher as raias). */
     List<String> labels(Connection connection, String repoId) throws IntegrationException;
 
-    /** MRs da pessoa (abertos e aceitos desde {@code mergedSince}), para revisar, issues atribuídas e pipelines. */
-    Snapshot snapshot(Connection connection, Collection<RemoteRepo> repos, OffsetDateTime mergedSince) throws IntegrationException;
+    /**
+     * MRs da pessoa (abertos e aceitos desde {@code mergedSince}), com revisão pedida a ela, issues e pipelines disparadas por ela.
+     * Repositório com raias em {@code lanes} (id → etiquetas) traz só as issues nessas etiquetas de que a pessoa participa;
+     * sem raias, as atribuídas a ela.
+     */
+    Snapshot snapshot(Connection connection, Collection<RemoteRepo> repos, OffsetDateTime mergedSince, Map<String, List<String>> lanes)
+            throws IntegrationException;
+
+    /** Quando a etiqueta entrou na issue pela última vez (nulo = não achou). */
+    OffsetDateTime labelAddedAt(Connection connection, IssueRef issue, String label) throws IntegrationException;
 
     /** Issue ainda aberta? */
     boolean issueOpen(Connection connection, IssueRef issue) throws IntegrationException;
@@ -71,8 +80,9 @@ public interface CodeHost {
                     OffsetDateTime mergedAt) {
     }
 
+    /** {@code assigned} = atribuída à pessoa (senão ela só participa: criou, foi citada ou comentou). */
     record RemoteIssue(String repoId, String number, String title, String webUrl, String author, List<String> labels,
-                       LocalDate dueDate, OffsetDateTime updatedAt) {
+                       LocalDate dueDate, OffsetDateTime updatedAt, boolean assigned) {
     }
 
     record RemotePipeline(String repoId, String id, String status, String ref, String webUrl, OffsetDateTime updatedAt) {

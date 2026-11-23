@@ -50,6 +50,8 @@ public enum NotificationType {
     DEV_MR_COMMENTED,
     /** Pediram a revisão da pessoa. data: projectId, projectName, repoName, title, number, author */
     DEV_REVIEW_REQUESTED,
+    /** Issue da pessoa parada numa raia além do limite de dias. data: projectId, projectName, repoName, title, number, lane, days */
+    DEV_ISSUE_STUCK,
     /**
      * Novidade numa entrega (dono e membros do grupo dela). data: deliveryId, name, status (OUT_FOR_DELIVERY, PICKUP,
      * DELIVERED, FAILED, EXCEPTION, EXPIRED, TAX = aguardando pagamento, STALLED = parada), text (último evento), days

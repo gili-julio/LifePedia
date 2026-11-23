@@ -30,6 +30,7 @@ public class GitHubClient implements CodeHost {
     private static final String REPOS = "/repos/";
     private static final int MAX_DETAILED = 30;
     private static final int EVENT_PAGES = 3;
+    private static final int LABEL_EVENT_PAGES = 3;
 
     private final ApiCalls api;
 
@@ -75,8 +76,8 @@ public class GitHubClient implements CodeHost {
     }
 
     @Override
-    public Snapshot snapshot(Connection connection, Collection<RemoteRepo> repos, OffsetDateTime mergedSince)
-            throws IntegrationException {
+    public Snapshot snapshot(Connection connection, Collection<RemoteRepo> repos, OffsetDateTime mergedSince,
+                             Map<String, List<String>> lanes) throws IntegrationException {
         Set<String> ids = repos.stream().map(r -> r.externalId().toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
         Map<String, RemoteMr> byId = new LinkedHashMap<>();
         int detailed = 0;
@@ -92,32 +93,65 @@ public class GitHubClient implements CodeHost {
                 byId.put(Json.text(pr, "id"), pull(connection, repoId, pr, true, false, detailed++));
             }
         }
-        for (JsonNode pr : search(connection, "is:pr is:open review-requested:@me")) {
+        for (JsonNode pr : search(connection, "is:pr is:open user-review-requested:@me")) {
             String repoId = repoOf(pr);
             String id = Json.text(pr, "id");
             if (ids.contains(repoId.toLowerCase(Locale.ROOT)) && !byId.containsKey(id)) {
                 byId.put(id, pull(connection, repoId, pr, false, true, MAX_DETAILED));
             }
         }
+        Map<String, List<String>> watched = new HashMap<>();
+        lanes.forEach((repo, labels) -> {
+            if (!labels.isEmpty()) watched.put(repo.toLowerCase(Locale.ROOT), labels);
+        });
         List<RemoteIssue> issues = new ArrayList<>();
         for (JsonNode issue : search(connection, "is:issue is:open assignee:@me")) {
             String repoId = repoOf(issue);
-            if (!ids.contains(repoId.toLowerCase(Locale.ROOT))) continue;
-            issues.add(new RemoteIssue(repoId, Json.text(issue, "number"), Json.text(issue, "title", 300), Json.text(issue, "html_url"),
-                    Json.text(issue.path("user"), "login"), Json.strings(issue.path("labels")),
-                    Json.date(Json.text(issue.path("milestone"), "due_on")), Json.time(issue, "updated_at")));
+            String key = repoId.toLowerCase(Locale.ROOT);
+            if (ids.contains(key) && !watched.containsKey(key)) issues.add(issue(repoId, issue, true));
+        }
+        for (RemoteRepo repo : repos) {
+            List<String> labels = watched.get(repo.externalId().toLowerCase(Locale.ROOT));
+            if (labels == null) continue;
+            Set<String> wanted = labels.stream().map(l -> l.toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
+            for (JsonNode issue : search(connection, "is:issue is:open involves:@me repo:" + repoPath(repo.externalId()))) {
+                boolean inLane = Json.strings(issue.path("labels")).stream().anyMatch(l -> wanted.contains(l.toLowerCase(Locale.ROOT)));
+                if (!inLane) continue;
+                boolean assigned = false;
+                for (JsonNode user : issue.path("assignees")) {
+                    if (connection.login().equalsIgnoreCase(Json.text(user, "login"))) assigned = true;
+                }
+                issues.add(issue(repo.externalId(), issue, assigned));
+            }
         }
         List<RemotePipeline> pipelines = new ArrayList<>();
         for (RemoteRepo repo : repos) {
             if (repo.defaultBranch() == null) continue;
             for (JsonNode run : get(connection, REPOS + repoPath(repo.externalId()) + "/actions/runs?per_page=1&branch="
-                    + Json.encode(repo.defaultBranch())).path("workflow_runs")) {
+                    + Json.encode(repo.defaultBranch()) + "&actor=" + Json.encode(connection.login())).path("workflow_runs")) {
                 pipelines.add(new RemotePipeline(repo.externalId(), Json.text(run, "id"),
                         Pipelines.normalize(Json.text(run, "status"), Json.text(run, "conclusion")), Json.text(run, "head_branch"),
                         Json.text(run, "html_url"), Json.time(run, "updated_at")));
             }
         }
         return new Snapshot(List.copyOf(byId.values()), issues, pipelines);
+    }
+
+    @Override
+    public OffsetDateTime labelAddedAt(Connection connection, IssueRef issue, String label) throws IntegrationException {
+        OffsetDateTime latest = null;
+        for (int page = 1; page <= LABEL_EVENT_PAGES; page++) {
+            JsonNode events = get(connection, issuePath(issue) + "/events?per_page=100&page=" + page);
+            for (JsonNode event : events) {
+                OffsetDateTime at = Json.time(event, "created_at");
+                if ("labeled".equals(Json.text(event, "event")) && label.equalsIgnoreCase(Json.text(event.path("label"), "name"))
+                        && at != null && (latest == null || at.isAfter(latest))) {
+                    latest = at;
+                }
+            }
+            if (events.size() < 100) break;
+        }
+        return latest;
     }
 
     @Override
@@ -219,6 +253,12 @@ public class GitHubClient implements CodeHost {
         return new RemoteMr(repoId, Json.text(pr, "id"), number, Json.text(pr, "title", 300), state, Json.text(pr, "html_url"),
                 Json.text(pr.path("user"), "login"), mine, review, pr.path("draft").asBoolean(false), branch, pipeline, approved,
                 pr.path("comments").asInt(0), issues, Json.time(pr, "created_at"), Json.time(pr, "updated_at"), mergedAt);
+    }
+
+    private static RemoteIssue issue(String repoId, JsonNode issue, boolean assigned) {
+        return new RemoteIssue(repoId, Json.text(issue, "number"), Json.text(issue, "title", 300), Json.text(issue, "html_url"),
+                Json.text(issue.path("user"), "login"), Json.strings(issue.path("labels")),
+                Json.date(Json.text(issue.path("milestone"), "due_on")), Json.time(issue, "updated_at"), assigned);
     }
 
     private JsonNode search(Connection connection, String query) throws IntegrationException {

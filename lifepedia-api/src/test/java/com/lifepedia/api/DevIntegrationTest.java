@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +38,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -73,7 +75,7 @@ class DevIntegrationTest extends ApiTestSupport {
     void mocks() throws IntegrationException {
         when(gitlab.provider()).thenReturn(IntegrationProvider.GITLAB);
         when(github.provider()).thenReturn(IntegrationProvider.GITHUB);
-        when(gitlab.snapshot(any(), any(), any())).thenAnswer(call -> current);
+        when(gitlab.snapshot(any(), any(), any(), any())).thenAnswer(call -> current);
         when(gitlab.repo(any(), eq("101"))).thenReturn(new RemoteRepo("101", "acme/app", "https://gitlab.com/acme/app", "main"));
     }
 
@@ -126,7 +128,7 @@ class DevIntegrationTest extends ApiTestSupport {
         OffsetDateTime now = OffsetDateTime.now();
         LocalDate today = LocalDate.now(ZONE);
         RemoteIssue issue = new RemoteIssue("101", "5", "Corrigir login", "https://gitlab.com/acme/app/-/issues/5", "lider",
-                List.of("Doing"), null, now);
+                List.of("Doing"), null, now, true);
         current = new Snapshot(List.of(mr("opened", Pipelines.SUCCESS, 0, now.plusMinutes(1), null)), List.of(issue),
                 List.of(new RemotePipeline("101", "1", Pipelines.SUCCESS, "main", "https://gitlab.com/p/1", now)));
         when(gitlab.activity(any(), anyList(), any(), any())).thenReturn(List.of(new RemoteActivity("101", today, 3, 1, 0, 2)));
@@ -208,7 +210,7 @@ class DevIntegrationTest extends ApiTestSupport {
         String accountId = connectGitLab(alice, "12");
         String project = JsonPath.read(post(alice, "/api/dev/projects", "{\"name\":\"Freela\",\"color\":\"#0ea5e9\"}"), "$.id");
         current = new Snapshot(List.of(), List.of(new RemoteIssue("101", "6", "Ajustar menu", "https://gitlab.com/x/-/issues/6", "lider",
-                List.of(), LocalDate.now(ZONE).plusDays(2), OffsetDateTime.now())), List.of());
+                List.of(), LocalDate.now(ZONE).plusDays(2), OffsetDateTime.now(), true)), List.of());
         String repoId = JsonPath.read(post(alice, "/api/dev/projects/" + project + "/repos",
                 "{\"accountId\":\"%s\",\"externalId\":\"101\"}".formatted(accountId)), "$.id");
         send("PUT", alice, "/api/dev/repos/" + repoId, "{\"importIssues\":true,\"closeIssues\":true}");
@@ -218,6 +220,81 @@ class DevIntegrationTest extends ApiTestSupport {
         assertThat(send("PUT", alice, "/api/tasks/" + task + "/status", "{\"date\":\"%s\",\"status\":\"DONE\"}"
                 .formatted(LocalDate.now(ZONE).plusDays(2)))).hasStatus(204);
         verify(gitlab, timeout(5000)).closeIssue(any(), eq(new IssueRef("101", "6")));
+    }
+
+    @Test
+    void lanesParticipationStuckIssuesAndReports() throws IntegrationException {
+        String alice = registerAndGetBearer();
+        String accountId = connectGitLab(alice, "13");
+        String project = JsonPath.read(post(alice, "/api/dev/projects", "{\"name\":\"Acme\",\"color\":\"#6d28d9\"}"), "$.id");
+        String repoId = JsonPath.read(post(alice, "/api/dev/projects/" + project + "/repos",
+                "{\"accountId\":\"%s\",\"externalId\":\"101\"}".formatted(accountId)), "$.id");
+
+        assertThat(send("PUT", alice, "/api/dev/repos/" + repoId, """
+                {"importIssues":true,"closeIssues":false,"lanes":[{"label":"Doing"},{"label":"doing"}]}""")).hasStatus(400);
+        assertThat(send("PUT", alice, "/api/dev/repos/" + repoId, """
+                {"importIssues":true,"closeIssues":false,"lanes":[{"label":"Doing","days":0}]}""")).hasStatus(400);
+        String rules = body(send("PUT", alice, "/api/dev/repos/" + repoId, """
+                {"importIssues":true,"closeIssues":false,"lanes":[{"label":"To Do"},{"label":"Doing","days":3}]}"""));
+        assertThat(JsonPath.<List<String>>read(rules, "$.lanes[*].label")).containsExactly("To Do", "Doing");
+
+        // Issue 7: só participa e está em Doing há 5 dias (passou do limite). Issue 8: atribuída, entrou em To Do agora.
+        OffsetDateTime now = OffsetDateTime.now();
+        current = new Snapshot(List.of(new RemoteMr("101", "950", "40", "Tela de cadastro", "opened",
+                "https://gitlab.com/acme/app/-/merge_requests/40", "alice13", true, false, false, "8-cadastro", Pipelines.SUCCESS,
+                false, 0, List.of(), now, now, null)), List.of(
+                new RemoteIssue("101", "7", "Revisar contrato", "https://gitlab.com/acme/app/-/issues/7", "lider", List.of("Doing"),
+                        null, now, false),
+                new RemoteIssue("101", "8", "Tela de cadastro", "https://gitlab.com/acme/app/-/issues/8", "lider",
+                        List.of("To Do", "Backend"), null, now, true)), List.of());
+        when(gitlab.labelAddedAt(any(), eq(new IssueRef("101", "7")), eq("Doing"))).thenReturn(now.minusDays(5));
+        sync.sync(UUID.fromString(accountId), true);
+        sync.sync(UUID.fromString(accountId), true);
+
+        verify(gitlab, atLeastOnce()).snapshot(any(), any(), any(), eq(Map.of("101", List.of("To Do", "Doing"))));
+        verify(gitlab, times(1)).labelAddedAt(any(), eq(new IssueRef("101", "7")), eq("Doing"));
+        assertThat(types(alice).stream().filter("DEV_ISSUE_STUCK"::equals)).hasSize(1);
+        assertThat(jdbc.sql("select title from tasks where user_id = :u").param("u", UUID.fromString(userId(alice)))
+                .query(String.class).list()).containsExactly("#8 Tela de cadastro");
+
+        String detail = body(send("GET", alice, "/api/dev/projects/" + project, null));
+        assertThat(JsonPath.<List<String>>read(detail, "$.lanes[*].label")).containsExactly("To Do", "Doing");
+        assertThat(JsonPath.<List<String>>read(detail, "$.items[?(@.kind == 'ISSUE')].number")).containsExactly("7", "8");
+        assertThat(JsonPath.<List<Integer>>read(detail, "$.items[?(@.number == '7')].laneDays")).containsExactly(5);
+        assertThat(JsonPath.<List<Integer>>read(detail, "$.items[?(@.number == '7')].laneLimit")).containsExactly(3);
+        assertThat(JsonPath.<List<Boolean>>read(detail, "$.items[?(@.number == '7')].mine")).containsExactly(false);
+
+        // Anotação do dia: aviso no painel, rascunho com o que o GitLab registrou, busca e arquivo da conta.
+        String today = LocalDate.now(ZONE).toString();
+        assertThat(JsonPath.<List<Boolean>>read(body(send("GET", alice, "/api/dev/today", null)), "$.reports[*].written"))
+                .containsExactly(false);
+        String suggestion = JsonPath.read(body(send("GET", alice, "/api/dev/projects/" + project + "/reports/" + today + "/suggestion",
+                null)), "$.text");
+        assertThat(suggestion).contains("- Abri o MR !40 Tela de cadastro (acme/app)", "- Issue #8 Tela de cadastro foi para To Do")
+                .doesNotContain("#7");
+        String saved = body(send("PUT", alice, "/api/dev/projects/" + project + "/reports/" + today,
+                "{\"text\":\"Subi o MR do cadastro e pedi revisão\"}"));
+        assertThat(JsonPath.<String>read(saved, "$.day")).isEqualTo(today);
+        assertThat(send("PUT", alice, "/api/dev/projects/" + project + "/reports/" + LocalDate.now(ZONE).plusDays(1),
+                "{\"text\":\"Amanhã\"}")).hasStatus(400);
+        assertThat(send("PUT", alice, "/api/dev/projects/" + project + "/reports/" + today, "{\"text\":\" \"}")).hasStatus(400);
+        assertThat(JsonPath.<List<Boolean>>read(body(send("GET", alice, "/api/dev/today", null)), "$.reports[*].written"))
+                .containsExactly(true);
+        assertThat(JsonPath.<List<String>>read(body(send("GET", alice, "/api/dev/projects/" + project + "/reports?month="
+                + today.substring(0, 7), null)), "$[*].text")).containsExactly("Subi o MR do cadastro e pedi revisão");
+        assertThat(JsonPath.<List<String>>read(body(send("GET", alice, "/api/search?q=revisao&kinds=DEV_REPORT", null)),
+                "$.groups[0].items[*].link")).containsExactly("/dev/" + project + "?aba=reports&dia=" + today);
+        assertThat(JsonPath.<List<String>>read(body(send("GET", alice, "/api/account/export", null)), "$.devProjects[0].reports[*].text"))
+                .containsExactly("Subi o MR do cadastro e pedi revisão");
+
+        String bob = registerAndGetBearer();
+        assertThat(send("GET", bob, "/api/dev/projects/" + project + "/reports?month=" + today.substring(0, 7), null)).hasStatus(404);
+        assertThat(send("PUT", bob, "/api/dev/projects/" + project + "/reports/" + today, "{\"text\":\"x\"}")).hasStatus(404);
+        assertThat(send("GET", bob, "/api/dev/projects/" + project + "/reports/" + today + "/suggestion", null)).hasStatus(404);
+
+        assertThat(send("DELETE", alice, "/api/dev/projects/" + project + "/reports/" + today, null)).hasStatus(204);
+        assertThat(JsonPath.<List<Object>>read(body(send("GET", alice, "/api/dev/projects/" + project + "/reports?month="
+                + today.substring(0, 7), null)), "$[*]")).isEmpty();
     }
 
     @Test

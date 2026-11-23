@@ -41,3 +41,15 @@ export function itemNumber(provider: string | null | undefined, kind: 'MR' | 'IS
   if (kind === 'ISSUE') return `#${number}`
   return provider === 'GITHUB' ? `#${number}` : `!${number}`
 }
+
+/** Cor do selo da raia: passou do limite = aviso; o dobro = perigo. */
+export function laneTone(days: number | null, limit: number | null): 'normal' | 'warning' | 'danger' {
+  if (days === null || !limit || days < limit) return 'normal'
+  return days >= limit * 2 ? 'danger' : 'warning'
+}
+
+export function laneDaysText(days: number | null) {
+  if (days === null) return ''
+  if (days === 0) return 'desde hoje'
+  return `há ${days} dia${days > 1 ? 's' : ''}`
+}

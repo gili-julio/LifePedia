@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatDate, formatRelative } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { itemNumber, PIPELINE } from '../labels'
+import { LaneBadge } from './LaneBadge'
 import type { DevItem } from '../types'
 
 type Props = {
@@ -41,6 +42,7 @@ export function ItemRow({ item, showProject, provider }: Props) {
           {pipeline && <span>Pipeline: {pipeline.label}</span>}
           {item.kind === 'MR' && item.state === 'merged' && <Badge variant="secondary">Aceito</Badge>}
           {item.draft && <Badge variant="outline">Rascunho</Badge>}
+          {item.kind === 'ISSUE' && !item.mine && <Badge variant="outline">Participando</Badge>}
           {item.approved && (
             <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2Icon className="size-3.5" aria-hidden />Aprovado
@@ -58,9 +60,11 @@ export function ItemRow({ item, showProject, provider }: Props) {
             </Link>
           )}
         </div>
-        {item.labels.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {item.labels.slice(0, 6).map((label) => <Badge key={label} variant="outline" className="font-normal">{label}</Badge>)}
+        {(item.lane || item.labels.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1">
+            <LaneBadge item={item} />
+            {item.labels.filter((label) => label.toLowerCase() !== item.lane?.toLowerCase()).slice(0, 6)
+              .map((label) => <Badge key={label} variant="outline" className="font-normal">{label}</Badge>)}
           </div>
         )}
       </div>

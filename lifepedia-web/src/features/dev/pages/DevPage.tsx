@@ -1,4 +1,4 @@
-import { AlertTriangleIcon, CodeXmlIcon, PlugZapIcon, PlusIcon, SparklesIcon } from 'lucide-react'
+import { AlertTriangleIcon, CheckCircle2Icon, CodeXmlIcon, NotebookPenIcon, PlugZapIcon, PlusIcon, SparklesIcon } from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ListSearch, NoMatches } from '@/components/ListSearch'
@@ -16,8 +16,8 @@ import { DailyDialog } from '../components/DailyDialog'
 import { DevProjectDialog } from '../components/DevProjectDialog'
 import { EventList } from '../components/EventList'
 import { ItemRow } from '../components/ItemRow'
-import { devProjectUrl, LINK_KIND } from '../labels'
-import type { DevItem, DevProject } from '../types'
+import { devProjectUrl } from '../labels'
+import type { DevItem, DevProject, ReportStatus } from '../types'
 
 /** Módulo Dev: o painel do dia, os projetos de trabalho e a atividade das últimas semanas. */
 export function DevPage() {
@@ -30,6 +30,8 @@ export function DevPage() {
   const [search, setSearch] = useListSearch()
   const shown = projects.data?.filter((p) => matchesSearch(search, p.name, p.description)) ?? []
   const empty = projects.data?.length === 0
+  const missing = today.data?.reports.filter((r) => !r.written) ?? []
+  const written = new Set(today.data?.reports.filter((r) => r.written).map((r) => r.projectId))
 
   return (
     <div className="space-y-6">
@@ -51,6 +53,8 @@ export function DevPage() {
           <Button asChild size="sm" variant="outline"><Link to="/integracoes">Reconectar</Link></Button>
         </div>
       )}
+
+      {today.data && !empty && <ReportsNotice missing={missing} total={today.data.reports.length} />}
 
       {!projects.data ? <Skeleton className="h-64" /> : empty ? (
         <Card>
@@ -80,7 +84,7 @@ export function DevPage() {
                 <ItemsPanel title="Seus MRs abertos" items={today.data.myMergeRequests} empty="Nenhum MR aberto." />
                 <ItemsPanel title="Pipelines quebradas" items={today.data.failing} empty="Tudo verde." tone="danger" />
                 <div className="lg:col-span-2">
-                  <ItemsPanel title="Issues atribuídas a você" items={today.data.issues} empty="Nenhuma issue aberta com você." />
+                  <ItemsPanel title="Suas issues" items={today.data.issues} empty="Nenhuma issue sua nas raias escolhidas." />
                 </div>
               </div>
             )}
@@ -90,7 +94,7 @@ export function DevPage() {
             <h2 id="dev-projects" className="text-lg font-semibold tracking-tight">Projetos</h2>
             {shown.length ? (
               <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {shown.map((p) => <li key={p.id}><ProjectCard project={p} /></li>)}
+                {shown.map((p) => <li key={p.id}><ProjectCard project={p} written={written.has(p.id)} /></li>)}
               </ul>
             ) : <NoMatches onClear={() => setSearch('')} />}
           </section>
@@ -156,43 +160,66 @@ function ItemsPanel({ title, items, empty, tone }: { title: string; items: DevIt
   )
 }
 
-function ProjectCard({ project }: { project: DevProject }) {
+/** Aviso do topo: projetos sem anotação hoje, com atalho para a aba Reports. */
+function ReportsNotice({ missing, total }: { missing: ReportStatus[]; total: number }) {
+  if (missing.length === 0) {
+    return (
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <CheckCircle2Icon className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden />
+        {total > 1 ? 'Dia anotado em todos os projetos.' : 'Dia anotado.'}
+      </p>
+    )
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-muted/40 px-4 py-3 text-sm">
+      <NotebookPenIcon className="size-4 text-muted-foreground" aria-hidden />
+      <span className="min-w-40 flex-1">
+        Sem anotações hoje ainda{total > 1 && missing.length < total ? ` em ${missing.map((m) => m.projectName).join(', ')}` : ''}.
+      </span>
+      <div className="flex flex-wrap gap-1.5">
+        {missing.slice(0, 4).map((m) => (
+          <Button key={m.projectId} asChild size="sm" variant="outline">
+            <Link to={`${devProjectUrl(m.projectId)}?aba=reports`}>
+              <span className="size-2 rounded-full" style={{ background: m.projectColor }} aria-hidden />
+              {missing.length > 1 ? m.projectName : 'Anotar o dia'}
+            </Link>
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ProjectCard({ project, written }: { project: DevProject; written: boolean }) {
   const c = project.counts
   return (
-    <Card className="h-full gap-3 overflow-hidden pt-0">
-      <div className="h-1.5" style={{ background: project.color }} aria-hidden />
-      <CardHeader>
-        <CardTitle>
-          <Link to={devProjectUrl(project.id)} className="underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none">
-            {project.name}
-          </Link>
-        </CardTitle>
-        {project.description && <p className="text-sm text-muted-foreground">{project.description}</p>}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="flex flex-wrap gap-1.5 text-xs">
-          <Badge variant="secondary">{c.myMergeRequests} MRs seus</Badge>
-          <Badge variant="secondary">{c.reviews} para revisar</Badge>
-          <Badge variant="secondary">{c.issues} issues</Badge>
-          {c.failing > 0 && <Badge variant="destructive">{c.failing} quebrada{c.failing > 1 ? 's' : ''}</Badge>}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          {project.repos.length === 0 ? 'Nenhum repositório ligado' : `${project.repos.length} repositório${project.repos.length > 1 ? 's' : ''}`}
-        </p>
-        {project.links.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {project.links.slice(0, 4).map((link) => {
-              const Icon = LINK_KIND[link.kind].icon
-              return (
-                <a key={link.url + link.label} href={link.url} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
-                  <Icon className="size-3.5" aria-hidden />{link.label}
-                </a>
-              )
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <Link to={devProjectUrl(project.id)}
+      className="group block h-full rounded-2xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none">
+      <Card className="h-full gap-3 overflow-hidden pt-0 transition-colors group-hover:bg-muted/40 motion-reduce:transition-none group-hover:ring-foreground/20">
+        <div className="h-1.5" style={{ background: project.color }} aria-hidden />
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate">{project.name}</span>
+            {written && (
+              <span className="flex items-center gap-1 text-xs font-normal text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2Icon className="size-3.5" aria-hidden />Anotado hoje
+              </span>
+            )}
+          </CardTitle>
+          {project.description && <p className="text-sm text-muted-foreground">{project.description}</p>}
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="flex flex-wrap gap-1.5 text-xs">
+            <Badge variant="secondary">{c.myMergeRequests} MRs seus</Badge>
+            <Badge variant="secondary">{c.reviews} para revisar</Badge>
+            <Badge variant="secondary">{c.issues} issues</Badge>
+            {c.failing > 0 && <Badge variant="destructive">{c.failing} quebrada{c.failing > 1 ? 's' : ''}</Badge>}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {project.repos.length === 0 ? 'Nenhum repositório ligado' : `${project.repos.length} repositório${project.repos.length > 1 ? 's' : ''}`}
+          </p>
+        </CardContent>
+      </Card>
+    </Link>
   )
 }

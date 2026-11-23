@@ -12,6 +12,7 @@ import {
   ListTodoIcon,
   MessageCircleIcon,
   NotebookPenIcon,
+  NotebookTextIcon,
   PackageIcon,
   ReceiptTextIcon,
   RepeatIcon,
@@ -49,6 +50,7 @@ export const KINDS: Record<SearchKind, { label: string; icon: LucideIcon }> = {
   FRIEND: { label: 'Amigos', icon: HeartHandshakeIcon },
   DEV_PROJECT: { label: 'Projetos Dev', icon: CodeXmlIcon },
   DEV_ITEM: { label: 'Issues e MRs', icon: GitPullRequestIcon },
+  DEV_REPORT: { label: 'Anotações do Dev', icon: NotebookTextIcon },
   ARCH_PROJECT: { label: 'Arquitetura', icon: Building2Icon },
   PRICE_WATCH: { label: 'Preços acompanhados', icon: TagIcon },
 }

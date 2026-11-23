@@ -172,7 +172,11 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Dev** (`features/dev`): chaves `['dev', ...]`; mutações invalidam também `['integrations']` e `['tasks']` (issue vira
   tarefa). Busca de repositório espera 400 ms antes de chamar (`RepoDialog`). Link externo (MR, issue, atalho, chamada)
   sempre `target="_blank" rel="noopener noreferrer"`. Mapa de calor (`ActivityHeatmap`) num tom só (`--primary` misturado
-  com `--card`), legenda Menos/Mais e números do dia em texto (`aria-live`) ao passar o mouse ou focar.
+  com `--card`), legenda Menos/Mais e números do dia em texto (`aria-live`) ao passar o mouse ou focar. Raia e dias
+  (`laneDays`, `laneLimit`) e a ordem das issues sempre da API; o front só escolhe o tom (`laneTone`: amarelo ao passar do
+  limite, vermelho no dobro) em `LaneBadge`, sempre com o texto e ícone. Quadro (`LaneBoard`) agrupa pelas `lanes` do
+  detalhe, na ordem da API. Reports (`ReportsTab`): dia na URL (`?dia=`, nunca futuro), editor remontado por dia
+  (`key`), rascunho só pela API (`useReportSuggestion`).
 - **Simulador do financeiro** (`features/finance/simulator`): chaves `['finance', 'simulator', ...]` (mutações invalidam
   só o simulador). **Nenhuma conta no front**: saldo, rendimento, IR, inflação e o líquido de cada mês (`invested`) vêm
   da API; o front monta o pedido (`form.ts`, campos como texto, saldo aceita "-") e refaz com debounce de 400 ms sobre o
@@ -229,7 +233,7 @@ Recharts 3 (via `components/ui/chart.tsx`) · dnd-kit (listas reordenáveis) · 
 - **Notificação nova**: tipo em `features/notifications/types.ts` + texto/link em `notification-content.tsx`.
   `useReminderToasts` (no `AppLayout`) mostra `TASK_REMINDER` como toast quando as não lidas sobem.
 - **Conta** (`features/account`): importar manda só `format/categories/recurring/transactions/taskLists/taskTags/tasks`
-  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira e preços do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@11`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
+  (perfil, grupos, frequência, notas, financiamentos, arquitetura, Dev, integrações, simulações, entregas, veículos, carteira e preços do arquivo são registro; aceita `IMPORTABLE_FORMATS`, `@1` sem tarefas; exporta `@12`); sempre prévia (`dryRun`) antes de gravar; `REPLACE` exige confirmação explícita. Excluir
   conta: senha (ou Google, em conta sem senha) + "EXCLUIR", e depois `logout()` (limpa o estado local).
 - **Abas com muitos itens**: `components/ScrollTabsList` (com o `value` da aba) no lugar do `TabsList`: rola dentro da
   faixa no celular (a página não ganha rolagem lateral) e mantém a aba ativa à vista.
